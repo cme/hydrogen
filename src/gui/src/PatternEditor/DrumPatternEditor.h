@@ -82,6 +82,7 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 										bool isMidi,
 										bool isInstrumentMode,
 										bool isNoteOff);
+  		void addOrRemoveNote(int nColumn, int nRealColumn, int row);
 		void editNoteLengthAction( int nColumn, int nRealColumn, int row, int length, int selectedPatternNumber );
 		void undoRedoAction(    int column,
 								QString mode,
@@ -121,6 +122,7 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		bool m_bRightBtnPressed;
 		H2Core::Note *m_pDraggedNote;
 		//~
+
 
 		H2Core::Pattern *m_pPattern;
 

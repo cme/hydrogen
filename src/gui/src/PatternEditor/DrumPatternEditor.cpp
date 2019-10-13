@@ -48,6 +48,8 @@
 #include <cassert>
 #include <algorithm>
 
+#include <QtDebug>
+
 using namespace std;
 using namespace H2Core;
 
@@ -143,6 +145,51 @@ int DrumPatternEditor::getColumn(QMouseEvent *ev)
 }
 
 
+void DrumPatternEditor::addOrRemoveNote(int nColumn, int nRealColumn, int row) {
+	Song *pSong = Hydrogen::get_instance()->getSong();
+	Instrument *pSelectedInstrument = pSong->get_instrument_list()->get( row );
+	H2Core::Note *pDraggedNote = m_pPattern->find_note( nColumn, nRealColumn, pSelectedInstrument );
+
+	int oldLength = -1;
+	float oldVelocity = 0.8f;
+	float oldPan_L = 0.5f;
+	float oldPan_R = 0.5f;
+	float oldLeadLag = 0.0f;
+	Note::Key oldNoteKeyVal = Note::C;
+	Note::Octave oldOctaveKeyVal = Note::P8;
+
+	bool noteExisted = false;
+	if( pDraggedNote ){
+		oldLength = pDraggedNote->get_length();
+		oldVelocity = pDraggedNote->get_velocity();
+		oldPan_L = pDraggedNote->get_pan_l();
+		oldPan_R = pDraggedNote->get_pan_r();
+		oldLeadLag = pDraggedNote->get_lead_lag();
+		oldNoteKeyVal = pDraggedNote->get_key();
+		oldOctaveKeyVal = pDraggedNote->get_octave();
+		noteExisted = true;
+	}
+
+	SE_addNoteAction *action = new SE_addNoteAction( nColumn,
+													 row,
+													 __selectedPatternNumber,
+													 oldLength,
+													 oldVelocity,
+													 oldPan_L,
+													 oldPan_R,
+													 oldLeadLag,
+													 oldNoteKeyVal,
+													 oldOctaveKeyVal,
+													 noteExisted,
+													 Preferences::get_instance()->getHearNewNotes(),
+													 false,
+													 false);
+
+	HydrogenApp::get_instance()->m_pUndoStack->push( action );
+
+
+}
+
 
 void DrumPatternEditor::mousePressEvent(QMouseEvent *ev)
 {
@@ -166,7 +213,6 @@ void DrumPatternEditor::mousePressEvent(QMouseEvent *ev)
 	}
 	Instrument *pSelectedInstrument = pSong->get_instrument_list()->get( row );
 
-
 	if( ev->button() == Qt::LeftButton && (ev->modifiers() & Qt::ShiftModifier) )
 	{
 		//shift + leftClick: add noteOff note
@@ -175,45 +221,7 @@ void DrumPatternEditor::mousePressEvent(QMouseEvent *ev)
 	}
 	else if (ev->button() == Qt::LeftButton ) {
 
-		H2Core::Note *pDraggedNote = m_pPattern->find_note( nColumn, nRealColumn, pSelectedInstrument );
-
-		int oldLength = -1;
-		float oldVelocity = 0.8f;
-		float oldPan_L = 0.5f;
-		float oldPan_R = 0.5f;
-		float oldLeadLag = 0.0f;
-		Note::Key oldNoteKeyVal = Note::C;
-		Note::Octave oldOctaveKeyVal = Note::P8;
-
-		bool noteExisted = false;
-		if( pDraggedNote ){
-			oldLength = pDraggedNote->get_length();
-			oldVelocity = pDraggedNote->get_velocity();
-			oldPan_L = pDraggedNote->get_pan_l();
-			oldPan_R = pDraggedNote->get_pan_r();
-			oldLeadLag = pDraggedNote->get_lead_lag();
-			oldNoteKeyVal = pDraggedNote->get_key();
-			oldOctaveKeyVal = pDraggedNote->get_octave();
-			noteExisted = true;
-		}
-
-
-		SE_addNoteAction *action = new SE_addNoteAction( nColumn,
-														 row,
-														 __selectedPatternNumber,
-														 oldLength,
-														 oldVelocity,
-														 oldPan_L,
-														 oldPan_R,
-														 oldLeadLag,
-														 oldNoteKeyVal,
-														 oldOctaveKeyVal,
-														 noteExisted,
-														 Preferences::get_instance()->getHearNewNotes(),
-														 false,
-														 false);
-
-		HydrogenApp::get_instance()->m_pUndoStack->push( action );
+		addOrRemoveNote(nColumn, nRealColumn, row);
 
 	} else if (ev->button() == Qt::RightButton ) {
 		m_bRightBtnPressed = true;
@@ -229,6 +237,8 @@ void DrumPatternEditor::mousePressEvent(QMouseEvent *ev)
 			__oldLength = -1;
 		}
 	}
+
+	m_pPatternEditorPanel->setCursorPosition(nColumn);
 }
 
 void DrumPatternEditor::addOrDeleteNoteAction(	int nColumn,
@@ -448,12 +458,60 @@ void DrumPatternEditor::mouseMoveEvent(QMouseEvent *ev)
 }
 
 
-
-void DrumPatternEditor::keyPressEvent (QKeyEvent *ev)
+void DrumPatternEditor::keyPressEvent( QKeyEvent *ev )
 {
-	ev->ignore();
+	Hydrogen *pH2 = Hydrogen::get_instance();
+	switch (ev->key()) {
+	case Qt::Key_Right:
+		if (ev->modifiers() & Qt::ControlModifier)
+			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
+		else
+			m_pPatternEditorPanel->moveCursorRight();
+		update( 0, 0, width(), height() );
+		ev->accept();
+		break;
+	case Qt::Key_Left:
+		if (ev->modifiers() & Qt::ControlModifier)
+			m_pPatternEditorPanel->setCursorPosition(0);
+		else
+			m_pPatternEditorPanel->moveCursorLeft();
+		update( 0, 0, width(), height() );
+		ev->accept();
+		break;
+	case Qt::Key_Down:
+		{
+			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
+			int nMaxInstrument = pH2->getSong()->get_instrument_list()->size();
+			if (ev->modifiers() & Qt::ControlModifier)
+				pH2->setSelectedInstrumentNumber(nMaxInstrument-1);
+			else if (nSelectedInstrument + 1 < nMaxInstrument)
+				pH2->setSelectedInstrumentNumber(nSelectedInstrument + 1);
+			m_pPatternEditorPanel->ensureCursorVisible();
+		}
+		ev->accept();
+		break;
+	case Qt::Key_Up:
+		{
+			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
+			if (ev->modifiers() & Qt::ControlModifier)
+				pH2->setSelectedInstrumentNumber(0);
+			else if (nSelectedInstrument > 0)
+				pH2->setSelectedInstrumentNumber(nSelectedInstrument - 1);
+			m_pPatternEditorPanel->ensureCursorVisible();
+		}
+		ev->accept();
+		break;
+	case Qt::Key_Return:
+	case Qt::Key_Enter:
+		{
+			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
+			addOrRemoveNote(m_pPatternEditorPanel->getCursorPosition(), -1, nSelectedInstrument);
+		}
+		break;
+	default:
+		ev->ignore();
+	}
 }
-
 
 
 ///
@@ -493,6 +551,17 @@ void DrumPatternEditor::__draw_pattern(QPainter& painter)
 
 	// draw the grid
 	__draw_grid( painter );
+
+
+	// Draw cursor
+	if (hasFocus()) {
+		uint x = 20 + m_pPatternEditorPanel->getCursorPosition() * m_nGridWidth;
+		int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
+		uint y = nSelectedInstrument * m_nGridHeight;
+		painter.setPen(QColor(0,0,0));
+		painter.setRenderHint( QPainter::Antialiasing );
+		painter.drawRoundedRect(QRect(x-m_nGridWidth*3, y+1, m_nGridWidth*6, m_nGridHeight-2), 4, 4);
+	}
 
 
 	/*

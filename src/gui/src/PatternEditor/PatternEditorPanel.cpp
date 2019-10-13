@@ -71,7 +71,9 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	setAcceptDrops(true);
 
 	Preferences *pPref = Preferences::get_instance();
-	
+
+	m_nCursorPosition = 0;
+	m_nCursorIncrement = 0;
 
 // Editor TOP
 	PixmapWidget *editor_top = new PixmapWidget(nullptr);
@@ -294,7 +296,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	m_pPianoRollScrollView->setFrameShape( QFrame::NoFrame );
 	m_pPianoRollScrollView->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
 	m_pPianoRollScrollView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-	m_pPianoRollEditor = new PianoRollEditor( m_pPianoRollScrollView->viewport(), this );
+	m_pPianoRollEditor = new PianoRollEditor( m_pPianoRollScrollView->viewport(), this, m_pPianoRollScrollView);
 	m_pPianoRollScrollView->setWidget( m_pPianoRollEditor );
 	connect( m_pPianoRollScrollView->horizontalScrollBar(), SIGNAL( valueChanged(int) ), this, SLOT( on_patternEditorHScroll(int) ) );
 
@@ -610,6 +612,9 @@ void PatternEditorPanel::gridResolutionChanged( int nSelected )
 	// INFOLOG( QString("idx %1 -> %2 resolution").arg( nSelected ).arg( nResolution ) );
 	m_pDrumPatternEditor->setResolution( nResolution, bUseTriplets );
 	m_pPianoRollEditor->setResolution( nResolution, bUseTriplets );
+
+	m_nCursorIncrement = (bUseTriplets ? 4 : 3) * MAX_NOTES / (nResolution * 3);
+	m_nCursorPosition = m_nCursorIncrement * ( m_nCursorPosition / m_nCursorIncrement);
 
 	Preferences::get_instance()->setPatternEditorGridResolution( nResolution );
 	Preferences::get_instance()->setPatternEditorUsingTriplets( bUseTriplets );
@@ -1006,4 +1011,48 @@ void PatternEditorPanel::displayorHidePrePostCB()
 void PatternEditorPanel::updatePianorollEditor()
 {
 	m_pDrumPatternEditor->updateEditor(); // force an update
+}
+
+int PatternEditorPanel::getCursorPosition()
+{
+	return m_nCursorPosition;
+}
+
+void PatternEditorPanel::ensureCursorVisible()
+{
+  int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
+  uint y = nSelectedInstrument * Preferences::get_instance()->getPatternEditorGridHeight();
+  m_pEditorScrollView->ensureVisible(m_nCursorPosition * m_pPatternEditorRuler->getGridWidth(), y);
+}
+
+void PatternEditorPanel::setCursorPosition(int nCursorPosition)
+{
+	if (nCursorPosition < 0)
+		m_nCursorPosition = 0;
+	else if (nCursorPosition >= m_pPattern->get_length())
+		m_nCursorPosition = m_pPattern->get_length() - m_nCursorIncrement;
+	else
+		m_nCursorPosition = nCursorPosition;
+
+	ensureCursorVisible();
+}
+
+int PatternEditorPanel::moveCursorLeft()
+{
+	if (m_nCursorPosition >= m_nCursorIncrement)
+		m_nCursorPosition -= m_nCursorIncrement;
+
+	ensureCursorVisible();
+
+	return m_nCursorPosition;
+}
+
+int PatternEditorPanel::moveCursorRight()
+{
+	if (m_nCursorPosition + m_nCursorIncrement < m_pPattern->get_length())
+		m_nCursorPosition += m_nCursorIncrement;
+
+	ensureCursorVisible();
+
+	return m_nCursorPosition;
 }

@@ -80,6 +80,12 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		virtual void stateChangedEvent(int nState);
 		//~ Implements EventListener interface
 
+                void ensureCursorVisible();
+		int getCursorPosition();
+		void setCursorPosition(int nCursorPosition);
+		int moveCursorLeft();
+		int moveCursorRight();
+
 	private slots:
 		void gridResolutionChanged( int nSelected );
 		void propertiesComboChanged( int nSelected );
@@ -129,7 +135,6 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		DrumPatternEditor *	m_pDrumPatternEditor;
 
 		// piano roll editor
-		QScrollArea*		m_pPianoRollInternScrollView;
 		QScrollArea*		m_pPianoRollScrollView;
 		PianoRollEditor *	m_pPianoRollEditor;
 
@@ -177,6 +182,11 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		Button *			resDropdownBtn;
 
 		bool				m_bEnablePatternResize;
+
+		// Cursor positioning
+		int					m_nCursorPosition;
+		int					m_nCursorIncrement;
+		//~ Cursor
 
 
 		virtual void dragEnterEvent(QDragEnterEvent *event);
