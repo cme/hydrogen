@@ -141,6 +141,9 @@ set(CMAKE_AUTOUIC ON)
 IF(APPLE)
     INCLUDE_DIRECTORIES("/opt/local/include")
     LINK_DIRECTORIES("/opt/local/lib")
+    # Homebrew package locations
+    INCLUDE_DIRECTORIES("/usr/local/include")
+    LINK_DIRECTORIES("/usr/local/lib")
 
     #Without setting this, installation would go into /usr/local, which does not exist per default
     SET(CMAKE_INSTALL_PREFIX "/usr" )
