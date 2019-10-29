@@ -1,0 +1,4 @@
+CPUS=$(nproc 2>/dev/null ||  sysctl -n hw.ncpu)
+MAKE_OPTS="-j $CPUS"
+
+echo "CPUS: $CPUS"
