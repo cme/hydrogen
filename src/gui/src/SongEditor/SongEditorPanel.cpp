@@ -169,6 +169,7 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 
 // ZOOM
 	m_pHScrollBar = new QScrollBar( Qt::Horizontal, nullptr );
+	m_pHScrollBar->setObjectName( "SongEditorPanel HScrollBar" );
 	connect( m_pHScrollBar, SIGNAL(valueChanged(int)), this, SLOT( hScrollTo(int) ) );
 
 	// zoom-in btn
@@ -341,6 +342,7 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	m_pAutomationCombo->select( 0 );
 
 	m_pVScrollBar = new QScrollBar( Qt::Vertical, nullptr );
+	m_pVScrollBar->setObjectName( "SongEditorPanel VScrollBar" );
 	connect( m_pVScrollBar, SIGNAL(valueChanged(int)), this, SLOT( vScrollTo(int) ) );
 
 	m_pWidgetStack->addWidget( m_pPositionRulerScrollView );
