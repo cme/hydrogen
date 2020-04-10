@@ -875,6 +875,14 @@ void DrumPatternEditor::hideEvent ( QHideEvent *ev )
 
 
 
+void DrumPatternEditor::focusInEvent ( QFocusEvent *ev )
+{
+	UNUSED( ev );
+	m_pPatternEditorPanel->ensureCursorVisible();
+	updateEditor();
+}
+
+
 void DrumPatternEditor::setResolution(uint res, bool bUseTriplets)
 {
 	this->m_nResolution = res;

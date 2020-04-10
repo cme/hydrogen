@@ -996,6 +996,14 @@ void PianoRollEditor::keyPressEvent( QKeyEvent * ev )
 }
 
 
+void PianoRollEditor::focusInEvent( QFocusEvent * ev )
+{
+	UNUSED( ev );
+	m_pPatternEditorPanel->ensureCursorVisible();
+	updateEditor();
+}
+
+
 void PianoRollEditor::editNoteLengthAction( int nColumn,  int nRealColumn,  int length, int selectedPatternNumber, int nSelectedInstrumentnumber, int pressedline)
 {
 
