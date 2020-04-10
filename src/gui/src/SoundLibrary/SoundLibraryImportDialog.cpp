@@ -99,7 +99,7 @@ void SoundLibraryImportDialog::updateRepositoryCombo()
 	*/
 
 	if( pref->sServerList.size() == 0 ) {
-		pref->sServerList.push_back( "http://www.hydrogen-music.org/feeds/drumkit_list.php" );
+		pref->sServerList.push_back( "http://hydrogen-music.org/feeds/drumkit_list.php" );
 	}
 
 	repositoryCombo->clear();
@@ -374,16 +374,16 @@ void SoundLibraryImportDialog::updateSoundLibraryList()
 
 	m_pDrumkitsItem = new QTreeWidgetItem( m_pDrumkitTree );
 	m_pDrumkitsItem->setText( 0, tr( "Drumkits" ) );
-	m_pDrumkitTree->setItemExpanded( m_pDrumkitsItem, true );
+	m_pDrumkitsItem->setExpanded( true );
 
 
 	m_pSongItem = new QTreeWidgetItem( m_pDrumkitTree );
 	m_pSongItem->setText( 0, tr( "Songs" ) );
-	m_pDrumkitTree->setItemExpanded( m_pSongItem, true );
+	m_pSongItem->setExpanded( true );
 
 	m_pPatternItem = new QTreeWidgetItem( m_pDrumkitTree );
 	m_pPatternItem->setText( 0, tr( "Patterns" ) );
-	m_pDrumkitTree->setItemExpanded( m_pPatternItem, true );
+	m_pPatternItem->setExpanded( true );
 
 	for ( uint i = 0; i < m_soundLibraryList.size(); ++i ) {
 		QString sLibraryName = m_soundLibraryList[ i ].getName();

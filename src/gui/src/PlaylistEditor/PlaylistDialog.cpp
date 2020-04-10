@@ -73,16 +73,16 @@ PlaylistDialog::PlaylistDialog ( QWidget* pParent )
 	// Playlist menu
 	QMenu *m_pPlaylistMenu = m_pMenubar->addMenu( tr( "&Playlist" ) );
 
-	m_pPlaylistMenu->addAction( tr( "Add song to Play&list" ), this, SLOT( addSong() ), QKeySequence( "" ) );
-	m_pPlaylistMenu->addAction( tr( "Add &current song to Playlist" ), this, SLOT( addCurrentSong() ), QKeySequence( "" ) );
+	m_pPlaylistMenu->addAction( tr( "Add song to Play&list" ), this, SLOT( addSong() ), QKeySequence( "Ctrl+A" ) );
+	m_pPlaylistMenu->addAction( tr( "Add &current song to Playlist" ), this, SLOT( addCurrentSong() ), QKeySequence( "Ctrl+Alt+A" ) );
 	m_pPlaylistMenu->addSeparator();				// -----
-	m_pPlaylistMenu->addAction( tr( "&Remove selected song from Playlist" ), this, SLOT( removeFromList() ), QKeySequence( "" ) );
-	m_pPlaylistMenu->addAction( tr( "&New Playlist" ), this, SLOT( clearPlaylist() ), QKeySequence( "" ) );
+	m_pPlaylistMenu->addAction( tr( "&Remove selected song from Playlist" ), this, SLOT( removeFromList() ), QKeySequence::Delete );
+	m_pPlaylistMenu->addAction( tr( "&New Playlist" ), this, SLOT( clearPlaylist() ), QKeySequence( "Ctrl+N" ) );
 	m_pPlaylistMenu->addSeparator();
-	m_pPlaylistMenu->addAction( tr( "&Open Playlist" ), this, SLOT( loadList() ), QKeySequence( "" ) );
+	m_pPlaylistMenu->addAction( tr( "&Open Playlist" ), this, SLOT( loadList() ), QKeySequence( "Ctrl+O" ) );
 	m_pPlaylistMenu->addSeparator();
-	m_pPlaylistMenu->addAction( tr( "&Save Playlist" ), this, SLOT( saveList() ), QKeySequence( "" ) );
-	m_pPlaylistMenu->addAction( tr( "Save Playlist &as" ), this, SLOT( saveListAs() ), QKeySequence( "" ) );
+	m_pPlaylistMenu->addAction( tr( "&Save Playlist" ), this, SLOT( saveList() ), QKeySequence( "Ctrl+S" ) );
+	m_pPlaylistMenu->addAction( tr( "Save Playlist &as" ), this, SLOT( saveListAs() ), QKeySequence( "Ctrl+Shift+S" ) );
 
 #ifdef WIN32
 	//no scripts under windows
@@ -249,9 +249,9 @@ PlaylistDialog::PlaylistDialog ( QWidget* pParent )
 		}
 
 		QTreeWidgetItem* m_pPlaylistItem = m_pPlaylistTree->topLevelItem ( aselected );
-		m_pPlaylistItem->setBackgroundColor ( 0, QColor( 50, 50, 50) );
-		m_pPlaylistItem->setBackgroundColor ( 1, QColor( 50, 50, 50) );
-		m_pPlaylistItem->setBackgroundColor ( 2, QColor( 50, 50, 50) );
+		m_pPlaylistItem->setBackground( 0, QColor( 50, 50, 50) );
+		m_pPlaylistItem->setBackground( 1, QColor( 50, 50, 50) );
+		m_pPlaylistItem->setBackground( 2, QColor( 50, 50, 50) );
 	}
 
 	timer = new QTimer( this );
@@ -919,9 +919,9 @@ void PlaylistDialog::updateActiveSongNumber()
 
 	QTreeWidgetItem* pPlaylistItem = m_pPlaylistTree->topLevelItem ( selected );
 	if ( pPlaylistItem != nullptr ){
-		pPlaylistItem->setBackgroundColor ( 0, QColor( 50, 50, 50) );
-		pPlaylistItem->setBackgroundColor ( 1, QColor( 50, 50, 50) );
-		pPlaylistItem->setBackgroundColor ( 2, QColor( 50, 50, 50) );
+		pPlaylistItem->setBackground( 0, QColor( 50, 50, 50) );
+		pPlaylistItem->setBackground( 1, QColor( 50, 50, 50) );
+		pPlaylistItem->setBackground( 2, QColor( 50, 50, 50) );
 	}
 }
 

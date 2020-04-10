@@ -11,7 +11,6 @@ IF(COMMAND CMAKE_POLICY)
 	CMAKE_POLICY(SET CMP0003 NEW)   # add_library
 	CMAKE_POLICY(SET CMP0006 NEW)   # bundle destination property
 ENDIF()
-
 #
 # PROJECT INFO
 #
@@ -19,7 +18,7 @@ PROJECT(hydrogen)
 SET(VERSION_MAJOR "1")
 SET(VERSION_MINOR "0")
 SET(VERSION_PATCH "0")
-#SET(VERSION_SUFFIX "beta1")
+#SET(VERSION_SUFFIX "beta2")
 
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
@@ -91,6 +90,16 @@ ELSE()
     SET(CMAKE_BUILD_TYPE Release)
     SET(H2CORE_HAVE_DEBUG FALSE)
 ENDIF()
+
+OPTION(WANT_CLANG_TIDY "Use clang-tidy to check the sourcecode" OFF)
+IF(WANT_CLANG_TIDY)
+	find_program(CLANG_TIDY_CMD NAMES clang-tidy)
+	IF(CLANG_TIDY_CMD)
+		#use config from .clang-tidy
+		SET(CMAKE_CXX_CLANG_TIDY clang-tidy)
+	ENDIF()
+ENDIF()
+
 
 IF(WANT_BUNDLE)
     SET(H2CORE_HAVE_BUNDLE TRUE)
@@ -367,7 +376,7 @@ ENDIF()
 IF(NOT MINGW AND NOT APPLE)
 	INSTALL(FILES ${CMAKE_SOURCE_DIR}/linux/org.hydrogenmusic.Hydrogen.appdata.xml DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/appdata")
 	INSTALL(FILES ${CMAKE_SOURCE_DIR}/linux/org.hydrogenmusic.Hydrogen.desktop DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications")
-	INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/img/gray/h2-icon.svg DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/icons/hicolor/scalable/apps/org.hydrogenmusic.Hydrogen.svg")
+	INSTALL(FILES ${CMAKE_SOURCE_DIR}/data/img/gray/h2-icon.svg DESTINATION "${CMAKE_INSTALL_FULL_DATAROOTDIR}/icons/hicolor/scalable/apps" RENAME "org.hydrogenmusic.Hydrogen.svg")
 	INSTALL(FILES ${CMAKE_SOURCE_DIR}/linux/hydrogen.1 DESTINATION "${CMAKE_INSTALL_MANDIR}/man1")
 ENDIF()
 
