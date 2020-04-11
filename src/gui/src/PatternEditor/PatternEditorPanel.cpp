@@ -261,7 +261,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	// Ruler ScrollView
 	m_pRulerScrollView = new QScrollArea( nullptr );
 	m_pRulerScrollView->setObjectName( "RulerScrollView" );
-	m_pRulerScrollView->setFocusPolicy(Qt::NoFocus);
+	m_pRulerScrollView->setFocusPolicy(Qt::ClickFocus );
 	m_pRulerScrollView->setFrameShape( QFrame::NoFrame );
 	m_pRulerScrollView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 	m_pRulerScrollView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
@@ -289,9 +289,13 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	m_pDrumPatternEditor = new DrumPatternEditor( m_pEditorScrollView->viewport(), this );
 
 	m_pEditorScrollView->setWidget( m_pDrumPatternEditor );
+	m_pEditorScrollView->setFocusProxy( m_pDrumPatternEditor );
+
+	m_pRulerScrollView->setFocusProxy( m_pEditorScrollView );
 
 	connect( m_pEditorScrollView->verticalScrollBar(), SIGNAL( valueChanged(int) ), this, SLOT( on_patternEditorVScroll(int) ) );
 	connect( m_pEditorScrollView->horizontalScrollBar(), SIGNAL( valueChanged(int) ), this, SLOT( on_patternEditorHScroll(int) ) );
+
 
 
 //PianoRollEditor
@@ -306,6 +310,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	connect( m_pPianoRollScrollView->horizontalScrollBar(), SIGNAL( valueChanged(int) ), this, SLOT( on_patternEditorHScroll(int) ) );
 
 	m_pPianoRollScrollView->hide();
+	m_pPianoRollScrollView->setFocusProxy( m_pPianoRollEditor );
 
 //~ EDITOR
 
@@ -318,7 +323,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	// Instrument list scrollview
 	m_pInstrListScrollView = new QScrollArea( nullptr );
 	m_pInstrListScrollView->setObjectName( "InstrListScrollView" );
-	m_pInstrListScrollView->setFocusPolicy(Qt::NoFocus);
+	m_pInstrListScrollView->setFocusPolicy(Qt::ClickFocus);
 	m_pInstrListScrollView->setFrameShape( QFrame::NoFrame );
 	m_pInstrListScrollView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 	m_pInstrListScrollView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
@@ -329,6 +334,9 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 	m_pInstrListScrollView->setFixedWidth( m_pInstrumentList->width() );
 
 	connect( m_pInstrListScrollView->verticalScrollBar(), SIGNAL( valueChanged(int) ), this, SLOT( on_patternEditorVScroll(int) ) );
+
+	m_pInstrListScrollView->setFocusProxy( m_pEditorScrollView );
+
 //~ INSTRUMENT LIST
 
 
@@ -758,6 +766,10 @@ void PatternEditorPanel::showDrumEditorBtnClick(Button *ref)
 		m_pPianoRollScrollView->hide();
 		m_pEditorScrollView->show();
 		m_pInstrListScrollView->show();
+
+		m_pEditorScrollView->setFocus();
+		m_pRulerScrollView->setFocusProxy( m_pEditorScrollView );
+		m_pInstrListScrollView->setFocusProxy( m_pEditorScrollView );
 	
 		m_pDrumPatternEditor->selectedInstrumentChangedEvent(); // force an update
 	
@@ -770,9 +782,13 @@ void PatternEditorPanel::showDrumEditorBtnClick(Button *ref)
 		__show_drum_btn->setToolTip( tr( "Show drum editor" ) );
 		m_pPianoRollScrollView->show();
 		m_pPianoRollScrollView->verticalScrollBar()->setValue( 250 );
-		m_pEditorScrollView->show();
+		m_pEditorScrollView->hide();
 		m_pInstrListScrollView->show();
-	
+
+		m_pPianoRollScrollView->setFocus();
+		m_pRulerScrollView->setFocusProxy( m_pPianoRollScrollView );
+		m_pInstrListScrollView->setFocusProxy( m_pPianoRollScrollView );
+
 		m_pPianoRollEditor->selectedPatternChangedEvent();
 		m_pPianoRollEditor->updateEditor(); // force an update	
 		// force a re-sync of extern scrollbars
