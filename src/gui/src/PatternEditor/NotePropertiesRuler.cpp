@@ -126,6 +126,8 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 	column = column / width;
 	column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
 
+    m_pPatternEditorPanel->setCursorPosition(column);
+
 	int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
 	Song *pSong = (Hydrogen::get_instance())->getSong();
 
@@ -153,7 +155,7 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 			sprintf( valueChar, "%#.2f",  val);
 			( HydrogenApp::get_instance() )->setStatusBarMessage( QString("Set note velocity [%1]").arg( valueChar ), 2000 );
 		}
-                else if ( m_Mode == PAN && !pNote->get_note_off() ){
+        else if ( m_Mode == PAN && !pNote->get_note_off() ){
 			float pan_L, pan_R;
 
 			float val = (pNote->get_pan_r() - pNote->get_pan_l() + 0.5) + delta;
@@ -252,8 +254,6 @@ void NotePropertiesRuler::prepareUndoAction( int x )
 	column = column / width;
 	column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
 
-	m_pPatternEditorPanel->setCursorPosition(column);
-
 	int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
 	Song *pSong = (Hydrogen::get_instance())->getSong();
 
@@ -326,6 +326,8 @@ void NotePropertiesRuler::prepareUndoAction( int x )
 		column = (x_pos - 20) + (width / 2);
 		column = column / width;
 		column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
+
+        m_pPatternEditorPanel->setCursorPosition(column);
 
 		bool columnChange = false;
 		if( __columnCheckOnXmouseMouve != column ){
@@ -469,32 +471,131 @@ void NotePropertiesRuler::mouseReleaseEvent(QMouseEvent *ev)
 
 void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 {
-	switch (ev->key())
+  switch (ev->key())
 	{
 	case Qt::Key_Right:
-		if (ev->modifiers() & Qt::ControlModifier)
-			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
-		else
-			m_pPatternEditorPanel->moveCursorRight();
-		updateEditor();
-		ev->accept();
-		break;
+      if (ev->modifiers() & Qt::ControlModifier)
+        m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
+      else
+        m_pPatternEditorPanel->moveCursorRight();
+      updateEditor();
+      ev->accept();
+      break;
 	case Qt::Key_Left:
-		if (ev->modifiers() & Qt::ControlModifier)
-			m_pPatternEditorPanel->setCursorPosition(0);
-		else
-			m_pPatternEditorPanel->moveCursorLeft();
-		updateEditor();
-		ev->accept();
-		break;
+      if (ev->modifiers() & Qt::ControlModifier)
+        m_pPatternEditorPanel->setCursorPosition(0);
+      else
+        m_pPatternEditorPanel->moveCursorLeft();
+      updateEditor();
+      ev->accept();
+      break;
+
 	case Qt::Key_Up:
-		break;
 	case Qt::Key_Down:
-		break;
+      {
+        // Value adjustments
+        int column = m_pPatternEditorPanel->getCursorPosition();
+        int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
+        Song *pSong = (Hydrogen::get_instance())->getSong();
+        double delta;
+
+        switch (ev->key())
+          {
+          case Qt::Key_Up:
+            delta = 0.1;
+            break;
+          case Qt::Key_Down:
+            delta = -0.1;
+            break;
+          default:
+            break;
+          }
+
+        prepareUndoAction(column);
+
+        const Pattern::notes_t* notes = m_pPattern->get_notes();
+        FOREACH_NOTE_CST_IT_BOUND(notes,it,column) {
+          Note *pNote = it->second;
+          assert( pNote );
+          assert( (int)pNote->get_position() == column );
+          if ( pNote->get_instrument() != pSong->get_instrument_list()->get( nSelectedInstrument ) )
+            continue;
+
+          switch (m_Mode) {
+          case VELOCITY:
+            if ( !pNote->get_note_off() )
+              {
+                __velocity = pNote->get_velocity() + delta;
+                if (__velocity > VELOCITY_MAX)
+                  __velocity = VELOCITY_MAX;
+                else if (__velocity < VELOCITY_MIN)
+                  __velocity = VELOCITY_MIN;
+                pNote->set_velocity( __velocity );
+              }
+            break;
+          case PAN:
+            if ( !pNote->get_note_off() )
+              {
+                double val = (pNote->get_pan_r() - pNote->get_pan_l() + 0.5) + delta;
+                if ( val > PAN_MAX ) {
+                  __pan_L = 2*PAN_MAX - val;
+                  __pan_R = PAN_MAX;
+                } else {
+                  __pan_L = PAN_MAX;
+                  __pan_R = val;
+                }
+                pNote->set_pan_l( 2*PAN_MAX - val );
+                pNote->set_pan_r( val );
+                break;
+              }
+          case LEADLAG:
+            {
+              __leadLag = pNote->get_lead_lag() - delta;
+              if (__leadLag < LEAD_LAG_MIN)
+                __leadLag = LEAD_LAG_MIN;
+              else if (__leadLag > LEAD_LAG_MAX)
+                __leadLag = LEAD_LAG_MAX;
+              pNote->set_lead_lag( __leadLag );
+              break;
+            }
+          case PROBABILITY:
+            if ( !pNote->get_note_off() )
+              {
+                __probability = pNote->get_probability() + delta;
+                if (__probability > 1.0)
+                  __probability = 1.0;
+                if (__probability < 0.0)
+                  __probability = 0.0;
+                pNote->set_probability( __probability );
+              }
+            break;
+          case NOTEKEY:
+            // XXX
+            break;
+          }
+        }
+        addUndoAction();
+        updateEditor();
+        ev->accept();
+        break;
+      }
 	default:
-		ev->ignore();
+      ev->ignore();
 	}
 }
+
+
+void NotePropertiesRuler::focusInEvent( QFocusEvent * ev)
+{
+  updateEditor();
+}
+
+
+void NotePropertiesRuler::focusOutEvent( QFocusEvent * ev)
+{
+  updateEditor();
+}
+
 
 void NotePropertiesRuler::addUndoAction()
 {
