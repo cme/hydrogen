@@ -98,7 +98,7 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 
 	if (m_pPattern == nullptr) return;
 
-	pressAction( ev->x(), ev->y() ); //get all old values
+	prepareUndoAction( ev->x() ); //get all old values
 
 	float delta;
 	if (ev->modifiers() == Qt::ControlModifier) {
@@ -209,7 +209,7 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 
 		}
 		pSong->set_is_modified( true );
-		startUndoAction();
+		addUndoAction();
 		updateEditor();
 		break;
 	}
@@ -219,11 +219,13 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 void NotePropertiesRuler::mousePressEvent(QMouseEvent *ev)
 {
 	m_bMouseIsPressed = true;
-	pressAction( ev->x(), ev->y() );
+	prepareUndoAction( ev->x() );
 	mouseMoveEvent( ev );
 }
 
-void NotePropertiesRuler::pressAction( int x, int y)
+
+// Preserve current note properties at position x for use in later UndoAction.
+void NotePropertiesRuler::prepareUndoAction( int x )
 {
 
 	//create all needed old vars for undo
@@ -249,15 +251,6 @@ void NotePropertiesRuler::pressAction( int x, int y)
 	column = (x_pos - 20) + (width / 2);
 	column = column / width;
 	column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
-	float val = height() - y;
-	if (val > height()) {
-		val = height();
-	}
-	else if (val < 0.0) {
-		val = 0.0;
-	}
-	int keyval = val;
-	val = val / height();
 
 	m_pPatternEditorPanel->setCursorPosition(column);
 
@@ -453,7 +446,7 @@ void NotePropertiesRuler::pressAction( int x, int y)
 	
 			if( columnChange ){
 				__columnCheckOnXmouseMouve = column;
-				startUndoAction();
+				addUndoAction();
 				return;
 			}
 				
@@ -471,7 +464,7 @@ void NotePropertiesRuler::pressAction( int x, int y)
 void NotePropertiesRuler::mouseReleaseEvent(QMouseEvent *ev)
 {
 	m_bMouseIsPressed = false;
-	startUndoAction();
+	addUndoAction();
 }
 
 void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
@@ -503,7 +496,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 	}
 }
 
-void NotePropertiesRuler::startUndoAction()
+void NotePropertiesRuler::addUndoAction()
 {
 
 	SE_editNotePropertiesVolumeAction *action = new SE_editNotePropertiesVolumeAction( __undoColumn,
