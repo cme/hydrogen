@@ -85,6 +85,7 @@ class NotePropertiesRuler : public QWidget, public H2Core::Object, public EventL
 		void mouseMoveEvent(QMouseEvent *ev);
 		void wheelEvent(QWheelEvent *ev);
 		void mouseReleaseEvent(QMouseEvent *ev);
+		void keyPressEvent( QKeyEvent *ev );
 		void startUndoAction();
 		void pressAction( int x, int y);
 

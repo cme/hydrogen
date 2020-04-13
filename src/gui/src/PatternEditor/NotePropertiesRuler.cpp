@@ -80,6 +80,8 @@ NotePropertiesRuler::NotePropertiesRuler( QWidget *parent, PatternEditorPanel *p
 
 	HydrogenApp::get_instance()->addEventListener( this );
 	m_bMouseIsPressed = false;
+
+	setFocusPolicy(Qt::StrongFocus);
 }
 
 
@@ -256,6 +258,8 @@ void NotePropertiesRuler::pressAction( int x, int y)
 	}
 	int keyval = val;
 	val = val / height();
+
+	m_pPatternEditorPanel->setCursorPosition(column);
 
 	int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
 	Song *pSong = (Hydrogen::get_instance())->getSong();
@@ -468,6 +472,35 @@ void NotePropertiesRuler::mouseReleaseEvent(QMouseEvent *ev)
 {
 	m_bMouseIsPressed = false;
 	startUndoAction();
+}
+
+void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
+{
+	switch (ev->key())
+	{
+	case Qt::Key_Right:
+		if (ev->modifiers() & Qt::ControlModifier)
+			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
+		else
+			m_pPatternEditorPanel->moveCursorRight();
+		updateEditor();
+		ev->accept();
+		break;
+	case Qt::Key_Left:
+		if (ev->modifiers() & Qt::ControlModifier)
+			m_pPatternEditorPanel->setCursorPosition(0);
+		else
+			m_pPatternEditorPanel->moveCursorLeft();
+		updateEditor();
+		ev->accept();
+		break;
+	case Qt::Key_Up:
+		break;
+	case Qt::Key_Down:
+		break;
+	default:
+		ev->ignore();
+	}
 }
 
 void NotePropertiesRuler::startUndoAction()
@@ -1240,6 +1273,17 @@ void NotePropertiesRuler::updateEditor()
 	}
 	else if ( m_Mode == NOTEKEY ) {
 		createNoteKeyBackground( m_pBackground );
+	}
+
+	if (hasFocus())
+	{
+		QPainter p( m_pBackground );
+
+		uint x = 20 + m_pPatternEditorPanel->getCursorPosition() * m_nGridWidth;
+
+		p.setPen(QColor(0,0,0));
+		p.setRenderHint( QPainter::Antialiasing );
+		p.drawRoundedRect(QRect(x-m_nGridWidth*3, 0+1, m_nGridWidth*6, height()-2), 4, 4);
 	}
 
 	// redraw all
