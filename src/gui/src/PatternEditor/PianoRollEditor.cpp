@@ -953,24 +953,28 @@ void PianoRollEditor::keyPressEvent( QKeyEvent * ev )
 			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
 		else
 			m_pPatternEditorPanel->moveCursorRight();
+		m_pPatternEditorPanel->ensureCursorVisible();
 		break;
 	case Qt::Key_Left:
 		if (ev->modifiers() & Qt::ControlModifier)
 			m_pPatternEditorPanel->setCursorPosition(0);
 		else
 			m_pPatternEditorPanel->moveCursorLeft();
+		m_pPatternEditorPanel->ensureCursorVisible();
 		break;
 	case Qt::Key_Down:
 		if (ev->modifiers() & Qt::ControlModifier)
 			m_nCursorNote = 1;
 		else if (m_nCursorNote > 0)
 			m_nCursorNote--;
+		m_pPatternEditorPanel->ensureCursorVisible();
 		break;
 	case Qt::Key_Up:
 		if (ev->modifiers() & Qt::ControlModifier)
 			m_nCursorNote = 12 * m_nOctaves;
 		else if (m_nCursorNote < 12 * m_nOctaves)
 			m_nCursorNote += 1;
+		m_pPatternEditorPanel->ensureCursorVisible();
 		break;
 	case Qt::Key_Return:
 	case Qt::Key_Enter:
@@ -999,7 +1003,8 @@ void PianoRollEditor::keyPressEvent( QKeyEvent * ev )
 void PianoRollEditor::focusInEvent( QFocusEvent * ev )
 {
 	UNUSED( ev );
-	m_pPatternEditorPanel->ensureCursorVisible();
+	if ( ev->reason() != Qt::MouseFocusReason )
+		m_pPatternEditorPanel->ensureCursorVisible();
 	updateEditor();
 }
 

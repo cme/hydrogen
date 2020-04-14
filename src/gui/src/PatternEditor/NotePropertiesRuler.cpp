@@ -478,6 +478,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
         m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
       else
         m_pPatternEditorPanel->moveCursorRight();
+	  m_pPatternEditorPanel->ensureCursorVisible();
       updateEditor();
       ev->accept();
       break;
@@ -486,6 +487,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
         m_pPatternEditorPanel->setCursorPosition(0);
       else
         m_pPatternEditorPanel->moveCursorLeft();
+	  m_pPatternEditorPanel->ensureCursorVisible();
       updateEditor();
       ev->accept();
       break;
@@ -511,7 +513,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
             break;
           }
 
-        prepareUndoAction(column);
+        prepareUndoAction(20 + column * m_nGridWidth);
 
         const Pattern::notes_t* notes = m_pPattern->get_notes();
         FOREACH_NOTE_CST_IT_BOUND(notes,it,column) {
@@ -618,7 +620,6 @@ void NotePropertiesRuler::addUndoAction()
 											   __oldNoteKeyVal,
 											   __octaveKeyVal,
 											   __oldOctaveKeyVal );
-
 	HydrogenApp::get_instance()->m_pUndoStack->push( action );
 }
 

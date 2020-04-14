@@ -1053,8 +1053,6 @@ void PatternEditorPanel::setCursorPosition(int nCursorPosition)
 		m_nCursorPosition = m_pPattern->get_length() - m_nCursorIncrement;
 	else
 		m_nCursorPosition = nCursorPosition;
-
-	ensureCursorVisible();
 }
 
 int PatternEditorPanel::moveCursorLeft()

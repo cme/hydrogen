@@ -467,6 +467,7 @@ void DrumPatternEditor::keyPressEvent( QKeyEvent *ev )
 			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
 		else
 			m_pPatternEditorPanel->moveCursorRight();
+                m_pPatternEditorPanel->ensureCursorVisible();
 		update( 0, 0, width(), height() );
 		ev->accept();
 		break;
@@ -475,6 +476,7 @@ void DrumPatternEditor::keyPressEvent( QKeyEvent *ev )
 			m_pPatternEditorPanel->setCursorPosition(0);
 		else
 			m_pPatternEditorPanel->moveCursorLeft();
+		m_pPatternEditorPanel->ensureCursorVisible();
 		update( 0, 0, width(), height() );
 		ev->accept();
 		break;
@@ -878,7 +880,8 @@ void DrumPatternEditor::hideEvent ( QHideEvent *ev )
 void DrumPatternEditor::focusInEvent ( QFocusEvent *ev )
 {
 	UNUSED( ev );
-	m_pPatternEditorPanel->ensureCursorVisible();
+	if (ev->reason() != Qt::MouseFocusReason)
+		m_pPatternEditorPanel->ensureCursorVisible();
 	updateEditor();
 }
 
