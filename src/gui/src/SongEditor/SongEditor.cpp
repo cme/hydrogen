@@ -95,6 +95,9 @@ SongEditor::SongEditor( QWidget *parent )
 	m_nGridWidth = 16;
 	m_nGridHeight = 18;
 
+	m_nCursorRow = 1;
+	m_nCursorColumn = 1;
+
 	Preferences *pref = Preferences::get_instance();
 	m_nMaxPatternSequence = pref->getMaxBars();
 	int m_nInitialWidth = 10 + m_nMaxPatternSequence * m_nGridWidth;
@@ -138,7 +141,8 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	PatternList *pPatternList = pEngine->getSong()->get_pattern_list();
 	vector<PatternList*>* pColumns = pEngine->getSong()->get_pattern_group_vector();
 
-	if ( ev->key() == Qt::Key_Delete ) {
+	switch ( ev->key() ) {
+	case Qt::Key_Delete:
 		if ( m_selectedCells.size() != 0 ) {
 			AudioEngine::get_instance()->lock( RIGHT_HERE );
 			// delete all selected cells
@@ -148,15 +152,37 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 				pColumn->del(pPatternList->get( cell.y() ) );
 			}
 			AudioEngine::get_instance()->unlock();
-
+			
 			m_selectedCells.clear();
 			m_bSequenceChanged = true;
 			update();
 		}
+		break;
+	case Qt::Key_Left:
+		if ( m_nCursorColumn > 0 )
+			m_nCursorColumn -= 1;
+		update();
+		break;
+	case Qt::Key_Right:
+		if ( m_nCursorColumn < 100 ) // XXXX ?
+			m_nCursorColumn += 1;
+		update();
+		break;
+	case Qt::Key_Up:
+		if ( m_nCursorRow > 0 )
+			m_nCursorRow -= 1;
+		update();
+		break;
+	case Qt::Key_Down:
+		if ( m_nCursorRow < 100 ) // XXXX ?
+			m_nCursorRow += 1;
+		update();
+		break;
+	default:
+		ev->ignore();
 		return;
 	}
-
-	ev->ignore();
+	ev->accept();
 }
 
 
@@ -631,6 +657,14 @@ void SongEditor::paintEvent( QPaintEvent *ev )
 
 	QPainter painter(this);
 	painter.drawPixmap( ev->rect(), *m_pSequencePixmap, ev->rect() );
+
+	if (hasFocus()) {
+		painter.setPen( Qt::black );
+		painter.setRenderHint( QPainter::Antialiasing );
+		painter.drawRoundedRect( QRect( 10 + m_nCursorColumn * m_nGridWidth -2,
+										m_nCursorRow * m_nGridHeight,
+										m_nGridWidth +5, m_nGridHeight+1 ), 4, 4 );
+	}
 
 	if ( m_bShowLasso ) {
 		QPen pen( Qt::white );

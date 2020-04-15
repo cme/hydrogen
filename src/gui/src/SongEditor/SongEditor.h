@@ -97,11 +97,14 @@ class SongEditor : public QWidget, public H2Core::Object
 
 		std::vector<QPoint> m_selectedCells;
 		std::vector<QPoint> m_movingCells;
-                std::vector<QPoint> m_existingCells;
+		std::vector<QPoint> m_existingCells;
 
 		QPoint m_clickPoint;	// Usato come riferimento per le operazioni di spostamento
 		bool m_bShowLasso;
 		QRect m_lasso;
+
+		int m_nCursorRow;
+		int m_nCursorColumn;
 
 		virtual void mousePressEvent(QMouseEvent *ev);
 		virtual void mouseReleaseEvent(QMouseEvent *ev);
