@@ -167,7 +167,7 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 		update();
 		break;
 	case Qt::Key_Right:
-		if ( m_nCursorColumn < pColumns->size()-1 )
+		if ( m_nCursorColumn < m_nMaxPatternSequence -1 )
 			m_nCursorColumn += 1;
 		update();
 		break;

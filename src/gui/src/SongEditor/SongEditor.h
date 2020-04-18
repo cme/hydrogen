@@ -82,8 +82,8 @@ class SongEditor : public QWidget, public H2Core::Object
                 void movePatternCellAction( std::vector<QPoint> movingCells, std::vector<QPoint> selectedCells, std::vector<QPoint> m_existingCells, bool bIsCtrlPressed, bool undo);
 
 	private:
-                //holds a list for active patterns for each pattern
-                QList<SongEditorGridRepresentationItem*> gridRepresentation;
+		//holds a list for active patterns for each pattern
+		QList<SongEditorGridRepresentationItem*> gridRepresentation;
 
 		unsigned m_nGridHeight;
 		unsigned m_nGridWidth;
