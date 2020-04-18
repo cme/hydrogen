@@ -158,13 +158,16 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 			update();
 		}
 		break;
+		// TODO: Keep cursor visible
+		// TODO: Enter actions
+		// TODO: Control / start / end keys
 	case Qt::Key_Left:
 		if ( m_nCursorColumn > 0 )
 			m_nCursorColumn -= 1;
 		update();
 		break;
 	case Qt::Key_Right:
-		if ( m_nCursorColumn < 100 ) // XXXX ?
+		if ( m_nCursorColumn < pColumns->size()-1 )
 			m_nCursorColumn += 1;
 		update();
 		break;
@@ -174,7 +177,7 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 		update();
 		break;
 	case Qt::Key_Down:
-		if ( m_nCursorRow < 100 ) // XXXX ?
+		if ( m_nCursorRow < pPatternList->size()-1 )
 			m_nCursorRow += 1;
 		update();
 		break;
