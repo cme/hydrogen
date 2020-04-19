@@ -662,9 +662,13 @@ void SongEditor::paintEvent( QPaintEvent *ev )
 	QPainter painter(this);
 	painter.drawPixmap( ev->rect(), *m_pSequencePixmap, ev->rect() );
 
+	// Draw cursor
 	if (hasFocus()) {
 		painter.setPen( Qt::black );
 		painter.setRenderHint( QPainter::Antialiasing );
+		// Aim to leave a visible gap between the border of the
+		// pattern cell, and the cursor line, for consistency and
+		// visibility.
 		painter.drawRoundedRect( QRect( 10 + m_nCursorColumn * m_nGridWidth -2,
 										m_nCursorRow * m_nGridHeight,
 										m_nGridWidth +5, m_nGridHeight+1 ), 4, 4 );
