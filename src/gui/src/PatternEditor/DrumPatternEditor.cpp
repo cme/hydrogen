@@ -461,58 +461,42 @@ void DrumPatternEditor::mouseMoveEvent(QMouseEvent *ev)
 void DrumPatternEditor::keyPressEvent( QKeyEvent *ev )
 {
 	Hydrogen *pH2 = Hydrogen::get_instance();
-	switch (ev->key()) {
-	case Qt::Key_Right:
-		if (ev->modifiers() & Qt::ControlModifier)
-			m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
-		else
-			m_pPatternEditorPanel->moveCursorRight();
-                m_pPatternEditorPanel->ensureCursorVisible();
-		update( 0, 0, width(), height() );
-		ev->accept();
-		break;
-	case Qt::Key_Left:
-		if (ev->modifiers() & Qt::ControlModifier)
-			m_pPatternEditorPanel->setCursorPosition(0);
-		else
-			m_pPatternEditorPanel->moveCursorLeft();
-		m_pPatternEditorPanel->ensureCursorVisible();
-		update( 0, 0, width(), height() );
-		ev->accept();
-		break;
-	case Qt::Key_Down:
-		{
-			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
-			int nMaxInstrument = pH2->getSong()->get_instrument_list()->size();
-			if (ev->modifiers() & Qt::ControlModifier)
-				pH2->setSelectedInstrumentNumber(nMaxInstrument-1);
-			else if (nSelectedInstrument + 1 < nMaxInstrument)
-				pH2->setSelectedInstrumentNumber(nSelectedInstrument + 1);
-			m_pPatternEditorPanel->ensureCursorVisible();
-		}
-		ev->accept();
-		break;
-	case Qt::Key_Up:
-		{
-			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
-			if (ev->modifiers() & Qt::ControlModifier)
-				pH2->setSelectedInstrumentNumber(0);
-			else if (nSelectedInstrument > 0)
-				pH2->setSelectedInstrumentNumber(nSelectedInstrument - 1);
-			m_pPatternEditorPanel->ensureCursorVisible();
-		}
-		ev->accept();
-		break;
-	case Qt::Key_Return:
-	case Qt::Key_Enter:
-		{
-			int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
-			addOrRemoveNote(m_pPatternEditorPanel->getCursorPosition(), -1, nSelectedInstrument);
-		}
-		break;
-	default:
+	int nSelectedInstrument = pH2->getSelectedInstrumentNumber();
+	int nMaxInstrument = pH2->getSong()->get_instrument_list()->size();
+
+	if ( ev->matches( QKeySequence::MoveToNextChar ) )
+		// ->
+		m_pPatternEditorPanel->moveCursorRight();
+	else if ( ev->matches( QKeySequence::MoveToEndOfLine ) )
+		// -->|
+		m_pPatternEditorPanel->setCursorPosition( m_pPattern->get_length() );
+	else if ( ev->matches( QKeySequence::MoveToPreviousChar ) )
+		// <-
+		m_pPatternEditorPanel->moveCursorLeft();
+	else if ( ev->matches( QKeySequence::MoveToStartOfLine ) )
+		// |<--
+		m_pPatternEditorPanel->setCursorPosition( 0 );
+	else if ( ev->matches( QKeySequence::MoveToNextLine ) ) {
+		if ( nSelectedInstrument + 1 < nMaxInstrument )
+			pH2->setSelectedInstrumentNumber(nSelectedInstrument + 1);
+	} else if ( ev->matches( QKeySequence::MoveToEndOfDocument ) )
+		pH2->setSelectedInstrumentNumber( nMaxInstrument-1 );
+	else if ( ev->matches( QKeySequence::MoveToPreviousLine ) ) {
+		if (nSelectedInstrument > 0)
+			pH2->setSelectedInstrumentNumber( nSelectedInstrument - 1 );
+	} else if ( ev->matches( QKeySequence::MoveToStartOfDocument ) )
+		pH2->setSelectedInstrumentNumber(0);
+	else if ( ev->key() == Qt::Key_Enter || ev->key() == Qt::Key_Return )
+		addOrRemoveNote( m_pPatternEditorPanel->getCursorPosition(), -1, nSelectedInstrument );
+	else {
 		ev->ignore();
+		return;
 	}
+
+	m_pPatternEditorPanel->ensureCursorVisible();
+	update( 0, 0, width(), height() );
+	ev->accept();
+
 }
 
 
