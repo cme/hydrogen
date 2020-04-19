@@ -141,8 +141,12 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	PatternList *pPatternList = pEngine->getSong()->get_pattern_list();
 	vector<PatternList*>* pColumns = pEngine->getSong()->get_pattern_group_vector();
 
-	switch ( ev->key() ) {
-	case Qt::Key_Delete:
+	// TODO: Keep cursor visible
+	// TODO: Enter actions
+	// TODO: change key codes to sequences
+	// TODO: Keep cursor visible when window moves
+
+	if ( ev->matches( QKeySequence::Delete ) ) {
 		if ( m_selectedCells.size() != 0 ) {
 			AudioEngine::get_instance()->lock( RIGHT_HERE );
 			// delete all selected cells
@@ -152,40 +156,36 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 				pColumn->del(pPatternList->get( cell.y() ) );
 			}
 			AudioEngine::get_instance()->unlock();
-			
+
 			m_selectedCells.clear();
 			m_bSequenceChanged = true;
-			update();
 		}
-		break;
-		// TODO: Keep cursor visible
-		// TODO: Enter actions
-		// TODO: change key codes to sequences
-		// TODO: Keep cursor visible when window moves
-	case Qt::Key_Left:
-		if ( m_nCursorColumn > 0 )
-			m_nCursorColumn -= 1;
-		update();
-		break;
-	case Qt::Key_Right:
+	} else if ( ev->matches( QKeySequence::MoveToNextChar ) ) {
 		if ( m_nCursorColumn < m_nMaxPatternSequence -1 )
 			m_nCursorColumn += 1;
-		update();
-		break;
-	case Qt::Key_Up:
-		if ( m_nCursorRow > 0 )
-			m_nCursorRow -= 1;
-		update();
-		break;
-	case Qt::Key_Down:
+	} else if ( ev->matches( QKeySequence::MoveToEndOfLine ) ) {
+		m_nCursorColumn = m_nMaxPatternSequence -1;
+	} else if ( ev->matches( QKeySequence::MoveToPreviousChar ) ) {
+		if ( m_nCursorColumn > 0 )
+			m_nCursorColumn -= 1;
+	} else if ( ev->matches( QKeySequence::MoveToStartOfLine ) ) {
+		m_nCursorColumn = 0;
+	} else if ( ev->matches( QKeySequence::MoveToNextLine ) ) {
 		if ( m_nCursorRow < pPatternList->size()-1 )
 			m_nCursorRow += 1;
-		update();
-		break;
-	default:
+	} else if ( ev->matches( QKeySequence::MoveToEndOfDocument ) ) {
+		m_nCursorRow = pPatternList->size() -1;
+	} else if ( ev->matches( QKeySequence::MoveToPreviousLine ) ) {
+		if ( m_nCursorRow > 0 )
+			m_nCursorRow -= 1;
+	} else if ( ev->matches( QKeySequence::MoveToStartOfDocument ) ) {
+		m_nCursorRow = 0;
+	} else {
 		ev->ignore();
 		return;
 	}
+
+	update();
 	ev->accept();
 }
 
