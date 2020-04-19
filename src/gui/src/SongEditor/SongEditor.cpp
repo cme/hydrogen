@@ -82,12 +82,13 @@ SongEditorGridRepresentationItem::SongEditorGridRepresentationItem(int x, int y,
 }
 
 
-SongEditor::SongEditor( QWidget *parent )
+SongEditor::SongEditor( QWidget *parent, QScrollArea *pScrollView )
  : QWidget( parent )
  , Object( __class_name )
  , m_bSequenceChanged( true )
  , m_bIsMoving( false )
  , m_bShowLasso( false )
+ , m_pScrollView( pScrollView )
 {
 	setAttribute(Qt::WA_NoBackground);
 	setFocusPolicy (Qt::StrongFocus);
@@ -141,7 +142,6 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	PatternList *pPatternList = pEngine->getSong()->get_pattern_list();
 	vector<PatternList*>* pColumns = pEngine->getSong()->get_pattern_group_vector();
 
-	// TODO: Keep cursor visible
 	// TODO: Enter actions
 	// TODO: change key codes to sequences
 	// TODO: Keep cursor visible when window moves
@@ -185,10 +185,11 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 		return;
 	}
 
+	m_pScrollView->ensureVisible( 10 + m_nCursorColumn * m_nGridWidth + m_nGridWidth / 2,
+								  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2);
 	update();
 	ev->accept();
 }
-
 
 
 void SongEditor::mousePressEvent( QMouseEvent *ev )

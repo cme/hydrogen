@@ -65,7 +65,7 @@ class SongEditor : public QWidget, public H2Core::Object
 	Q_OBJECT
 
 	public:
-		SongEditor( QWidget *parent );
+		SongEditor( QWidget *parent, QScrollArea *pScrollView );
 		~SongEditor();
 
 		void createBackground();
@@ -79,11 +79,13 @@ class SongEditor : public QWidget, public H2Core::Object
 		void deletePattern( int nColumn, int nRow, unsigned nColumnIndex);
 		void clearThePatternSequenceVector( QString filename );
 		void updateEditorandSetTrue();
-                void movePatternCellAction( std::vector<QPoint> movingCells, std::vector<QPoint> selectedCells, std::vector<QPoint> m_existingCells, bool bIsCtrlPressed, bool undo);
+		void movePatternCellAction( std::vector<QPoint> movingCells, std::vector<QPoint> selectedCells, std::vector<QPoint> m_existingCells, bool bIsCtrlPressed, bool undo);
 
 	private:
 		//holds a list for active patterns for each pattern
 		QList<SongEditorGridRepresentationItem*> gridRepresentation;
+
+		QScrollArea *m_pScrollView;
 
 		unsigned m_nGridHeight;
 		unsigned m_nGridWidth;
