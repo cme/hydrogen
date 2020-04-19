@@ -160,7 +160,8 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 		break;
 		// TODO: Keep cursor visible
 		// TODO: Enter actions
-		// TODO: Control / start / end keys
+		// TODO: change key codes to sequences
+		// TODO: Keep cursor visible when window moves
 	case Qt::Key_Left:
 		if ( m_nCursorColumn > 0 )
 			m_nCursorColumn -= 1;
