@@ -143,8 +143,6 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	vector<PatternList*>* pColumns = pEngine->getSong()->get_pattern_group_vector();
 
 	// TODO: Enter actions
-	// TODO: change key codes to sequences
-	// TODO: Keep cursor visible when window moves
 
 	if ( ev->matches( QKeySequence::Delete ) ) {
 		if ( m_selectedCells.size() != 0 ) {
@@ -180,6 +178,8 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 			m_nCursorRow -= 1;
 	} else if ( ev->matches( QKeySequence::MoveToStartOfDocument ) ) {
 		m_nCursorRow = 0;
+	} else if ( ev->key() == Qt::Key_Enter || ev->key() == Qt::Key_Return ) {
+		// XXX?
 	} else {
 		ev->ignore();
 		return;
@@ -201,6 +201,9 @@ void SongEditor::mousePressEvent( QMouseEvent *ev )
 	int nRow = ev->y() / m_nGridHeight;
 	int nColumn = ( (int)ev->x() - 10 ) / (int)m_nGridWidth;
 
+	m_nCursorRow = nRow;
+	m_nCursorColumn = nColumn;
+
 	if ( ev->modifiers() == Qt::ControlModifier ) {
 		INFOLOG( "[mousePressEvent] CTRL pressed!" );
 		m_bIsCtrlPressed = true;
@@ -212,7 +215,7 @@ void SongEditor::mousePressEvent( QMouseEvent *ev )
 	HydrogenApp* h2app = HydrogenApp::get_instance();
 	Hydrogen *pEngine = Hydrogen::get_instance();
 	Song *pSong = pEngine->getSong();
-		PatternList *pPatternList = pSong->get_pattern_list();
+	PatternList *pPatternList = pSong->get_pattern_list();
 
 	// don't lock the audio driver before checking that...
 	if ( nRow >= (int)pPatternList->size() || nRow < 0 || nColumn < 0 ) { return; }
