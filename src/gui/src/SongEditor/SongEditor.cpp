@@ -179,7 +179,35 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	} else if ( ev->matches( QKeySequence::MoveToStartOfDocument ) ) {
 		m_nCursorRow = 0;
 	} else if ( ev->key() == Qt::Key_Enter || ev->key() == Qt::Key_Return ) {
-		// XXX?
+
+		SongEditorActionMode actionMode = HydrogenApp::get_instance()->getSongEditorPanel()->getActionMode();
+		if ( actionMode == DRAW_ACTION ) {
+			// In DRAW mode, Enter's obvious action is the same as a
+			// click - insert or delete pattern.
+			HydrogenApp* h2app = HydrogenApp::get_instance();
+			Song *pSong = pEngine->getSong();
+			PatternList *pPatternList = pSong->get_pattern_list();
+			H2Core::Pattern *pPattern = pPatternList->get( m_nCursorRow );
+			vector<PatternList*> *pColumns = pSong->get_pattern_group_vector();
+			if ( m_nCursorColumn < (int)pColumns->size() ) {
+				PatternList *pColumn = ( *pColumns )[ m_nCursorColumn ];
+				unsigned nColumnIndex = pColumn->index( pPattern );
+
+				if ( nColumnIndex != -1 )
+					// Existing pattern. Delete.
+					h2app->m_pUndoStack->push( new SE_deletePatternAction( m_nCursorColumn, m_nCursorRow, nColumnIndex) );
+				else if ( m_nCursorColumn < (int)pColumns->size() )
+					// No existing pattern. Insert.
+					h2app->m_pUndoStack->push( new SE_addPatternAction( m_nCursorColumn, m_nCursorRow, nColumnIndex ) );
+			} else {
+				h2app->m_pUndoStack->push( new SE_addPatternAction( m_nCursorColumn, m_nCursorRow, 0 ) );
+			}
+		} else if ( actionMode == SELECT_ACTION ) {
+			// TBD. There's no clear and obvious default
+			// single-keypress action to take in select mode, as all
+			// associated mouse actions are drags (define selection,
+			// and move selection).
+		}
 	} else {
 		ev->ignore();
 		return;
