@@ -96,8 +96,8 @@ SongEditor::SongEditor( QWidget *parent, QScrollArea *pScrollView )
 	m_nGridWidth = 16;
 	m_nGridHeight = 18;
 
-	m_nCursorRow = 1;
-	m_nCursorColumn = 1;
+	m_nCursorRow = 0;
+	m_nCursorColumn = 0;
 
 	Preferences *pref = Preferences::get_instance();
 	m_nMaxPatternSequence = pref->getMaxBars();
@@ -217,6 +217,16 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 								  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2);
 	update();
 	ev->accept();
+}
+
+// Make cursor visible on focus
+void SongEditor::focusInEvent( QFocusEvent *ev )
+{
+	if ( ev->reason() != Qt::MouseFocusReason ) {
+		m_pScrollView->ensureVisible( 10 + m_nCursorColumn * m_nGridWidth + m_nGridWidth / 2,
+									  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2);
+		update();
+	}
 }
 
 

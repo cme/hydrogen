@@ -44,6 +44,7 @@ using namespace H2Core;
 #include "../Widgets/Fader.h"
 #include "../Widgets/PixmapWidget.h"
 #include "../Widgets/LCDCombo.h"
+#include "../WidgetScrollArea.h"
 
 #include "../Skin.h"
 #include "../SongEditor/SongEditorPanel.h"
@@ -259,7 +260,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 // RULER____________________________________
 
 	// Ruler ScrollView
-	m_pRulerScrollView = new QScrollArea( nullptr );
+	m_pRulerScrollView = new WidgetScrollArea( nullptr );
 	m_pRulerScrollView->setObjectName( "RulerScrollView" );
 	m_pRulerScrollView->setFocusPolicy(Qt::ClickFocus );
 	m_pRulerScrollView->setFrameShape( QFrame::NoFrame );
@@ -277,7 +278,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 // EDITOR _____________________________________
 	// Editor scrollview
-	m_pEditorScrollView = new QScrollArea( nullptr );
+	m_pEditorScrollView = new WidgetScrollArea( nullptr );
 	m_pEditorScrollView->setObjectName( "EditorScrollView" );
 	m_pEditorScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pEditorScrollView->setFrameShape( QFrame::NoFrame );
@@ -299,7 +300,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 
 //PianoRollEditor
-	m_pPianoRollScrollView = new QScrollArea( nullptr );
+	m_pPianoRollScrollView = new WidgetScrollArea( nullptr );
 	m_pPianoRollScrollView->setObjectName( "PianoRollScrollView" );
 	m_pPianoRollScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pPianoRollScrollView->setFrameShape( QFrame::NoFrame );
@@ -321,7 +322,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 // INSTRUMENT LIST
 	// Instrument list scrollview
-	m_pInstrListScrollView = new QScrollArea( nullptr );
+	m_pInstrListScrollView = new WidgetScrollArea( nullptr );
 	m_pInstrListScrollView->setObjectName( "InstrListScrollView" );
 	m_pInstrListScrollView->setFocusPolicy(Qt::ClickFocus);
 	m_pInstrListScrollView->setFrameShape( QFrame::NoFrame );
@@ -343,7 +344,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 
 // NOTE_VELOCITY EDITOR
-	m_pNoteVelocityScrollView = new QScrollArea( nullptr );
+	m_pNoteVelocityScrollView = new WidgetScrollArea( nullptr );
 	m_pNoteVelocityScrollView->setObjectName( "NoteVelocityScrollView" );
 	m_pNoteVelocityScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pNoteVelocityScrollView->setFrameShape( QFrame::NoFrame );
@@ -358,7 +359,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 
 // NOTE_PAN EDITOR
-	m_pNotePanScrollView = new QScrollArea( nullptr );
+	m_pNotePanScrollView = new WidgetScrollArea( nullptr );
 	m_pNotePanScrollView->setObjectName( "NotePanScrollView" );
 	m_pNotePanScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pNotePanScrollView->setFrameShape( QFrame::NoFrame );
@@ -372,7 +373,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 
 
 // NOTE_LEADLAG EDITOR
-	m_pNoteLeadLagScrollView = new QScrollArea( nullptr );
+	m_pNoteLeadLagScrollView = new WidgetScrollArea( nullptr );
 	m_pNoteLeadLagScrollView->setObjectName( "NoteLeadLagScrollView" );
 	m_pNoteLeadLagScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pNoteLeadLagScrollView->setFrameShape( QFrame::NoFrame );
@@ -388,7 +389,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 // NOTE_NOTEKEY EDITOR
 
 
-	m_pNoteNoteKeyScrollView = new QScrollArea( nullptr );
+	m_pNoteNoteKeyScrollView = new WidgetScrollArea( nullptr );
 	m_pNoteNoteKeyScrollView->setObjectName( "NoteNoteKeyScrollView" );
 	m_pNoteNoteKeyScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pNoteNoteKeyScrollView->setFrameShape( QFrame::NoFrame );
@@ -403,7 +404,7 @@ PatternEditorPanel::PatternEditorPanel( QWidget *pParent )
 //~ NOTE_NOTEKEY EDITOR
 
 // NOTE_PROBABILITY EDITOR
-	m_pNoteProbabilityScrollView = new QScrollArea( nullptr );
+	m_pNoteProbabilityScrollView = new WidgetScrollArea( nullptr );
 	m_pNoteProbabilityScrollView->setObjectName( "NoteProbabilityScrollView" );
 	m_pNoteProbabilityScrollView->setFocusPolicy(Qt::NoFocus);
 	m_pNoteProbabilityScrollView->setFrameShape( QFrame::NoFrame );

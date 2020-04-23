@@ -113,6 +113,7 @@ class SongEditor : public QWidget, public H2Core::Object
 		virtual void mouseMoveEvent(QMouseEvent *ev);
 		virtual void keyPressEvent (QKeyEvent *ev);
 		virtual void paintEvent(QPaintEvent *ev);
+		virtual void focusInEvent( QFocusEvent *ev ) override;
 
 		void drawSequence();
 		void drawPattern( int pos, int number, bool invertColour );
