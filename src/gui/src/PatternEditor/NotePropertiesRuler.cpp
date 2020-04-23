@@ -81,7 +81,7 @@ NotePropertiesRuler::NotePropertiesRuler( QWidget *parent, PatternEditorPanel *p
 	HydrogenApp::get_instance()->addEventListener( this );
 	m_bMouseIsPressed = false;
 
-	setFocusPolicy(Qt::StrongFocus);
+	setFocusPolicy( Qt::StrongFocus );
 }
 
 
@@ -126,7 +126,7 @@ void NotePropertiesRuler::wheelEvent(QWheelEvent *ev )
 	column = column / width;
 	column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
 
-    m_pPatternEditorPanel->setCursorPosition(column);
+    m_pPatternEditorPanel->setCursorPosition( column );
 
 	int nSelectedInstrument = Hydrogen::get_instance()->getSelectedInstrumentNumber();
 	Song *pSong = (Hydrogen::get_instance())->getSong();
@@ -327,7 +327,7 @@ void NotePropertiesRuler::prepareUndoAction( int x )
 		column = column / width;
 		column = (column * 4 * MAX_NOTES) / ( nBase * pPatternEditor->getResolution() );
 
-        m_pPatternEditorPanel->setCursorPosition(column);
+        m_pPatternEditorPanel->setCursorPosition( column );
 
 		bool columnChange = false;
 		if( __columnCheckOnXmouseMouve != column ){
@@ -476,7 +476,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 		m_pPatternEditorPanel->moveCursorRight();
 	else if ( ev->matches( QKeySequence::MoveToEndOfLine ) )
 		// -->|
-		m_pPatternEditorPanel->setCursorPosition(m_pPattern->get_length());
+		m_pPatternEditorPanel->setCursorPosition( m_pPattern->get_length() );
 	else if ( ev->matches( QKeySequence::MoveToPreviousChar ) )
 		// <-
 		m_pPatternEditorPanel->moveCursorLeft();
@@ -502,7 +502,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 			Song *pSong = (Hydrogen::get_instance())->getSong();
 
 
-			prepareUndoAction(20 + column * m_nGridWidth);
+			prepareUndoAction( 20 + column * m_nGridWidth );
 
 			const Pattern::notes_t* notes = m_pPattern->get_notes();
 			FOREACH_NOTE_CST_IT_BOUND(notes,it,column) {
@@ -581,7 +581,7 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 									__noteKeyVal = 11;
 								}
 						}
-					pNote->set_key_octave((Note::Key)__noteKeyVal, (Note::Octave)__octaveKeyVal);
+					pNote->set_key_octave( (Note::Key)__noteKeyVal, (Note::Octave)__octaveKeyVal );
 					break;
 				}
 			}
@@ -597,13 +597,13 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 }
 
 
-void NotePropertiesRuler::focusInEvent( QFocusEvent * ev)
+void NotePropertiesRuler::focusInEvent( QFocusEvent * ev )
 {
 	updateEditor();
 }
 
 
-void NotePropertiesRuler::focusOutEvent( QFocusEvent * ev)
+void NotePropertiesRuler::focusOutEvent( QFocusEvent * ev )
 {
 	updateEditor();
 }
@@ -1386,9 +1386,9 @@ void NotePropertiesRuler::updateEditor()
 
 		uint x = 20 + m_pPatternEditorPanel->getCursorPosition() * m_nGridWidth;
 
-		p.setPen(QColor(0,0,0));
+		p.setPen( QColor( 0,0,0 ) );
 		p.setRenderHint( QPainter::Antialiasing );
-		p.drawRoundedRect(QRect(x-m_nGridWidth*3, 0+1, m_nGridWidth*6, height()-2), 4, 4);
+		p.drawRoundedRect( QRect( x-m_nGridWidth*3, 0+1, m_nGridWidth*6, height()-2 ), 4, 4 );
 	}
 
 	// redraw all

@@ -79,7 +79,7 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		virtual void selectedInstrumentChangedEvent();
 		//~ Implements EventListener interface
 
-                void ensureCursorVisible();
+		void ensureCursorVisible();
 		int getCursorPosition();
 		void setCursorPosition(int nCursorPosition);
 		int moveCursorLeft();

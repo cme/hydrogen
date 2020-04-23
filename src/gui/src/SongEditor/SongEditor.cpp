@@ -214,7 +214,7 @@ void SongEditor::keyPressEvent ( QKeyEvent * ev )
 	}
 
 	m_pScrollView->ensureVisible( 10 + m_nCursorColumn * m_nGridWidth + m_nGridWidth / 2,
-								  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2);
+								  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2 );
 	update();
 	ev->accept();
 }
@@ -224,7 +224,7 @@ void SongEditor::focusInEvent( QFocusEvent *ev )
 {
 	if ( ev->reason() != Qt::MouseFocusReason )
 		m_pScrollView->ensureVisible( 10 + m_nCursorColumn * m_nGridWidth + m_nGridWidth / 2,
-									  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2);
+									  m_nCursorRow * m_nGridHeight + m_nGridHeight / 2 );
 	update();
 }
 
@@ -704,7 +704,7 @@ void SongEditor::paintEvent( QPaintEvent *ev )
 	painter.drawPixmap( ev->rect(), *m_pSequencePixmap, ev->rect() );
 
 	// Draw cursor
-	if (hasFocus()) {
+	if ( hasFocus() ) {
 		painter.setPen( Qt::black );
 		painter.setRenderHint( QPainter::Antialiasing );
 		// Aim to leave a visible gap between the border of the

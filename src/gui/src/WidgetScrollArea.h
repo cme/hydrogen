@@ -28,7 +28,7 @@
 /* Qt's QScrollArea widget has some behaviour that's quite unpleasant
  * for Hydrogen. When tabbing to the next or previous widget, a
  * QScrollArea will ensure that the most recently (or currently)
- *  focused child widget of the QScrollArea is visible.
+ * focused child widget of the QScrollArea is visible.
  *
  * In the Hydrogen GUI, ScrollAreas typically are occupied by one
  * single large widget, whose extent is larger than that visible to
@@ -37,7 +37,7 @@
  *
  * The movement is distracting and confusing and will likely remove
  * the area the user is *actually* focusing from view.
- * 
+ *
  * This class overrides this behaviour.
  */
 class WidgetScrollArea : public QScrollArea

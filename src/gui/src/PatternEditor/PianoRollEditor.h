@@ -46,7 +46,7 @@ class PianoRollEditor: public QWidget, public EventListener, public H2Core::Obje
     Q_OBJECT
 	public:
 		PianoRollEditor( QWidget *pParent, PatternEditorPanel *panel,
-						 QScrollArea *pScrollView);
+						 QScrollArea *pScrollView );
 		~PianoRollEditor();
 
 

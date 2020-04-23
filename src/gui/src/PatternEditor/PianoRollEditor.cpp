@@ -51,7 +51,7 @@ PianoRollEditor::PianoRollEditor( QWidget *pParent, PatternEditorPanel *panel,
 	, m_pPattern( nullptr )
 	, m_pPatternEditorPanel( panel )
 	, m_pDraggedNote( nullptr )
-	, m_pScrollView( pScrollView)
+	, m_pScrollView( pScrollView )
 {
 	INFOLOG( "INIT" );
 
@@ -400,14 +400,14 @@ void PianoRollEditor::drawPattern()
 	}
 
 	// Draw cursor
-	if (hasFocus()) {
+	if ( hasFocus() ) {
 		QPoint pos = cursorPosition();
 
-		p.setPen(QColor(0,0,0));
-		p.setBrush(Qt::NoBrush);
+		p.setPen( QColor(0,0,0) );
+		p.setBrush( Qt::NoBrush );
 		p.setRenderHint( QPainter::Antialiasing );
-		p.drawRoundedRect(QRect(pos.x() - m_nGridWidth*3, pos.y(),
-								m_nGridWidth*6, m_nRowHeight), 4, 4);
+		p.drawRoundedRect( QRect( pos.x() - m_nGridWidth*3, pos.y(),
+								  m_nGridWidth*6, m_nRowHeight ), 4, 4 );
 	}
 
 }
@@ -591,7 +591,7 @@ void PianoRollEditor::mousePressEvent(QMouseEvent *ev)
 			nRealColumn = (ev->x() - 20) / static_cast<float>(m_nGridWidth);
 		}
 
-		addOrRemoveNote(nColumn, nRealColumn, pressedline, pressednotekey, pressedoctave);
+		addOrRemoveNote( nColumn, nRealColumn, pressedline, pressednotekey, pressedoctave );
 
 	}
 
@@ -973,8 +973,8 @@ void PianoRollEditor::keyPressEvent( QKeyEvent * ev )
 		int note = m_nCursorNote % 12;
 		int octave = m_nCursorNote / 12;
 		int pressedline = (m_nOctaves * 12) - m_nCursorNote - 1;
-		addOrRemoveNote(m_pPatternEditorPanel->getCursorPosition(), -1, pressedline,
-						note, octave - OCTAVE_OFFSET);
+		addOrRemoveNote( m_pPatternEditorPanel->getCursorPosition(), -1, pressedline,
+						 note, octave - OCTAVE_OFFSET );
 	} else {
 		ev->ignore();
 		return;
@@ -982,7 +982,7 @@ void PianoRollEditor::keyPressEvent( QKeyEvent * ev )
 
 	// Update editor
 	QPoint pos = cursorPosition();
-	m_pScrollView->ensureVisible(pos.x(), pos.y());
+	m_pScrollView->ensureVisible( pos.x(), pos.y() );
 	updateEditor();
 	ev->accept();
 

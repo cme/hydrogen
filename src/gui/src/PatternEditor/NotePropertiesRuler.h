@@ -86,8 +86,8 @@ class NotePropertiesRuler : public QWidget, public H2Core::Object, public EventL
 		void wheelEvent(QWheelEvent *ev);
 		void mouseReleaseEvent(QMouseEvent *ev);
 		void keyPressEvent( QKeyEvent *ev );
-		void focusInEvent( QFocusEvent * ev);
-		void focusOutEvent( QFocusEvent * ev);
+		void focusInEvent( QFocusEvent *ev );
+		void focusOutEvent( QFocusEvent *ev );
 		void addUndoAction();
 		void prepareUndoAction( int x );
 
