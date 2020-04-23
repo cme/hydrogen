@@ -1380,8 +1380,7 @@ void NotePropertiesRuler::updateEditor()
 		createNoteKeyBackground( m_pBackground );
 	}
 
-	if (hasFocus())
-	{
+	if ( hasFocus() ) {
 		QPainter p( m_pBackground );
 
 		uint x = 20 + m_pPatternEditorPanel->getCursorPosition() * m_nGridWidth;

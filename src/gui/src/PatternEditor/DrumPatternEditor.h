@@ -140,7 +140,7 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		virtual void showEvent ( QShowEvent *ev );
 		virtual void hideEvent ( QHideEvent *ev );
 		virtual void paintEvent(QPaintEvent *ev);
-		virtual void focusInEvent( QFocusEvent *ev );
+		virtual void focusInEvent( QFocusEvent *ev ) override;
 
 		int getColumn(QMouseEvent *ev);
 
