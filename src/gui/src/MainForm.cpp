@@ -1510,7 +1510,21 @@ bool MainForm::eventFilter( QObject *o, QEvent *e )
 	if ( e->type() == QEvent::FileOpen ) {
 		// Mac OS always opens files (including via double click in Finder) via a FileOpenEvent.
 		QFileOpenEvent *fe = dynamic_cast<QFileOpenEvent*>(e);
-		openSongFile( fe->file() );
+		assert( fe != nullptr );
+		QString sFileName = fe->file();
+
+		if ( sFileName.endsWith( H2Core::Filesystem::songs_ext ) ) {
+			openSongFile( fe->file() );
+		}
+		if ( sFileName.endsWith( H2Core::Filesystem::drumkit_ext ) ) {
+			H2Core::Drumkit::install( sFileName );
+		}
+		if ( sFileName.endsWith( H2Core::Filesystem::playlist_ext ) ) {
+			bool loadlist = HydrogenApp::get_instance()->getPlayListDialog()->loadListByFileName( sFileName );
+			if ( loadlist ){
+				H2Core::Playlist::get_instance()->setNextSongByNumber( 0 );
+			}
+		}
 
 	} else if ( e->type() == QEvent::KeyPress) {
 		// special processing for key press

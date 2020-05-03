@@ -212,13 +212,13 @@ int main(int argc, char *argv[])
 		// default document bindings to work.
 		QString sArg;
 		foreach ( sArg, parser.positionalArguments() ) {
-			if ( sArg.endsWith( ".h2song" ) ) {
+			if ( sArg.endsWith( H2Core::Filesystem::songs_ext ) ) {
 				sSongFilename = sArg;
 			}
-			if ( sArg.endsWith( ".h2drumkit" ) ) {
+			if ( sArg.endsWith( H2Core::Filesystem::drumkit_ext ) ) {
 				sDrumkitName = sArg;
 			}
-			if ( sArg.endsWith( ".h2playlist" ) ) {
+			if ( sArg.endsWith( H2Core::Filesystem::playlist_ext ) ) {
 				sPlaylistFilename = sArg;
 			}
 		}
