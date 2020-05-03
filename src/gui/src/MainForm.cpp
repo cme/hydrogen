@@ -166,6 +166,9 @@ MainForm::MainForm( QApplication *app, const QString& songFilename )
 	//	h2app->getPlayListDialog()->installEventFilter(this);
 	installEventFilter( this );
 
+	// To pick up FileOpen messages.
+	m_pQApp->installEventFilter( this );
+
 	connect( &m_AutosaveTimer, SIGNAL(timeout()), this, SLOT(onAutoSaveTimer()));
 	m_AutosaveTimer.start( 60 * 1000 );
 
@@ -1501,12 +1504,15 @@ void MainForm::initKeyInstMap()
 }
 
 
-
 bool MainForm::eventFilter( QObject *o, QEvent *e )
 {
 	UNUSED( o );
+	if ( e->type() == QEvent::FileOpen ) {
+		// Mac OS always opens files (including via double click in Finder) via a FileOpenEvent.
+		QFileOpenEvent *fe = dynamic_cast<QFileOpenEvent*>(e);
+		openSongFile( fe->file() );
 
-	if ( e->type() == QEvent::KeyPress) {
+	} else if ( e->type() == QEvent::KeyPress) {
 		// special processing for key press
 		QKeyEvent *k = (QKeyEvent *)e;
 

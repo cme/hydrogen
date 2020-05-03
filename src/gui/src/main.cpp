@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 		parser.addOption( songFileOption );
 		parser.addOption( kitOption );
 		parser.addOption( verboseOption );
-		
+		parser.addPositionalArgument( "file", "Song, playlist or Drumkit file" );
 		
 		//Conditional options
 		#ifdef H2CORE_HAVE_JACKSESSION
