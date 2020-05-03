@@ -205,6 +205,23 @@ int main(int argc, char *argv[])
 				logLevelOpt = H2Core::Logger::Error|H2Core::Logger::Warning;
 			}
 		}
+
+		// Operating system GUIs typically pass documents to open as
+		// simple positional arguments to the process command
+		// line. Handling this here enables "Open with" as well as
+		// default document bindings to work.
+		QString sArg;
+		foreach ( sArg, parser.positionalArguments() ) {
+			if ( sArg.endsWith( ".h2song" ) ) {
+				sSongFilename = sArg;
+			}
+			if ( sArg.endsWith( ".h2drumkit" ) ) {
+				sDrumkitName = sArg;
+			}
+			if ( sArg.endsWith( ".h2playlist" ) ) {
+				sPlaylistFilename = sArg;
+			}
+		}
 		
 		#ifdef H2CORE_HAVE_JACKSESSION
 				QString sessionId;
