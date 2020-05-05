@@ -141,6 +141,7 @@ MANDATORY_PKG(LIBSNDFILE)
 
 # http://doc.qt.io/qt-5/cmake-manual.html
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+FIND_PACKAGE(Qt5Test REQUIRED)
 FIND_PACKAGE(Qt5Xml REQUIRED)
 FIND_PACKAGE(Qt5XmlPatterns REQUIRED)
 FIND_PACKAGE(Qt5LinguistTools REQUIRED)
@@ -350,6 +351,16 @@ IF( HYDROGEN_INSTALLED )
 ${red}IMPORTANT${reset}:
   previously installed hydrogen headers found in ${HYDROGEN_INSTALLED}
   you should uninstall these files before building hydrogen unless you know what you are doing.
+-----------------------------------------------------------------\n"
+    )
+ENDIF()
+
+IF( NOT CMAKE_INSTALL_PREFIX MATCHES "/usr/?$")
+    COLOR_MESSAGE("-----------------------------------------------------------------
+${red}IMPORTANT${reset}:
+CMAKE_INSTALL_PREFIX is set to '${CMAKE_INSTALL_PREFIX}',
+depending of your system settings, you might end up with an installation
+that does not work out of the box. If so, see INSTALL.md : Running Hydrogen
 -----------------------------------------------------------------\n"
     )
 ENDIF()

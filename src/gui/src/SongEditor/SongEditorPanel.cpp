@@ -20,6 +20,7 @@
  *
  */
 #include "SongEditorPanel.h"
+#include "PlaybackTrackWaveDisplay.h"
 
 #include "../AudioFileBrowser/AudioFileBrowser.h"
 #include "../HydrogenApp.h"
@@ -305,9 +306,6 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	m_pWidgetStack = new QStackedWidget( nullptr );
 	m_pWidgetStack->setFixedHeight( 50 );
 	
-	InstrumentComponent* pCompo = AudioEngine::get_instance()->get_sampler()->__preview_instrument->get_components()->front();
-	assert(pCompo);
-		
 	m_pPositionRulerScrollView = new WidgetScrollArea( m_pWidgetStack );
 	m_pPositionRulerScrollView->setFrameShape( QFrame::NoFrame );
 	m_pPositionRulerScrollView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
@@ -324,15 +322,17 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	m_pPlaybackTrackScrollView->setFrameShape( QFrame::NoFrame );
 	m_pPlaybackTrackScrollView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 	m_pPlaybackTrackScrollView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-
-	m_pWaveDisplay = new WaveDisplay( m_pPlaybackTrackScrollView->viewport() );
-	m_pWaveDisplay->setSampleNameAlignment( Qt::AlignLeft );
-	m_pWaveDisplay->updateDisplay( pCompo->get_layer(0) );
-	m_pWaveDisplay->resize( m_pPositionRuler->width() , 50);
 	
-	m_pPlaybackTrackScrollView->setWidget( m_pWaveDisplay );
-	m_pPlaybackTrackScrollView->setFixedHeight( 50 );
+	InstrumentComponent* pCompo = AudioEngine::get_instance()->get_sampler()->__playback_instrument->get_components()->front();
+	assert(pCompo);
 
+	m_pPlaybackTrackWaveDisplay = new PlaybackTrackWaveDisplay( m_pPlaybackTrackScrollView->viewport() );
+	m_pPlaybackTrackWaveDisplay->setSampleNameAlignment( Qt::AlignLeft );
+	m_pPlaybackTrackWaveDisplay->resize( m_pPositionRuler->width() , 50);
+	m_pPlaybackTrackWaveDisplay->setAcceptDrops( true );
+	
+	m_pPlaybackTrackScrollView->setWidget( m_pPlaybackTrackWaveDisplay );
+	m_pPlaybackTrackScrollView->setFixedHeight( 50 );
 	
 	m_pAutomationPathScrollView = new WidgetScrollArea( nullptr );
 	m_pAutomationPathScrollView->setFrameShape( QFrame::NoFrame );
@@ -358,6 +358,11 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	m_pWidgetStack->addWidget( m_pPositionRulerScrollView );
 	m_pWidgetStack->addWidget( m_pPlaybackTrackScrollView );
 
+	if( Preferences::get_instance()->getShowPlaybackTrack() ) {
+		showPlaybackTrack();
+	} else {
+		showTimeline();
+	}
 	
 	// ok...let's build the layout
 	QGridLayout *pGridLayout = new QGridLayout();
@@ -372,7 +377,6 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	pGridLayout->addWidget( m_pAutomationPathScrollView, 2, 1);
 	pGridLayout->addWidget( m_pAutomationCombo, 2, 0, Qt::AlignTop | Qt::AlignRight );
 	pGridLayout->addWidget( pHScrollbarPanel, 3, 1 );
-
 	if( !pPref->getShowAutomationArea() ){
 		m_pAutomationPathScrollView->hide();
 		m_pAutomationCombo->hide();
@@ -382,7 +386,6 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	QPalette defaultPalette;
 	defaultPalette.setColor( QPalette::Background, QColor( 58, 62, 72 ) );
 	this->setPalette( defaultPalette );
-
 
 	show();
 
@@ -502,9 +505,10 @@ void SongEditorPanel::hScrollTo( int value )
 ///
 void SongEditorPanel::updateAll()
 {
-	InstrumentComponent *pCompo = AudioEngine::get_instance()->get_sampler()->__playback_instrument->get_components()->front();
-
-	m_pWaveDisplay->updateDisplay( pCompo->get_layer(0) );
+	Hydrogen *	pEngine = Hydrogen::get_instance();
+	Song *		pSong = pEngine->getSong();
+	
+	updatePlaybackTrackIfNecessary();
 
 	m_pPatternList->createBackground();
 	m_pPatternList->update();
@@ -514,11 +518,17 @@ void SongEditorPanel::updateAll()
 	m_pSongEditor->createBackground();
 	m_pSongEditor->update();
 
-	Hydrogen *pEngine = Hydrogen::get_instance();
-	Song *pSong = pEngine->getSong();
-	m_pAutomationPathView->setAutomationPath (pSong->get_velocity_automation_path());
+ 	m_pAutomationPathView->setAutomationPath( pSong->get_velocity_automation_path() );
 
 	resyncExternalScrollBar();
+}
+
+void SongEditorPanel::updatePlaybackTrackIfNecessary()
+{
+	if( Preferences::get_instance()->getShowPlaybackTrack() ) {
+		InstrumentComponent *pCompo = AudioEngine::get_instance()->get_sampler()->__playback_instrument->get_components()->front();
+		m_pPlaybackTrackWaveDisplay->updateDisplay( pCompo->get_layer(0) );
+	}
 }
 
 
@@ -715,7 +725,7 @@ void SongEditorPanel::showTimeline()
 	m_pPlaybackTrackFader->hide();
 	m_pViewPlaybackToggleBtn->setPressed( false );
 	m_pViewTimeLineToggleBtn->setPressed( true );
-	
+	Preferences::get_instance()->setShowPlaybackTrack( false );
 }
 
 
@@ -728,6 +738,7 @@ void SongEditorPanel::showPlaybackTrack()
 	m_pPlaybackTrackFader->show();
 	m_pViewTimeLineToggleBtn->setPressed( false );
 	m_pViewPlaybackToggleBtn->setPressed( true );
+	Preferences::get_instance()->setShowPlaybackTrack( true );
 }
 
 void SongEditorPanel::viewTimeLineBtnPressed( Button* pBtn )

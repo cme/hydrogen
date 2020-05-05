@@ -48,7 +48,8 @@ WaveDisplay::WaveDisplay(QWidget* pParent)
 		ERRORLOG( "Error loading pixmap" );
 	}
 
-	m_pPeakData = new int[ width() ]{};
+	m_pPeakData = new int[ width() ];
+	memset( m_pPeakData, 0, width() * sizeof( m_pPeakData[0] ) );
 }
 
 
@@ -128,7 +129,7 @@ void WaveDisplay::updateDisplay( H2Core::InstrumentLayer *pLayer )
 		m_pLayer = pLayer;
 		m_sSampleName = pLayer->get_sample()->get_filename();
 
-//		INFOLOG( "[updateDisplay] sample: " + m_sSampleName  );
+		//INFOLOG( "[updateDisplay] sample: " + m_sSampleName  );
 
 		int nSampleLength = pLayer->get_sample()->get_frames();
 		int nScaleFactor = nSampleLength / m_nCurrentWidth;

@@ -20,58 +20,36 @@
  *
  */
 
-#ifndef WAVE_DISPLAY
-#define WAVE_DISPLAY
+#ifndef PLAYBACKTRACKWAVE_DISPLAY
+#define PLAYBACKTRACKWAVE_DISPLAY
 
 #include <QtGui>
 #if QT_VERSION >= 0x050000
 #  include <QtWidgets>
 #endif
 #include <hydrogen/object.h>
+#include "../InstrumentEditor/WaveDisplay.h"
 
 namespace H2Core
 {
 	class InstrumentLayer;
 }
 
-class WaveDisplay : public QWidget, public H2Core::Object
+class PlaybackTrackWaveDisplay : public WaveDisplay
 {
     H2_OBJECT
 	Q_OBJECT
 
 	public:
-		WaveDisplay(QWidget* pParent);
-		~WaveDisplay();
+		PlaybackTrackWaveDisplay(QWidget* pParent);
+		~PlaybackTrackWaveDisplay() = default;
 
-		virtual void	updateDisplay( H2Core::InstrumentLayer *pLayer );
-
-		void			paintEvent( QPaintEvent *ev );
-		void			resizeEvent( QResizeEvent * event );
-		void			mouseDoubleClickEvent(QMouseEvent *ev);
+		void	updateDisplay( H2Core::InstrumentLayer *pLayer ) override;
 		
-		void			setSampleNameAlignment(Qt::AlignmentFlag flag);
-
-	signals:
-		void doubleClicked(QWidget *pWidget);
-
-	protected:
-		Qt::AlignmentFlag			m_SampleNameAlignment;
-		QPixmap						m_Background;
-		QString						m_sSampleName;
-		int *						m_pPeakData;
-		
-		/*
-		 * Used to re-initialise m_pPeakData if width has changed
-		 */
-		
-		int							m_nCurrentWidth;
-		
-		H2Core::InstrumentLayer *	m_pLayer;
+	public slots:
+		virtual void dragMoveEvent(QDragMoveEvent *event);
+		virtual void dropEvent(QDropEvent *event);
+		virtual void dragEnterEvent(QDragEnterEvent * event);
 };
-
-inline void WaveDisplay::setSampleNameAlignment(Qt::AlignmentFlag flag)
-{
-	m_SampleNameAlignment = flag;
-}
 
 #endif

@@ -915,7 +915,7 @@ inline void audioEngine_process_checkBPMChanged(Song* pSong)
 	) return;
 
 	float fOldTickSize = m_pAudioDriver->m_transport.m_nTickSize;
-	float fNewTickSize = m_pAudioDriver->getSampleRate() * 60.0 / pSong->__bpm / pSong->__resolution;
+	float fNewTickSize =AudioEngine::compute_tick_size( m_pAudioDriver->getSampleRate(), pSong->__bpm, pSong->__resolution );
 
 	// Nothing changed - avoid recomputing
 	if ( fNewTickSize == fOldTickSize )
@@ -2371,6 +2371,7 @@ Hydrogen::Hydrogen()
 	m_bExportSessionIsActive = false;
 	m_pTimeline = new Timeline();
 	m_pCoreActionController = new CoreActionController();
+	m_bActiveGUI = false;
 
 	initBeatcounter();
 	InstrumentComponent::setMaxLayers( Preferences::get_instance()->getMaxLayers() );
