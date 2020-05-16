@@ -51,6 +51,8 @@ NotePropertiesRuler::NotePropertiesRuler( QWidget *parent, PatternEditorPanel *p
 	//infoLog("INIT");
 	//setAttribute(Qt::WA_NoBackground);
 
+	__columnCheckOnXmouseMouve = -1;
+
 	m_nGridWidth = (Preferences::get_instance())->getPatternEditorGridWidth();
 	m_nEditorWidth = 20 + m_nGridWidth * ( MAX_NOTES * 4 );
 
