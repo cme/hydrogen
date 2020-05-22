@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <string>
 #include <cassert>
+#include <time.h>
 
 
 /** \def RIGHT_HERE
@@ -138,6 +139,23 @@ public:
 	 * - false : Else
 	 */
 	bool try_lock( const char* file, unsigned int line, const char* function );
+
+	/**
+	 * Mutex locking of the AudioEngine.
+	 *
+	 * This function is equivalent to lock() but calls
+	 * _pthread_mutex_timedlock()_ (pthread.h), and returns true on
+	 * successful acquisition of the lock, false on failure.
+	 * \param deadline Real time at which timeout will occur if lock has not been acquired.
+	 * \param file File the locking occurs in.
+	 * \param line Line of the file the locking occurs in.
+	 * \param function Function the locking occurs in.
+	 *
+	 * \return
+	 * - true : On successful acquisition of the lock
+	 * - false : On failure
+	 */
+	bool lock_timed( const struct timespec deadline, const char* file, unsigned int line, const char* function );
 	/**
 	 * Mutex unlocking of the AudioEngine.
 	 *

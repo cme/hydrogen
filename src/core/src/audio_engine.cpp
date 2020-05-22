@@ -22,6 +22,8 @@
 
 #include <hydrogen/audio_engine.h>
 
+#include <sys/time.h>
+
 #include <hydrogen/fx/Effects.h>
 #include <hydrogen/basics/song.h>
 #include <hydrogen/IO/AudioOutput.h>
@@ -110,6 +112,22 @@ bool AudioEngine::try_lock( const char* file, unsigned int line, const char* fun
 	int res = pthread_mutex_trylock( &__engine_mutex );
 	if ( res != 0 ) {
 		// Lock not obtained
+		return false;
+	}
+	__locker.file = file;
+	__locker.line = line;
+	__locker.function = function;
+	return true;
+}
+
+bool AudioEngine::lock_timed( struct timespec deadline, const char* file, unsigned int line, const char* function )
+{
+	int res = pthread_mutex_timedlock( &__engine_mutex, &deadline );
+	if ( res != 0 ) {
+		// Lock not obtained
+		WARNINGLOG( QString( "Lock timeout: lock timeout %1:%2%3, lock held by %s:%s:%s" )
+					.arg( file ).arg( function ).arg( line )
+					.arg( __locker.file ).arg( __locker.function ).arg( __locker.line ));
 		return false;
 	}
 	__locker.file = file;
