@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# lock render ladspa vu total max
+awk '/PROFILE/ { print $5, $7, $9, $11, $13, $15}' < $1 > $1.data
+
+cat <<EOF > $1.gnuplot
+
+set term png;
+plot "$1.data" using 5  title "total" with lines, "$1.data" using 1 title "lock" with lines, "$1.data" using 6 title "max" with lines;
+
+EOF
+
+gnuplot "$1.gnuplot" > $1.png
+open $1.png
+
+cat <<EOF > $1-2.gnuplot
+
+set term png;
+plot "$1.data" using 5  title "total" with lines, "$1.data" using 1 title "lock" with lines;
+
+EOF
+
+gnuplot "$1-2.gnuplot" > $1-2.png
+open $1-2.png
