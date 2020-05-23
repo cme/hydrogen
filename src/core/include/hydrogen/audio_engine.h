@@ -149,7 +149,7 @@ public:
 	 * - true : On successful acquisition of the lock
 	 * - false : On failure
 	 */
-	bool lock_timed( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function );
+	bool try_lock_for( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function );
 	/**
 	 * Mutex unlocking of the AudioEngine.
 	 *

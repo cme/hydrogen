@@ -118,10 +118,10 @@ bool AudioEngine::try_lock( const char* file, unsigned int line, const char* fun
 	return true;
 }
 
-bool AudioEngine::lock_timed( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function )
+bool AudioEngine::try_lock_for( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function )
 {
-	int res = __engine_mutex.try_lock_for( duration );
-	if ( res != 0 ) {
+	bool res = __engine_mutex.try_lock_for( duration );
+	if ( !res ) {
 		// Lock not obtained
 		WARNINGLOG( QString( "Lock timeout: lock timeout %1:%2%3, lock held by %s:%s:%s" )
 					.arg( file ).arg( function ).arg( line )

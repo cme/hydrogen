@@ -1276,7 +1276,10 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	 */
 	if(!AudioEngine::get_instance()->try_lock( RIGHT_HERE )){
 		___ERRORLOG( "Failed to lock audioEngine, missed buffer" );
-		return 0;
+		if (! AudioEngine::get_instance()->try_lock_for( std::chrono::milliseconds(100),  RIGHT_HERE ) ) {
+			___ERRORLOG( "    Didn't get lock even after another 100ms" );
+			return 0;
+		}
 	}
 
 	if ( m_audioEngineState < STATE_READY) {
