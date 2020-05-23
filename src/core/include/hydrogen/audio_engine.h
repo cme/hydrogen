@@ -28,11 +28,10 @@
 #include <hydrogen/sampler/Sampler.h>
 #include <hydrogen/synth/Synth.h>
 
-#include <pthread.h>
 #include <string>
 #include <cassert>
-#include <time.h>
-
+#include <mutex>
+#include <chrono>
 
 /** \def RIGHT_HERE
  * Macro intended to be used for the logging of the locking of the
@@ -85,11 +84,7 @@ public:
 
 	/** Mutex locking of the AudioEngine.
 	 *
-	 * It passes the address of the #__engine_mutex object to
-	 * _pthread_mutex_lock()_ (pthread.h) to lock the AudioEngine
-	 * and transfer ownership of the #__engine_mutex to the
-	 * calling thread. Only this very thread can unlock() the
-	 * engine again.
+	 * Lock the AudioEngine for exclusive access by this thread.
 	 *
 	 * The documentation below may serve as a guide for future
 	 * implementations. At the moment the logging of the locking
@@ -125,17 +120,15 @@ public:
 	/**
 	 * Mutex locking of the AudioEngine.
 	 *
-	 * This function is equivalent to lock() but calls
-	 * _pthread_mutex_trylock()_ (pthread.h) instead and returns a
-	 * bool depending on its results.
+	 * This function is equivalent to lock() but returns false
+	 * immediaely if the lock canot be obtained immediately.
 	 *
 	 * \param file File the locking occurs in.
 	 * \param line Line of the file the locking occurs in.
 	 * \param function Function the locking occurs in.
 	 *
 	 * \return
-	 * - true : On success (if _pthread_mutex_lock()_ returns
-	 *   0)
+	 * - true : On success
 	 * - false : Else
 	 */
 	bool try_lock( const char* file, unsigned int line, const char* function );
@@ -143,10 +136,11 @@ public:
 	/**
 	 * Mutex locking of the AudioEngine.
 	 *
-	 * This function is equivalent to lock() but calls
-	 * _pthread_mutex_timedlock()_ (pthread.h), and returns true on
-	 * successful acquisition of the lock, false on failure.
-	 * \param deadline Real time at which timeout will occur if lock has not been acquired.
+	 * This function is equivalent to lock() but will only wait for a
+	 * given period of time. If the lock cannot be acquired in this
+	 * time, it will return false.
+	 *
+	 * \param duration Time (in milliseconds) to wait for the lock.
 	 * \param file File the locking occurs in.
 	 * \param line Line of the file the locking occurs in.
 	 * \param function Function the locking occurs in.
@@ -155,12 +149,11 @@ public:
 	 * - true : On successful acquisition of the lock
 	 * - false : On failure
 	 */
-	bool lock_timed( const struct timespec deadline, const char* file, unsigned int line, const char* function );
+	bool lock_timed( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function );
 	/**
 	 * Mutex unlocking of the AudioEngine.
 	 *
-	 * Calls _pthread_mutex_unlock()_ (pthread.h) on the address
-	 * of #__engine_mutex and leaves #__locker untouched.
+	 * Unlocks the AudioEngine to allow other threads acces, and leaves #__locker untouched.
 	 */
 	void unlock();
 	
@@ -192,7 +185,7 @@ private:
 	  * try_lock() and to unlock it via unlock(). It is
 	  * initialized in AudioEngine() and not explicitly exited.
 	  */
-	pthread_mutex_t __engine_mutex;
+	std::timed_mutex __engine_mutex;
 
 	/**
 	 * This struct is most probably intended to be used for

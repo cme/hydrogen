@@ -55,8 +55,6 @@ AudioEngine::AudioEngine()
 	__instance = this;
 	INFOLOG( "INIT" );
 
-	pthread_mutex_init( &__engine_mutex, nullptr );
-
 	__sampler = new Sampler;
 	__synth = new Synth;
 
@@ -99,7 +97,7 @@ Synth* AudioEngine::get_synth()
 
 void AudioEngine::lock( const char* file, unsigned int line, const char* function )
 {
-	pthread_mutex_lock( &__engine_mutex );
+	__engine_mutex.lock();
 	__locker.file = file;
 	__locker.line = line;
 	__locker.function = function;
@@ -109,8 +107,8 @@ void AudioEngine::lock( const char* file, unsigned int line, const char* functio
 
 bool AudioEngine::try_lock( const char* file, unsigned int line, const char* function )
 {
-	int res = pthread_mutex_trylock( &__engine_mutex );
-	if ( res != 0 ) {
+	bool res = __engine_mutex.try_lock();
+	if ( !res ) {
 		// Lock not obtained
 		return false;
 	}
@@ -120,9 +118,9 @@ bool AudioEngine::try_lock( const char* file, unsigned int line, const char* fun
 	return true;
 }
 
-bool AudioEngine::lock_timed( struct timespec deadline, const char* file, unsigned int line, const char* function )
+bool AudioEngine::lock_timed( std::chrono::milliseconds duration, const char* file, unsigned int line, const char* function )
 {
-	int res = pthread_mutex_timedlock( &__engine_mutex, &deadline );
+	int res = __engine_mutex.try_lock_for( duration );
 	if ( res != 0 ) {
 		// Lock not obtained
 		WARNINGLOG( QString( "Lock timeout: lock timeout %1:%2%3, lock held by %s:%s:%s" )
@@ -147,7 +145,7 @@ float AudioEngine::compute_tick_size(int sampleRate, int bpm, int resolution)
 void AudioEngine::unlock()
 {
 	// Leave "__locker" dirty.
-	pthread_mutex_unlock( &__engine_mutex );
+	__engine_mutex.unlock();
 }
 
 

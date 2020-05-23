@@ -1275,6 +1275,7 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	 * audio processing.
 	 */
 	if(!AudioEngine::get_instance()->try_lock( RIGHT_HERE )){
+		___ERRORLOG( "Failed to lock audioEngine, missed buffer" );
 		return 0;
 	}
 
