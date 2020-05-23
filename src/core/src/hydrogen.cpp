@@ -1256,6 +1256,8 @@ inline void audioEngine_process_clearAudioBuffers( uint32_t nFrames )
 #endif
 }
 
+
+#define PROFILE_LOCKS
 int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 {
 	// ___INFOLOG( QString( "[begin] status: %1, frame: %2, ticksize: %3, bpm: %4" )
@@ -1268,6 +1270,11 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	// Resetting all audio output buffers with zeros.
 	audioEngine_process_clearAudioBuffers( nframes );
 
+#ifdef PROFILE_LOCKS
+	auto tStart = std::chrono::steady_clock::now();
+	bool bLockedImmediately = true;
+#endif
+
 	/*
 	 * The "try_lock" was introduced for Bug #164 (Deadlock after during
 	 * alsa driver shutdown). The try_lock *should* only fail in rare circumstances
@@ -1276,11 +1283,18 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	 */
 	if(!AudioEngine::get_instance()->try_lock( RIGHT_HERE )){
 		___ERRORLOG( "Failed to lock audioEngine, missed buffer" );
+#ifdef PROFILE_LOCKS
+		bLockedImmediately = false;
+#endif
 		if (! AudioEngine::get_instance()->try_lock_for( std::chrono::milliseconds(100),  RIGHT_HERE ) ) {
 			___ERRORLOG( "    Didn't get lock even after another 100ms" );
 			return 0;
 		}
 	}
+
+#ifdef PROFILE_LOCKS
+	auto tLocked = std::chrono::steady_clock::now();
+#endif
 
 	if ( m_audioEngineState < STATE_READY) {
 		AudioEngine::get_instance()->unlock();
@@ -1368,6 +1382,10 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 		m_pMainBuffer_R[ i ] += out_R[ i ];
 	}
 
+#ifdef PROFILE_LOCKS
+	auto tRendered = std::chrono::steady_clock::now();
+#endif
+
 	timeval renderTime_end = currentTime2();
 	timeval ladspaTime_start = renderTime_end;
 
@@ -1402,6 +1420,11 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	}
 #endif
 	timeval ladspaTime_end = currentTime2();
+
+#ifdef PROFILE_LOCKS
+	auto tLadspaComplete = std::chrono::steady_clock::now();
+#endif
+
 
 	// update master peaks
 	float val_L, val_R;
@@ -1462,6 +1485,18 @@ int audioEngine_process( uint32_t nframes, void* /*arg*/ )
 	// 	    .arg( m_pAudioDriver->m_transport.m_nFrames )
 	// 	    .arg( m_pAudioDriver->m_transport.m_nTickSize )
 	// 	    .arg( m_pAudioDriver->m_transport.m_nBPM ) );
+
+#ifdef PROFILE_LOCKS
+	auto tUnlock = std::chrono::steady_clock::now();
+	qDebug() << "PROFILE:"
+			 << " locked_immediately " << bLockedImmediately
+			 << " lock " << std::chrono::duration_cast<std::chrono::microseconds>(tLocked - tStart).count()
+			 << " render " << std::chrono::duration_cast<std::chrono::microseconds>(tRendered - tLocked).count()
+			 << " ladspa " << std::chrono::duration_cast<std::chrono::microseconds>(tLadspaComplete - tRendered).count()
+			 << " vubars " << std::chrono::duration_cast<std::chrono::microseconds>(tUnlock - tLadspaComplete).count()
+			 << " total " << std::chrono::duration_cast<std::chrono::microseconds>(tUnlock - tStart).count()
+			 << " max " << m_fMaxProcessTime * 1000.0;
+#endif
 
 	AudioEngine::get_instance()->unlock();
 
