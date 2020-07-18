@@ -25,6 +25,7 @@
 #define DRUM_PATTERN_EDITOR_H
 
 #include "../EventListener.h"
+#include "../Selection.h"
 
 #include <hydrogen/object.h>
 
@@ -109,6 +110,14 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		void functionPasteNotesRedoAction(std::list<H2Core::Pattern*> & changeList, std::list<H2Core::Pattern*> & appliedList);
 		void functionPasteNotesUndoAction(std::list<H2Core::Pattern*> & appliedList);
 
+		// Synthetic UI events from selection manager
+		void mouseClickEvent( QMouseEvent *ev );
+		void mouseDragStartEvent( QMouseEvent *ev );
+		void mouseDragUpdateEvent( QMouseEvent *ev );
+		void mouseDragEndEvent( QMouseEvent *ev );
+
+		std::vector<H2Core::Note *> elementsIntersecting( QRect r );
+
 	public slots:
 		void updateEditor();
 
@@ -119,7 +128,6 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		uint m_nResolution;
 		bool m_bUseTriplets;
 
-		bool m_bRightBtnPressed;
 		H2Core::Note *m_pDraggedNote;
 		//~
 
@@ -141,6 +149,8 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		virtual void hideEvent ( QHideEvent *ev );
 		virtual void paintEvent(QPaintEvent *ev);
 		virtual void focusInEvent( QFocusEvent *ev );
+
+		Selection<DrumPatternEditor, H2Core::Note *> m_selection;
 
 		int getColumn(QMouseEvent *ev);
 
