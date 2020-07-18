@@ -148,13 +148,13 @@ void Pattern::save_to( XMLNode* node, const Instrument* instrumentOnly ) const
 
 Note* Pattern::find_note( int idx_a, int idx_b, Instrument* instrument, Note::Key key, Note::Octave octave, bool strict ) const
 {
-	for( notes_cst_it_t it=__notes.lower_bound( idx_a ); it!=__notes.upper_bound( idx_a ); it++ ) {
+	for( notes_cst_it_t it=__notes.lower_bound( idx_a ); it != __notes.end() && it->first == idx_a; it++ ) {
 		Note* note = it->second;
 		assert( note );
 		if ( note->match( instrument, key, octave ) ) return note;
 	}
 	if( idx_b==-1 ) return nullptr;
-	for( notes_cst_it_t it=__notes.lower_bound( idx_b ); it!=__notes.upper_bound( idx_b ); it++ ) {
+	for( notes_cst_it_t it=__notes.lower_bound( idx_b ); it != __notes.end() && it->first == idx_b; it++ ) {
 		Note* note = it->second;
 		assert( note );
 		if ( note->match( instrument, key, octave ) ) return note;
@@ -162,7 +162,7 @@ Note* Pattern::find_note( int idx_a, int idx_b, Instrument* instrument, Note::Ke
 	if( strict ) return nullptr;
 	// TODO maybe not start from 0 but idx_b-X
 	for ( int n=0; n<idx_b; n++ ) {
-		for( notes_cst_it_t it=__notes.lower_bound( n ); it!=__notes.upper_bound( n ); it++ ) {
+		for( notes_cst_it_t it=__notes.lower_bound( n ); it != __notes.end() && it->first == n; it++ ) {
 			Note* note = it->second;
 			assert( note );
 			if ( note->match( instrument, key, octave ) && ( ( idx_b<=note->get_position()+note->get_length() ) && idx_b>=note->get_position() ) ) return note;
@@ -174,13 +174,13 @@ Note* Pattern::find_note( int idx_a, int idx_b, Instrument* instrument, Note::Ke
 Note* Pattern::find_note( int idx_a, int idx_b, Instrument* instrument, bool strict ) const
 {
 	notes_cst_it_t it;
-	for( it=__notes.lower_bound( idx_a ); it!=__notes.upper_bound( idx_a ); it++ ) {
+	for( it=__notes.lower_bound( idx_a ); it != __notes.end() && it->first == idx_a; it++ ) {
 		Note* note = it->second;
 		assert( note );
 		if ( note->get_instrument() == instrument ) return note;
 	}
 	if( idx_b==-1 ) return nullptr;
-	for( it=__notes.lower_bound( idx_b ); it!=__notes.upper_bound( idx_b ); it++ ) {
+	for( it=__notes.lower_bound( idx_b ); it != __notes.end() && it->first == idx_b; it++ ) {
 		Note* note = it->second;
 		assert( note );
 		if ( note->get_instrument() == instrument ) return note;
@@ -188,7 +188,7 @@ Note* Pattern::find_note( int idx_a, int idx_b, Instrument* instrument, bool str
 	if ( strict ) return nullptr;
 	// TODO maybe not start from 0 but idx_b-X
 	for ( int n=0; n<idx_b; n++ ) {
-		for( it=__notes.lower_bound( n ); it!=__notes.upper_bound( n ); it++ ) {
+		for( it=__notes.lower_bound( n ); it != __notes.end() && it->first == n; it++ ) {
 			Note* note = it->second;
 			assert( note );
 			if ( note->get_instrument() == instrument && ( ( idx_b<=note->get_position()+note->get_length() ) && idx_b>=note->get_position() ) ) return note;
