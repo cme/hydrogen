@@ -247,6 +247,17 @@ void Song::set_is_modified(bool is_modified)
 	}
 }
 
+bool Song::has_missing_samples()
+{
+	InstrumentList *pInstrumentList = get_instrument_list();
+	for ( int i = 0; i < pInstrumentList->size(); i++ ) {
+		if ( pInstrumentList->get( i )->has_missing_samples() ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void Song::readTempPatternList( const QString& filename )
 {
 	XMLDoc doc;
@@ -805,6 +816,7 @@ Song* SongReader::readSong( const QString& filename )
 				if ( pSample == nullptr ) {
 					ERRORLOG( "Error loading sample: " + sFilename + " not found" );
 					pInstrument->set_muted( true );
+					pInstrument->set_missing_samples( true );
 				}
 				InstrumentComponent* pCompo = new InstrumentComponent ( 0 );
 				InstrumentLayer* pLayer = new InstrumentLayer( pSample );
@@ -891,6 +903,7 @@ Song* SongReader::readSong( const QString& filename )
 						if ( pSample == nullptr ) {
 							ERRORLOG( "Error loading sample: " + sFilename + " not found" );
 							pInstrument->set_muted( true );
+							pInstrument->set_missing_samples( true );
 						}
 						InstrumentLayer* pLayer = new InstrumentLayer( pSample );
 						pLayer->set_start_velocity( fMin );
@@ -978,6 +991,7 @@ Song* SongReader::readSong( const QString& filename )
 						if ( pSample == nullptr ) {
 							ERRORLOG( "Error loading sample: " + sFilename + " not found" );
 							pInstrument->set_muted( true );
+							pInstrument->set_missing_samples( true );
 						}
 						InstrumentLayer* pLayer = new InstrumentLayer( pSample );
 						pLayer->set_start_velocity( fMin );
