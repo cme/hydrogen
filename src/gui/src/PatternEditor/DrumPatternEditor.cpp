@@ -590,8 +590,12 @@ void DrumPatternEditor::__draw_pattern(QPainter& painter)
 		resize( width(), m_nEditorHeight );
 	}
 
-	uint y = m_nGridHeight * nSelectedInstrument;
-	painter.fillRect( 0, y + 1, ( 20 + nNotes * m_nGridWidth ), m_nGridHeight - 1, selectedRowColor );
+	for ( uint nInstr = 0; nInstr < pInstrList->size(); ++nInstr ) {
+		uint y = m_nGridHeight * nInstr;
+		if ( nInstr == (uint)nSelectedInstrument ) {	// selected instrument
+			painter.fillRect( 0, y + 1, ( 20 + nNotes * m_nGridWidth ), m_nGridHeight - 1, selectedRowColor );
+		}
+	}
 
 
 	// draw the grid
@@ -682,7 +686,19 @@ void DrumPatternEditor::__draw_note( Note *note, QPainter& p )
 
 	p.setRenderHint( QPainter::Antialiasing );
 
-	int nInstrument = note->get_instrument()->get_id();
+	int nInstrument = -1;
+	InstrumentList * pInstrList = Hydrogen::get_instance()->getSong()->get_instrument_list();
+	for ( uint nInstr = 0; nInstr < pInstrList->size(); ++nInstr ) {
+		Instrument *pInstr = pInstrList->get( nInstr );
+		if ( pInstr == note->get_instrument() ) {
+ 			nInstrument = nInstr;
+			break;
+		}
+	}
+	if ( nInstrument == -1 ) {
+		ERRORLOG( "Instrument not found..skipping note" );
+		return;
+	}
 
 	uint pos = note->get_position();
 
