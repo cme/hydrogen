@@ -52,14 +52,11 @@ private:
 
 	std::set<Elem> m_selectedElements;
 
-	// Lasso: screen coords or grid coords?
-	// Moving selection
-	// Selected cells
-
-	// TODO: interfaces for keyboard
-	// Ctrl + click / drag for adding to selection
-	// Moving
-	// Start drag after some short time, as well as distance
+	// TODO: 
+	//   - Ctrl + click / drag for adding to selection
+	//   - Moving
+	//   - replace SongEditor select / drag
+	//   - in PianoRollPatternEditor too
 
 public:
 
@@ -80,12 +77,37 @@ public:
 				 << "";
 	}
 
+
+	// ----------------------------------------------------------------------
+	// Selection operation interfaces
 	bool isMoving() {
 		return m_selectionState == Moving;
 	}
 
+	QPoint movingOffset() {
+		// XXX Not implemented yet
+		return QPoint(0,0);
+	}
+
 	bool isSelected( Elem e ) {
 		return m_selectedElements.find( e ) != m_selectedElements.end();
+	}
+
+	typedef typename std::set<Elem>::iterator iterator;
+
+	iterator begin() { return m_selectedElements.begin(); }
+	iterator end() { return m_selectedElements.end(); }
+
+	void removeFromSelection( Elem e ) {
+		m_selectedElements.remove( e );
+	}
+
+	void addToSelection( Elem e ) {
+		m_selectedElements.insert( e );
+	}
+
+	void clearSelection() {
+		m_selectedElements.clear();
 	}
 
 	// ----------------------------------------------------------------------
@@ -168,6 +190,7 @@ public:
 		if ( m_selectionState == Lasso ) {
 			QPen pen( Qt::white );
 			pen.setStyle( Qt::DotLine );
+			pen.setWidth(2);
 			painter->setPen( pen );
 			painter->setBrush( Qt::NoBrush );
 			painter->drawRect( m_lasso );
@@ -178,7 +201,10 @@ public:
 	// ----------------------------------------------------------------------
 	// Higher-level mouse events -- clicks and drags
 	void mouseClick( QMouseEvent *ev ) {
-		m_selectedElements.clear();
+		if ( !m_selectedElements.empty() ) {
+			m_selectedElements.clear();
+			widget->update();
+		}
 		widget->mouseClickEvent( ev );
 	}
 

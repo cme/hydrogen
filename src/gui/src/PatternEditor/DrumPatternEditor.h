@@ -38,6 +38,7 @@ namespace H2Core
 {
 	class Note;
 	class Pattern;
+	class Instrument;
 }
 
 class PatternEditorInstrumentList;
@@ -116,7 +117,8 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		void mouseDragUpdateEvent( QMouseEvent *ev );
 		void mouseDragEndEvent( QMouseEvent *ev );
 
-		std::vector<H2Core::Note *> elementsIntersecting( QRect r );
+		typedef std::pair< int, H2Core::Instrument* > SelectionIndex;
+		std::vector<SelectionIndex> elementsIntersecting( QRect r );
 
 	public slots:
 		void updateEditor();
@@ -150,7 +152,7 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 		virtual void paintEvent(QPaintEvent *ev);
 		virtual void focusInEvent( QFocusEvent *ev );
 
-		Selection<DrumPatternEditor, H2Core::Note *> m_selection;
+		Selection<DrumPatternEditor, SelectionIndex > m_selection;
 
 		int getColumn(QMouseEvent *ev);
 
