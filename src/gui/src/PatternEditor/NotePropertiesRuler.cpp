@@ -494,32 +494,47 @@ void NotePropertiesRuler::mouseReleaseEvent(QMouseEvent *ev)
 void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 {
 	m_pPatternEditorPanel->setCursorHidden( false );
+
+	// Basic directional movement using standard keys
 	if ( ev->matches( QKeySequence::MoveToNextChar ) ) {
 		// ->
 		m_pPatternEditorPanel->moveCursorRight();
+
 	} else if ( ev->matches( QKeySequence::MoveToEndOfLine ) ) {
 		// -->|
 		m_pPatternEditorPanel->setCursorPosition( m_pPattern->get_length() );
+
 	} else if ( ev->matches( QKeySequence::MoveToPreviousChar ) ) {
 		// <-
 		m_pPatternEditorPanel->moveCursorLeft();
+
 	} else if ( ev->matches( QKeySequence::MoveToStartOfLine ) ) {
 		// |<--
 		m_pPatternEditorPanel->setCursorPosition(0);
+
 	} else {
 		// Value adjustments
 		double delta = 0.0;
 		bool bRepeatLastValue = false;
 
 		if ( ev->matches( QKeySequence::MoveToPreviousLine ) ) {
+			// Key: Up: increase note parameter value
 			delta = 0.1;
+
 		} else if ( ev->matches( QKeySequence::MoveToNextLine ) ) {
+			// Key: Down: decrease note parameter value
 			delta = -0.1;
+
 		} else if ( ev->matches( QKeySequence::MoveToStartOfDocument ) ) {
+			// Key: MoveToStartOfDocument: increase parameter to maximum value
 			delta = 1.0;
+
 		} else if ( ev->matches( QKeySequence::MoveToEndOfDocument ) ) {
+			// Key: MoveEndOfDocument: decrease parameter to minimum value
 			delta = -1.0;
+
 		} else if ( ev->key() == Qt::Key_Enter || ev->key() == Qt::Key_Return ) {
+			// Key: Enter/Return: repeat last parameter value set.
 			if (m_bValueHasBeenSet) {
 				bRepeatLastValue = true;
 			}
@@ -553,7 +568,6 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 						__velocity = qBound( __velocity, VELOCITY_MIN, VELOCITY_MAX );
 						m_fLastSetValue = __velocity;
 						m_bValueHasBeenSet = true;
-						pNote->set_velocity( __velocity );
 					}
 					break;
 				case PAN:
@@ -573,8 +587,6 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 						}
 						m_fLastSetValue = val;
 						m_bValueHasBeenSet = true;
-						pNote->set_pan_l( 2*PAN_MAX - val );
-						pNote->set_pan_r( val );
 						break;
 					}
 				case LEADLAG:
@@ -587,7 +599,6 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 						__leadLag = qBound( __leadLag, LEAD_LAG_MIN, LEAD_LAG_MAX );
 						m_fLastSetValue = __leadLag;
 						m_bValueHasBeenSet = true;
-						pNote->set_lead_lag( __leadLag );
 						break;
 					}
 				case PROBABILITY:
@@ -600,7 +611,6 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 						__probability = qBound( __probability, 0.0f, 1.0f );
 						m_fLastSetValue = __probability;
 						m_bValueHasBeenSet = true;
-						pNote->set_probability( __probability );
 					}
 					break;
 				case NOTEKEY:
@@ -628,7 +638,6 @@ void NotePropertiesRuler::keyPressEvent( QKeyEvent *ev )
 					}
 					m_fLastSetValue = 12 * __octaveKeyVal + __noteKeyVal;
 					m_bValueHasBeenSet = true;
-					pNote->set_key_octave( (Note::Key)__noteKeyVal, (Note::Octave)__octaveKeyVal );
 					break;
 				}
 			}
