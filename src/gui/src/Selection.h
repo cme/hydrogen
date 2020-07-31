@@ -240,22 +240,26 @@ public:
 	}
 
 	void mouseDragStart( QMouseEvent *ev ) {
-		QRect r = QRect( m_pClickEvent->pos(), ev->pos() );
-		std::vector<Elem> elems = widget->elementsIntersecting( r );
+		if ( ev->button() == Qt::LeftButton) {
+			QRect r = QRect( m_pClickEvent->pos(), ev->pos() );
+			std::vector<Elem> elems = widget->elementsIntersecting( r );
 
-		if ( elems.empty() ) {
-			//  Didn't hit anything. Start new selection drag.
-			m_selectionState = MouseLasso;
-			m_lasso.setTopLeft( m_pClickEvent->pos() );
-			m_lasso.setBottomRight( ev->pos() );
-			widget->update();
+			if ( elems.empty() ) {
+				//  Didn't hit anything. Start new selection drag.
+				m_selectionState = MouseLasso;
+				m_lasso.setTopLeft( m_pClickEvent->pos() );
+				m_lasso.setBottomRight( ev->pos() );
+				widget->setCursor( Qt::CrossCursor );
+				widget->update();
 
-		} else {
-			/* Move selection */
-			m_selectionState = MouseMoving;
-			m_movingOffset = ev->pos() - m_pClickEvent->pos();
+			} else {
+				/* Move selection */
+				m_selectionState = MouseMoving;
+				widget->setCursor( Qt::DragMoveCursor );
+				m_movingOffset = ev->pos() - m_pClickEvent->pos();
+			}
+
 		}
-
 		widget->mouseDragStartEvent( ev );
 	}
 
@@ -285,10 +289,12 @@ public:
 	void mouseDragEnd( QMouseEvent *ev ) {
 		if ( m_selectionState == MouseLasso) {
 			m_selectionState = Idle;
+			widget->unsetCursor();
 			widget->update();
 
 		} else if ( m_selectionState == MouseMoving ) {
 			m_selectionState = Idle;
+			widget->unsetCursor();
 			widget->selectionMoveEndEvent( ev );
 			widget->update();
 
@@ -310,6 +316,7 @@ public:
 	//! \returns true to indicate that the Selection claims the keypress, false otherwise.
 
 	bool keyPressEvent( QKeyEvent *ev ) {
+
 		if ( ev->matches( QKeySequence::SelectNextChar )
 			 || ev->matches( QKeySequence::SelectPreviousChar )
 			 || ev->matches( QKeySequence::SelectNextLine )

@@ -138,6 +138,8 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 
 	public slots:
 		void updateEditor();
+		void selectAll();
+		void selectNone();
 
 	private:
 		float m_nGridWidth;
@@ -172,10 +174,14 @@ class DrumPatternEditor : public QWidget, public EventListener, public H2Core::O
 
 		int getColumn(QMouseEvent *ev);
 		QPoint movingGridOffset();
+		void updateModifiers( QInputEvent *ev );
 
 		int findFreeCompoID( int startingPoint = 0 );
 		int findExistingCompo( QString SourceName );
 		QString renameCompo( QString OriginalName );
+
+		bool m_bFineGrained;
+		bool m_bCopyNotMove;
 
 		int __nRealColumn;
 		int __nColumn;
