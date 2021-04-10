@@ -161,6 +161,8 @@ for:
           FOR %%F IN (Hydrogen-*.exe) DO %%F /S /D=%INSTDIR%
           %PYTHON% -m pytest %APPVEYOR_BUILD_FOLDER%\windows\ci\test_installation.py --junitxml=test_installation.xml
 
+          FOR %%F IN (Hydrogen-*.exe) DO appveyor PushArtifact %%F
+
     artifacts:
       - path: '**\Hydrogen-*.exe'
         name: Installer
