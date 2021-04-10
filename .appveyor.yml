@@ -2,13 +2,13 @@ environment:
   GENERATOR: "MinGW Makefiles"
   matrix:
 
-    - job_name: 'Ubuntu 20.04'
-      job_group: 'Linux'
-      appveyor_build_worker_image: Ubuntu2004
+    #- job_name: 'Ubuntu 20.04'
+    #  job_group: 'Linux'
+    #  appveyor_build_worker_image: Ubuntu2004
 
-    - job_name: 'OS X'
-      job_group: 'Mac OS X'
-      appveyor_build_worker_image: macos
+    #- job_name: 'OS X'
+    #  job_group: 'Mac OS X'
+    #  appveyor_build_worker_image: macos
 
     - job_name: 'Windows64'
       job_group: 'Windows'
@@ -21,7 +21,7 @@ environment:
     - job_name: 'Windows32'
       job_group: 'Windows'
       MSYS: 'C:\msys64\mingw32'
-      MSYS_REPO: 'mingw64/mingw-w64-i686'
+      MSYS_REPO: 'mingw-w64-i686'
       BUILD_TYPE: "Release"
       CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=OFF"
       appveyor_build_worker_image: Visual Studio 2019
@@ -150,7 +150,7 @@ for:
           REM *** Deploy other libraries ***
           set PYTHON=C:\Python38\python
           %PYTHON% -m pip install -r %APPVEYOR_BUILD_FOLDER%\windows\ci\requirements.txt
-          %PYTHON% %APPVEYOR_BUILD_FOLDER%\windows\ci\copy_thirdparty_dlls.py --no-overwrite -V info -L %MSYS%\bin -d %APPVEYOR_BUILD_FOLDER%\windows\extralibs src/gui/hydrogen.exe src/core/libhydrogen-core-1.1.0.dll
+          %PYTHON% %APPVEYOR_BUILD_FOLDER%\windows\ci\copy_thirdparty_dlls.py --no-overwrite -V info -L %MSYS%\bin -d %APPVEYOR_BUILD_FOLDER%\windows\extralibs src/gui/hydrogen.exe src/core/libhydrogen-core-1.0.2.dll
 
           REM *** Build installer ***
           cpack -G NSIS -v
