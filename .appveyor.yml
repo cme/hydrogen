@@ -10,14 +10,6 @@ environment:
     #  job_group: 'Mac OS X'
     #  appveyor_build_worker_image: macos
 
-    - job_name: 'WindowsDebug64'
-      job_group: 'Windows'
-      MSYS: 'C:\msys64\mingw64'
-      MSYS_REPO: 'mingw64/mingw-w64-x86_64'
-      BUILD_TYPE: "Debug"
-      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=ON -DWIN64:BOOL=ON"
-      appveyor_build_worker_image: Visual Studio 2019
-
     - job_name: 'Windows64'
       job_group: 'Windows'
       MSYS: 'C:\msys64\mingw64'
@@ -120,6 +112,7 @@ for:
 
     build_script:
       - cmd: |-
+          echo APPVEYOR_REPO_TAG is %APPVEYOR_REPO_TAG%
           REM *** Build ***
           cmake --build . -j %NUMBER_OF_PROCESSORS%
 
@@ -156,8 +149,7 @@ on_finish:
   - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\CMakeCache.txt
   - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\CMakeFiles\CMakeOutput.log
   - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\CMakeFiles\CMakeError.log
-  - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\Hydrogen-1.1.0-win64.exe
-  - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\Hydrogen-1.1.0-win32.exe
+  - cmd: if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts FOR %%F IN (%APPVEYOR_BUILD_FOLDER%\build\Hydrogen-*.exe) DO appveyor PushArtifact %%F
 
   - cmd: |
       if %APPVEYOR_REPO_BRANCH%==appveyor-build-with-artifacts curl -F file=@%APPVEYOR_BUILD_FOLDER%\build\test_installation.xml https://ci.appveyor.com/api/testresults/junit/%APPVEYOR_JOB_ID%
