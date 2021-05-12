@@ -53,7 +53,7 @@ for:
         - job_group: 'Mac OS X'
 
     cache:
-      - $HOME/.ccache
+      - $HOME/Library/Caches/ccache
 
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
