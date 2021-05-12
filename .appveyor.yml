@@ -42,7 +42,7 @@ for:
     build_script: |-
       ccache -s
       git submodule init && git submodule update
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache .. && time make -j $( ncpus )
+      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache .. && time make -j $( cat /proc/cpuinfo | grep '^processor' | wc -l )
       ccache -s
 
     test_script: |-
