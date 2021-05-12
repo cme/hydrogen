@@ -24,12 +24,13 @@ build:
 
 for:
   - 
-    cache:
-      - $HOME/.ccache
 
     matrix:
       only:
         - job_group: 'Linux'
+
+    cache:
+      - $HOME/.ccache
 
     before_build: |-
       echo 'Linux build script'
@@ -51,6 +52,9 @@ for:
       only:
         - job_group: 'Mac OS X'
 
+    cache:
+      - $HOME/.ccache
+
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
@@ -64,16 +68,19 @@ for:
 
       brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
-      brew install libsndfile jack pulseaudio cppunit
+      brew install libsndfile jack pulseaudio cppunit ccache
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
+      ccache -s
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
 
       git submodule init && git submodule update
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make
+      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 -DCMAKE_CXX_COMPILER_LAUNCHER=ccache .. && make
       PATH="$(brew --prefix qt5)/bin:$PATH"
       ../macos/build_dmg.sh -v src/gui/hydrogen.app Hydrogen${PKG_SUFFIX}.dmg
+
+      ccache -s
 
       #deploy dmg only on branch appveyor-build-with-artifacts
       if [ "$APPVEYOR_REPO_BRANCH" = appveyor-build-with-artifacts ]; then appveyor PushArtifact Hydrogen*.dmg -DeploymentName Installer; fi

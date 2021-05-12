@@ -33,7 +33,7 @@ function cmake_init() {
     fi
     cd $BUILD_DIR || exit 1
     if [ ! -e CMakeCache.txt ]; then
-        cmake ${CMAKE_OPTIONS} .. || exit 1
+        cmake ${CMAKE_OPTIONS} .. -GNinja || exit 1
     fi
     cd .. || exit 1
 }
@@ -50,11 +50,11 @@ function cmake_make() {
     cmake_init
     echo -e " * cmake make\n" && cd $BUILD_DIR || exit 1
     if [ $VERBOSE -eq 1 ]; then
-        VERBOSE=1 make translations $MAKE_OPTS || exit 1
-        VERBOSE=1 make $MAKE_OPTS || exit 1
+        VERBOSE=1 ninja translations $MAKE_OPTS || exit 1
+        VERBOSE=1 ninja $MAKE_OPTS || exit 1
     else
-        make translations $MAKE_OPTS || exit 1
-        make $MAKE_OPTS || exit 1
+        ninja translations $MAKE_OPTS || exit 1
+        ninja $MAKE_OPTS || exit 1
     fi
 
     if [[ "$PLATFORM_STR" == 'Linux' ]]; then
