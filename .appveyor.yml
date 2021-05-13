@@ -54,6 +54,7 @@ for:
 
     cache:
       - $HOME/Library/Caches/ccache
+      - /usr/local/Homebrew
 
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
@@ -74,7 +75,7 @@ for:
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       ccache -s
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
-      du -h /usr/local/*brew
+      # du -h /usr/local/*brew
 
       ncpu=$( sysctl -n hw.ncpu )
 
