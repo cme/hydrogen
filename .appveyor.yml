@@ -54,17 +54,12 @@ for:
 
     cache:
       - $HOME/Library/Caches/ccache
-      - $HOME/homebrew.tar
+      - $HOMe/Library/Caches/Homebrew
 
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
-      if [ -f $HOME/homebrew.tar ] ; then
-        echo "Unpacking Homebrew..."
-        du -h $HOME/homebrew.tar
-        time ( cd /usr/local/Homebrew; sudo tar xf $HOME/homebrew.tar )
-      fi
       brew update
 
       echo "Updating and building Homebrew"
@@ -78,10 +73,6 @@ for:
       brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
       brew install libsndfile jack pulseaudio cppunit ccache
-
-      echo "Preserving Homebrew..."
-      ( cd /usr/local/Homebrew; time tar cf $HOME/homebrew.tar . )
-      du -h $HOME/homebrew.tar
 
 
     build_script: |-
