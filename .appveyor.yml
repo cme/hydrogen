@@ -74,6 +74,8 @@ for:
       brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
       brew install libsndfile jack pulseaudio cppunit ccache
 
+      du -h $HOME/Library/Caches/Homebrew
+
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
