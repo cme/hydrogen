@@ -54,7 +54,7 @@ for:
 
     cache:
       - $HOME/Library/Caches/ccache
-      - $HOMe/Library/Caches/Homebrew
+      - $HOME/Library/Caches/Homebrew
 
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
