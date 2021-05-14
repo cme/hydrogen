@@ -80,7 +80,7 @@ for:
         brew install libsndfile jack pulseaudio cppunit ccache
 
         echo "Preserving Homebrew..."
-        ( cd /usr/local/Homebrew; time tar cvf $HOME/homebrow.tar )
+        ( cd /usr/local/Homebrew; time tar cvf $HOME/homebrow.tar . )
         du -h $HOME/homebrew.tar
 
       fi 
