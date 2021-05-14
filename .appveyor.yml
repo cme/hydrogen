@@ -53,6 +53,7 @@ for:
         - job_group: 'Mac OS X'
 
     cache:
+      - $HOME/Library/Caches/ccache
       - /usr/local/Homebrew
 
     before_build: |-
