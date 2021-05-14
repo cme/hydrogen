@@ -64,18 +64,26 @@ for:
         echo "Unpacking Homebrew..."
         du -h $HOME/homebrew.tar
         time ( cd /usr/local/Homebrew; tar xf $HOME/homebrew.tar )
-      fi
+        brew update
+      else
 
-      brew update
-      # Build libsndfile and bdb from source to enable building for 10.12
-      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+        echo "Updating and building Homebrew"
+        brew update
+        # Build libsndfile and bdb from source to enable building for 10.12
+        brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-      brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-      brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
-      brew install libsndfile jack pulseaudio cppunit ccache
+        brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+        brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+        brew install libsndfile jack pulseaudio cppunit ccache
+
+        echo "Preserving Homebrew..."
+        ( cd /usr/local/Homebrew; time tar cvf $HOME/homebrow.tar )
+        du -h $HOME/homebrew.tar
+
+      fi 
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
@@ -98,8 +106,6 @@ for:
     test_script: |-
       TMPDIR=/tmp src/tests/tests --appveyor || true
 
-    on_finish:
-      cmd: time ( cd /usr/local/Homebrew; tar cf $HOME/homebrew.tar )
 
   -
     matrix:
