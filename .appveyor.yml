@@ -63,7 +63,7 @@ for:
       if [ -f $HOME/homebrew.tar ] ; then
         echo "Unpacking Homebrew..."
         du -h $HOME/homebrew.tar
-        time ( cd /usr/local/Homebrew; tar xf $HOME/homebrew.tar )
+        time ( cd /usr/local/Homebrew; sudo tar xf $HOME/homebrew.tar )
       fi
       brew update
 
