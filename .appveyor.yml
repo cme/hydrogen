@@ -54,11 +54,17 @@ for:
 
     cache:
       - $HOME/Library/Caches/ccache
-      - /usr/local/Homebrew
+      - $HOME/homebrew.tar
 
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
+
+      if [ -f $HOME/homebrew.tar ] ; then
+        echo "Unpacking Homebrew..."
+        du -h $HOME/homebrew.tar
+        time ( cd /usr/local/Homebrew; tar xf $HOME/homebrew.tar )
+      fi
 
       brew update
       # Build libsndfile and bdb from source to enable building for 10.12
@@ -91,6 +97,9 @@ for:
 
     test_script: |-
       TMPDIR=/tmp src/tests/tests --appveyor || true
+
+    on_finish:
+      cmd: time ( cd /usr/local/Homebrew; tar cf $HOME/homebrew.tar )
 
   -
     matrix:
