@@ -195,7 +195,7 @@ protected:
 	QColor selectedNoteColor( const H2Core::UIStyle *pStyle ) const;
 
 	//! Draw a note
-	void drawNoteSymbol( QPainter &p, QPoint pos, H2Core::Note *pNote ) const;
+	void drawNoteSymbol( QPainter &p, QPoint pos, H2Core::Note *pNote, bool bIsForeground = true ) const;
 
 	//! Update current pattern information
 	void updatePatternInfo();

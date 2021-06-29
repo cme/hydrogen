@@ -132,7 +132,7 @@ class DrumPatternEditor : public PatternEditor, protected WidgetWithScalableFont
 		void onPreferencesChanged( bool bAppearanceOnly );
 
 	private:
-		void __draw_note( H2Core::Note* note, QPainter& painter );
+		void __draw_note( H2Core::Note* note, QPainter& painter, bool bIsForeground = true );
 		void __draw_pattern( QPainter& painter );
 		void __draw_grid( QPainter& painter );
 		void __create_background( QPainter& pointer );
