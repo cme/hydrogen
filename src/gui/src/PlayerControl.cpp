@@ -738,9 +738,7 @@ void PlayerControl::songModeBtnClicked(Button* ref)
 {
 	UNUSED( ref );
 
-	Hydrogen::get_instance()->getCoreActionController()->activateSongMode( true, false );
-
-	songModeActivationEvent( 1 );
+	Hydrogen::get_instance()->getCoreActionController()->activateSongMode( true, true );
 }
 
 
@@ -749,9 +747,7 @@ void PlayerControl::liveModeBtnClicked(Button* ref)
 {
 	UNUSED( ref );
 
-	Hydrogen::get_instance()->getCoreActionController()->activateSongMode( false, false );
-
-	songModeActivationEvent( 0 );
+	Hydrogen::get_instance()->getCoreActionController()->activateSongMode( false, true );
 }
 
 void PlayerControl::songModeActivationEvent( int nValue )
