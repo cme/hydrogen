@@ -43,6 +43,7 @@
 #include <core/Basics/InstrumentComponent.h>
 #include <core/Basics/PatternList.h>
 #include <core/IO/JackAudioDriver.h>
+#include <core/EventQueue.h>
 
 #ifdef WIN32
 #include <time.h>
@@ -188,6 +189,7 @@ SongEditorPanel::SongEditorPanel(QWidget *pParent)
 	m_pModeActionBtn->move( 169, 5 + 25 );
 	m_pModeActionBtn->setToolTip( tr( "stacked mode") );
 	m_pModeActionBtn->setPressed(  pPref->patternModePlaysSelected() );
+	m_pModeActionBtn->setDisabled( pSong->getMode() == Song::SONG_MODE );
 	connect( m_pModeActionBtn, SIGNAL( clicked( Button* ) ), this, SLOT( modeActionBtnPressed() ) );
 
 // ZOOM
@@ -732,6 +734,11 @@ void SongEditorPanel::actionModeChangeEvent( int nValue ) {
 	}
 }
 
+void SongEditorPanel::songModeActivationEvent( int nValue ) {
+	// Disable the stacked mode button in song mode since it does nothing in song mode
+	m_pModeActionBtn->setDisabled( nValue );
+}
+
 void SongEditorPanel::pointerActionBtnPressed( Button* pBtn )
 {
 	Hydrogen::get_instance()->getSong()->setActionMode( H2Core::Song::ActionMode::selectMode );
@@ -880,7 +887,9 @@ void SongEditorPanel::modeActionBtnPressed( )
 	} else {
 		m_pModeActionBtn->setToolTip( tr( "single pattern mode") );
 	}
-	Hydrogen::get_instance()->togglePlaysSelected();
+	bool bIsStacked = m_pModeActionBtn->isPressed();
+	Hydrogen::get_instance()->setPlaysSelected( ! bIsStacked );
+	EventQueue::get_instance()->push_event( EVENT_STACKED_MODE_ACTIVATION, bIsStacked? 1 : 0 );
 	updateAll();
 }
 

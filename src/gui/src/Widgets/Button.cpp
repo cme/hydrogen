@@ -280,6 +280,11 @@ void Button::paintEvent( QPaintEvent* ev)
 
 	}
 
+	// Grey-out the widget if it is not enabled
+	if ( ! isEnabled() ) {
+		painter.fillRect( ev->rect(), QColor( 128, 128, 128, 208 ) );
+	}
+
 }
 
 
