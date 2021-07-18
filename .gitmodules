@@ -1,3 +1,6 @@
 [submodule "data/doc"]
 	path = data/doc
 	url = https://github.com/hydrogen-music/documentation.git
+[submodule "src/weakjack"]
+	path = src/weakjack
+	url = git@github.com:x42/weakjack.git
