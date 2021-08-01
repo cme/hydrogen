@@ -34,9 +34,13 @@
 
 #include <pthread.h>
 
+#ifdef USE_WEAK_JACK
+#include "../weakjack/weak_libjack.h"
+#else
 #include <jack/jack.h>
 #include <jack/midiport.h>
 #include <jack/ringbuffer.h>
+#endif
 
 #include <string>
 #include <vector>

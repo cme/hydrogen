@@ -29,7 +29,11 @@
 #include <cassert>
 #include <algorithm>
 #include <cmath>
+#ifdef USE_WEAK_JACK
+#include "../weakjack/weak_libjack.h"
+#else
 #include <jack/metadata.h>
+#endif
 
 #include <core/Hydrogen.h>
 #include <core/AudioEngine.h>

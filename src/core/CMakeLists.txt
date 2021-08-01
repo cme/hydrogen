@@ -5,7 +5,7 @@ FILE(GLOB_RECURSE hydrogen_INCLUDES *.h)
 FILE(GLOB_RECURSE hydrogen_SOURCES *.cpp *.cc *.c)
 LIST(APPEND hydrogen_INCLUDES ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-ADD_LIBRARY( hydrogen-core-${VERSION} ${H2CORE_LIBRARY_TYPE} ${hydrogen_SOURCES})
+ADD_LIBRARY( hydrogen-core-${VERSION} ${H2CORE_LIBRARY_TYPE} ${hydrogen_SOURCES} ../weakjack/weak_libjack.c)
 INCLUDE_DIRECTORIES( include
     ${CMAKE_SOURCE_DIR}/src                     # regular headers
     ${CMAKE_SOURCE_DIR}/include                 # regular headers

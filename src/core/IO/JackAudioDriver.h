@@ -32,6 +32,9 @@
 
 #include <map>
 #include <pthread.h>
+#ifdef USE_WEAK_JACK
+#include "../weakjack/weak_libjack.h"
+#else
 #include <jack/jack.h>
 
 #if defined(H2CORE_HAVE_JACKSESSION) || _DOXYGEN_
@@ -39,6 +42,8 @@
 #endif
 
 #include <jack/transport.h>
+
+#endif
 
 #include <core/Globals.h>
 

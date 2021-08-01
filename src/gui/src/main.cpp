@@ -39,7 +39,11 @@
 #include <core/Lash/LashClient.h>
 #endif
 #ifdef H2CORE_HAVE_JACKSESSION
+#ifdef USE_WEAK_JACK
+#include "../weakjack/weak_libjack.h"
+#else
 #include <jack/session.h>
+#endif
 #endif
 
 #include <core/MidiMap.h>
