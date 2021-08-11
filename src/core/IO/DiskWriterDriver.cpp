@@ -33,6 +33,7 @@
 
 #include <pthread.h>
 #include <cassert>
+#include <fstream>
 
 #if defined(WIN32) || _DOXYGEN_
 #include <windows.h>
@@ -145,6 +146,9 @@ void* diskWriterDriver_thread( void* param )
 	}
 
 
+	std::ofstream o;
+	o.open( ( pDriver->m_sFilename + ".dump" ).toLocal8Bit() );
+	qDebug() << "XXX Write to " << pDriver->m_sFilename + ".dump";
 	SNDFILE* m_file = sf_open( pDriver->m_sFilename.toLocal8Bit(), SFM_WRITE, &soundInfo );
 
 	float *pData = new float[ pDriver->m_nBufferSize * 2 ];	// always stereo
@@ -254,6 +258,7 @@ void* diskWriterDriver_thread( void* param )
 				{
 					pData[i * 2 + 1] = pData_R[i];
 				}
+				o << frameNumber << " " << pData[i * 2 ] << " " << pData[ i * 2 + 1 ] << std::endl;
 			}
 			int res = sf_writef_float( m_file, pData, usedBuffer );
 			if ( res != ( int )usedBuffer ) {
