@@ -122,7 +122,7 @@ class FunctionalTest : public CppUnit::TestCase {
 	CPPUNIT_TEST( testExportMIDISMF0 );
 	CPPUNIT_TEST( testExportMIDISMF1Single );
 	CPPUNIT_TEST( testExportMIDISMF1Multi );
-//	CPPUNIT_TEST( testExportMuteGroupsAudio ); // SKIP
+	CPPUNIT_TEST( testExportMuteGroupsAudio ); // SKIP
 	CPPUNIT_TEST( testExportVelocityAutomationAudio );
 	CPPUNIT_TEST( testExportVelocityAutomationMIDISMF0 );
 	CPPUNIT_TEST( testExportVelocityAutomationMIDISMF1 );
