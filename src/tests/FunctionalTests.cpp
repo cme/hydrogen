@@ -247,7 +247,6 @@ class FunctionalTest : public CppUnit::TestCase {
 		Filesystem::rm( outFile );
 	}
 	
-/* SKIP
 	void testExportMuteGroupsAudio()
 	{
 		auto songFile = H2TEST_FILE("functional/mutegroups.h2song");
@@ -258,7 +257,7 @@ class FunctionalTest : public CppUnit::TestCase {
 		H2TEST_ASSERT_AUDIO_FILES_EQUAL( refFile, outFile );
 		Filesystem::rm( outFile );
 	}
-*/
+
 	void testExportVelocityAutomationAudio()
 	{
 		auto songFile = H2TEST_FILE("functional/velocityautomation.h2song");
