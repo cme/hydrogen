@@ -6,6 +6,10 @@ environment:
       job_group: 'Linux'
       appveyor_build_worker_image: Ubuntu2004
 
+    - job_name: 'Ubuntu 18.04'
+      job_group: 'Linux'
+      appveyor_build_worker_image: Ubuntu1804
+
     - job_name: 'OS X'
       job_group: 'Mac OS X'
       appveyor_build_worker_image: macos
