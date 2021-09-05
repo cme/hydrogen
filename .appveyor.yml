@@ -23,6 +23,7 @@ for:
       sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk
       sudo rm /usr/local/bin/doxygen
       cmake --version
+      which cmake
 
     build_script: |-
       git submodule init && git submodule update
