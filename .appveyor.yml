@@ -83,11 +83,9 @@ for:
 
       time brew update
       echo "updated"
-      # Build libsndfile and bdb from source to enable building for 10.12
-      time brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-      time brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-      time brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-      time brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+
+      curl -L 'https://github.com/cme/hydrogen-bottles/releases/download/1.0.0/hydrogen-bottles.tar' | tar xvf -
+      brew install ./*bottle*.tar.gz
 
       time brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       time brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
