@@ -64,7 +64,6 @@ for:
 
       CPUS=$(nproc 2>/dev/null)
       echo "Building with $CPUS cpus"
-      CPUS=1 # for cmparison
 
       mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make -j $CPUS
 
@@ -102,7 +101,6 @@ for:
       git submodule init && git submodule update
 
       CPUS=$(sysctl -n hw.ncpu)
-      CPUS=1
       echo "Building with $CPUS cpus"
 
       mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make -j $CPUS
