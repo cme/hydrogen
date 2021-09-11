@@ -65,7 +65,7 @@ for:
       CPUS=$(nproc 2>/dev/null)
       echo "Building with $CPUS cpus"
 
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && time make # -j $CPUS
+      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && time make -j $CPUS
 
     test_script: |-
       TMPDIR=/tmp src/tests/tests --appveyor
@@ -104,7 +104,7 @@ for:
       CPUS=$(sysctl -n hw.ncpu)
       echo "Building with $CPUS cpus"
 
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && time make # -j $CPUS
+      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && time make -j $CPUS
       PATH="$(brew --prefix qt5)/bin:$PATH"
       ../macos/build_dmg.sh -v src/gui/hydrogen.app Hydrogen${PKG_SUFFIX}.dmg
 
