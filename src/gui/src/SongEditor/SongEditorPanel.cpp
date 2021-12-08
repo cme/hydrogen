@@ -448,10 +448,13 @@ void SongEditorPanel::updatePlayHeadPosition()
 		int nPlayHeadPosition = Hydrogen::get_instance()->getPatternPos() * m_pSongEditor->getGridWidth();
 
 		int value = m_pEditorScrollView->horizontalScrollBar()->value();
+		ERRORLOG( QString( "x %1 w %2 nPlayHeadPosition %3 value %4" ).arg( x ).arg( w ).arg( nPlayHeadPosition ).arg( value ) );
 		if ( nPlayHeadPosition > ( x + w - 50 ) ) {
+			ERRORLOG( QString( "Playhead to right of viewport edge at %1, scroll right" ).arg( x + w - 50 ) );
 			hScrollTo( value + 100 );
 		}
 		else if ( nPlayHeadPosition < x ) {
+			ERRORLOG( QString( "Playhead to left of viewport, scroll left" ) );
 			hScrollTo( value - 100 );
 		}
 	}
@@ -704,6 +707,7 @@ void SongEditorPanel::resyncExternalScrollBar()
 	m_pVScrollBar->setValue( m_pEditorScrollView->verticalScrollBar()->value() );
 
 	// Make sure currently selected pattern is visible.
+	ERRORLOG( QString( "Ensure visible pattern" ) );
 	m_pPatternListScrollView->ensureVisible( 0, (Hydrogen::get_instance()->getSelectedPatternNumber()
 												 * nGridHeight + nGridHeight/2 ),
 											 0, m_pPatternList->getGridHeight() );

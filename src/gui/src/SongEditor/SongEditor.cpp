@@ -529,6 +529,7 @@ void SongEditor::keyPressEvent( QKeyEvent * ev )
 	}
 
 	QPoint cursorCentre = columnRowToXy( QPoint( m_nCursorColumn, m_nCursorRow ) ) + centre;
+	ERRORLOG( QString( "XXX ensureVisible %1 %2" ).arg( cursorCentre.x() ).arg( cursorCentre.y() ) );
 	m_pScrollView->ensureVisible( cursorCentre.x(), cursorCentre.y() );
 	m_selection.updateKeyboardCursorPosition( getKeyboardCursorRect() );
 	update();
@@ -545,6 +546,7 @@ void SongEditor::focusInEvent( QFocusEvent *ev )
 	if ( ev->reason() == Qt::TabFocusReason || ev->reason() == Qt::BacktabFocusReason ) {
 		QPoint pos = columnRowToXy( QPoint( m_nCursorColumn, m_nCursorRow ))
 			+ QPoint( m_nGridWidth / 2, m_nGridHeight / 2 );
+		ERRORLOG( QString( "XXX ensureVisible %1 %2" ).arg( pos.x(), pos.y() ) );
 		m_pScrollView->ensureVisible( pos.x(), pos.y() );
 		HydrogenApp::get_instance()->setHideKeyboardCursor( false );
 	}

@@ -114,6 +114,7 @@ public:
 
 };
 
+#include "core/Object.h"
 
 //! Drag scroller object. When attached to a QScrollArea, this will scroll the widget whenever the mouse
 //! cursor goes out of bounds.
@@ -155,6 +156,7 @@ public slots:
 	void timeout( void ) {
 		QWidget *pWidget = m_pScrollArea->widget();
 		QPoint pos = pWidget->mapFromGlobal( QCursor::pos() );
+		___ERRORLOG( QString( "XXX Drag scroller sets visible %1 %2" ).arg( pos.x() ).arg( pos.y() ) );
 		m_pScrollArea->ensureVisible( pos.x(), pos.y(), 1, 1 );
 	}
 };
