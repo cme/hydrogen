@@ -74,6 +74,12 @@ for:
 
       echo "Which brew: " $( which brew )
 
+      echo "XXX"
+      ls -alrt /usr/local/bin
+
+      echo "XXX"
+      find /opt /usr -name Cellar
+
       ls -l /opt/homebrew/Cellar
       ls -l /usr/homebrew/Cellar
       ls -l /usr/local/homebrew/Cellar
