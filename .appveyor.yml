@@ -72,24 +72,26 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
-      echo "Which brew: " $( which brew )
+      python3 ./build_deps_macos.py
 
-      ls -l /usr/local/Cellar > before.txt
+      #echo "Which brew: " $( which brew )
 
-      brew update
-      # Build libsndfile and bdb from source to enable building for 10.12
-      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+      #ls -l /usr/local/Cellar > before.txt
 
-      brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-      brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
-      brew install libsndfile jack pulseaudio cppunit
+      #brew update
+      ## Build libsndfile and bdb from source to enable building for 10.12
+      #brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-      ls -l /usr/local/Cellar > after.txt
+      #brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+      #brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+      #brew install libsndfile jack pulseaudio cppunit
 
-      diff before.txt after.txt
+      #ls -l /usr/local/Cellar > after.txt
+
+      #diff before.txt after.txt
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
