@@ -3,35 +3,35 @@ environment:
   ARTIFACT_BRANCH: master-artifacts
   matrix:
 
-    - job_name: 'Ubuntu 20.04'
-      job_group: 'Linux'
-      appveyor_build_worker_image: Ubuntu2004
+#    - job_name: 'Ubuntu 20.04'
+#      job_group: 'Linux'
+#      appveyor_build_worker_image: Ubuntu2004
 
     - job_name: 'OS X'
       job_group: 'Mac OS X'
       appveyor_build_worker_image: macos
 
-    - job_name: 'Windows64'
-      job_group: 'Windows'
-      MSYS: 'C:\msys64\mingw64'
-      MSYS_REPO: 'mingw64/mingw-w64-x86_64'
-      BUILD_TYPE: "Release"
-      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=ON"
-      appveyor_build_worker_image: Visual Studio 2019
-      LIBJACK: libjack64.dll
-      CHOCO_ARCH:
-      PROGRAM_FILES: "Program Files"
+#    - job_name: 'Windows64'
+#      job_group: 'Windows'
+#      MSYS: 'C:\msys64\mingw64'
+#      MSYS_REPO: 'mingw64/mingw-w64-x86_64'
+#      BUILD_TYPE: "Release"
+#      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=ON"
+#      appveyor_build_worker_image: Visual Studio 2019
+#      LIBJACK: libjack64.dll
+#      CHOCO_ARCH:
+#      PROGRAM_FILES: "Program Files"
 
-    - job_name: 'Windows32'
-      job_group: 'Windows'
-      MSYS: 'C:\msys64\mingw32'
-      MSYS_REPO: 'mingw-w64-i686'
-      BUILD_TYPE: "Release"
-      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=OFF"
-      appveyor_build_worker_image: Visual Studio 2019
-      LIBJACK: libjack.dll
-      CHOCO_ARCH:  --x86
-      PROGRAM_FILES: "Program Files (x86)"
+#    - job_name: 'Windows32'
+#      job_group: 'Windows'
+#      MSYS: 'C:\msys64\mingw32'
+#      MSYS_REPO: 'mingw-w64-i686'
+#      BUILD_TYPE: "Release"
+#      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=OFF"
+#      appveyor_build_worker_image: Visual Studio 2019
+#      LIBJACK: libjack.dll
+#      CHOCO_ARCH:  --x86
+#      PROGRAM_FILES: "Program Files (x86)"
 
 build:
   verbosity: detailed
@@ -72,6 +72,12 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
+      echo "Which brew: " $( which brew )
+
+      ls -l /opt/homebrew/Cellar
+      ls -l /usr/homebrew/Cellar
+      ls -l /usr/local/homebrew/Cellar
+
       brew update
       # Build libsndfile and bdb from source to enable building for 10.12
       brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
@@ -82,6 +88,10 @@ for:
       brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
       brew install libsndfile jack pulseaudio cppunit
+
+      ls -l /opt/homebrew/Cellar
+      ls -l /usr/homebrew/Cellar
+      ls -l /usr/local/homebrew/Cellar
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
