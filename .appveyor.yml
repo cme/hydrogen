@@ -74,6 +74,9 @@ for:
 
       python3 ./build_deps_macos.py
 
+      echo "Zipping..."
+      gzip -9v brew.tar
+
       appveyor PushArtifact brew.tar.gz
 
     build_script: |-

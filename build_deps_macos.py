@@ -33,7 +33,6 @@ for b in os.listdir(cellar):
     p = os.path.join(cellar, b)
     if not b in stamps or stamps[b] != os.path.getmtime(p):
         print("updated or new: %s" % p)
-        os.system("tar rzf brew.tar.gz %s" % p)
-        os.system("ls -alrt %s.tar.gz" % b)
+        os.system("tar rf brew.tar %s" % p)
     else:
         print("%s not updated" % b)
