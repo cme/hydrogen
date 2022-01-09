@@ -17,16 +17,16 @@ for b in os.listdir(cellar):
 
 # Install stuff.
 if True:
-    os.path.system("      brew update")
+    os.system("      brew update")
     # Build libsndfile and bdb from source to enable building for 10.12
-    os.path.system("      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb")
-    os.path.system("      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb")
-    os.path.system("      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb")
-    os.path.system("      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb")
+    os.system("      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb")
+    os.system("      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb")
+    os.system("      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb")
+    os.system("      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb")
 
-    os.path.system("     brew install qt5; export CMAKE_PREFIX_PATH=\"$(brew --prefix qt5)\";")
-    os.path.system("     brew install libarchive; export PKG_CONFIG_PATH=\"$(brew --prefix libarchive)/lib/pkgconfig\";")
-    os.path.system("     brew install libsndfile jack pulseaudio cppunit")
+    os.system("     brew install qt5; export CMAKE_PREFIX_PATH=\"$(brew --prefix qt5)\";")
+    os.system("     brew install libarchive; export PKG_CONFIG_PATH=\"$(brew --prefix libarchive)/lib/pkgconfig\";")
+    os.system("     brew install libsndfile jack pulseaudio cppunit")
 
 
 for b in os.listdir(cellar):
