@@ -72,16 +72,19 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
-      brew update
+      #brew update
       # Build libsndfile and bdb from source to enable building for 10.12
-      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
+      #brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-      brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-      brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
-      brew install libsndfile jack pulseaudio cppunit
+      #brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+      #brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+      #brew install libsndfile jack pulseaudio cppunit
+
+      curl -o brew.tar.gz 'https://ci.appveyor.com/api/buildjobs/qrp541x8wx2a89l7/artifacts/brew.tar.gz'
+      gzip -dc brew.tar.gz | ( cd /; sudo tar xf - )
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
