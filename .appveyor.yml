@@ -29,7 +29,7 @@ for:
 
       cache=$PWD/cache_dir/usr_local.tar.gz
 
-      if [ -d cache_dir ] && [ -f $cache ];
+      if [ -d cache_dir ] && [ -f $cache ]; then
         echo "Using cached Homebrew"
         ( cd /; tar xf $cache )
       else
