@@ -27,6 +27,8 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
+      echo Dirs: $HOME and $PWD
+
       cache=$PWD/cache_dir/usr_local.tar.gz
 
       if [ -d cache_dir ] && [ -f $cache ]; then
@@ -47,7 +49,8 @@ for:
 
         echo "Creating cache tarball $cache"
         mkdir cache_dir
-        tar czf $cache --exclude usr_local.tar.gz /usr/local/{Cellar,Homebrew,var/homebrew}
+        tar czf /tmp/t.tar.gz /usr/local/{Cellar,Homebrew,var/homebrew}
+        mv /tmp/t.tar.gz $cache
         ls -l $cache
       fi
 
