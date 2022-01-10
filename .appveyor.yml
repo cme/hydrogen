@@ -45,9 +45,9 @@ for:
         brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
         brew install libsndfile jack pulseaudio cppunit
 
-        echo "Creating cache tarball"
+        echo "Creating cache tarball $cache"
         mkdir cache_dir
-        tar cz9f $cache /usr/local/{Cellar,Homebrew,var/homebrew}
+        tar czf $cache /usr/local/{Cellar,Homebrew,var/homebrew}
         ls -l $cache
       fi
 
