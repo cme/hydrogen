@@ -3,35 +3,10 @@ environment:
   ARTIFACT_BRANCH: master-artifacts
   matrix:
 
-    - job_name: 'Ubuntu 20.04'
-      job_group: 'Linux'
-      appveyor_build_worker_image: Ubuntu2004
-
     - job_name: 'OS X'
       job_group: 'Mac OS X'
       appveyor_build_worker_image: macos
 
-    - job_name: 'Windows64'
-      job_group: 'Windows'
-      MSYS: 'C:\msys64\mingw64'
-      MSYS_REPO: 'mingw64/mingw-w64-x86_64'
-      BUILD_TYPE: "Release"
-      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=ON"
-      appveyor_build_worker_image: Visual Studio 2019
-      LIBJACK: libjack64.dll
-      CHOCO_ARCH:
-      PROGRAM_FILES: "Program Files"
-
-    - job_name: 'Windows32'
-      job_group: 'Windows'
-      MSYS: 'C:\msys64\mingw32'
-      MSYS_REPO: 'mingw-w64-i686'
-      BUILD_TYPE: "Release"
-      CMAKE_FLAGS: "-DWANT_DEBUG:BOOL=OFF -DWIN64:BOOL=OFF"
-      appveyor_build_worker_image: Visual Studio 2019
-      LIBJACK: libjack.dll
-      CHOCO_ARCH:  --x86
-      PROGRAM_FILES: "Program Files (x86)"
 
 build:
   verbosity: detailed
@@ -43,27 +18,7 @@ matrix:
 
 for:
   - 
-    matrix:
-      only:
-        - job_group: 'Linux'
-
-    before_build: |-
-      echo 'Linux build script'
-      sudo apt-get update
-      sudo apt-get install -y clang qt5-default qttools5-dev qttools5-dev-tools libqt5xmlpatterns5-dev libarchive-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev libqt5svg5-dev
-      sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk
-      sudo rm /usr/local/bin/doxygen
-
-    build_script: |-
-      git submodule init && git submodule update
-
-      CPUS=$(nproc)
-      echo "Building with $CPUS cpus"
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make -j $CPUS
-
-    test_script: |-
-      TMPDIR=/tmp src/tests/tests --appveyor
-  - 
+    cache: cache_dir
     matrix:
       only:
         - job_group: 'Mac OS X'
@@ -72,16 +27,29 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
-      brew update
-      # Build libsndfile and bdb from source to enable building for 10.12
-      brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-      brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+      cache=$PWD/cache_dir/usr_local.tar.gz
 
-      brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-      brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
-      brew install libsndfile jack pulseaudio cppunit
+      if [ -d cache_dir ] && [ -f $cache ];
+        echo "Using cached Homebrew"
+        ( cd /; tar xf $cache )
+      else
+        echo "Building dependencies"
+        brew update
+        # Build libsndfile and bdb from source to enable building for 10.12
+        brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
+        brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
+
+        brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+        brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+        brew install libsndfile jack pulseaudio cppunit
+
+        echo "Creating cache tarball"
+        mkdir cache_dir
+        tar cz9f $cache /usr/local/{Cellar,Homebrew,var/homebrew}
+        ls -l $cache
+      fi
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
