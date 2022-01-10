@@ -72,10 +72,36 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
+      find /usr/local > before.txt
       python3 ./build_deps_macos.py
+      find /usr/local > after.txt
+
+      /usr/bin/env -i HOME=/Users/colin SHELL=/bin/zsh PATH=/usr/bin:/bin:/usr/sbin:/sbin TERM=xterm-256color DISPLAY=/private/tmp/com.apple.launchd.DTDZ6eBSFF/org.xquartz:0 LOGNAME=colin USER=colin SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.PsAhnFKAyv/Listeners HOMEBREW_BREW_FILE=/usr/local/bin/brew HOMEBREW_CELLAR=/usr/local/Cellar HOMEBREW_DISPLAY=/private/tmp/com.apple.launchd.DTDZ6eBSFF/org.xquartz:0 HOMEBREW_LIBRARY=/usr/local/Library HOMEBREW_PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:/opt/X11/bin:/Library/Apple/usr/bin:/Users/colin/repo/bin HOMEBREW_PREFIX=/usr/local HOMEBREW_REPOSITORY=/usr/local /bin/bash -x /usr/local/Library/Homebrew/brew.sh --prefix qt
+
+      echo "Making new archive..."
+      tar czf brew2.tar.gz -T after.txt -X before.txt
+      echo ls -lh brew2.tar.gz
+
+      appveyor PushArtifact brew2.tar.gz
+      appveyor PushArtifact before.txt
+      appveyor PushArtifact after.txt
+
+      ls -lR /usr/local > ls-lR-after-setup.txt
+      appveyor PushArtifact ls-lR-after-setup.txt
+
+      echo "Prefixes:"
+      brew --prefix qt5
+      brew --prefix libarchive
+
+      tar rf brew.tar /opt/homebrew/Library/Taps/homebrew/homebrew-core/Formula
+      echo "Finding formula directory"
+      find /opt /usr/local -name Formula -print -exec tar rf brew.tar '{}' ';'
+      tar rf brew.tar /usr/local/var/homebrew
 
       echo "Zipping..."
       gzip -9v brew.tar
+      echo "Done"
+
 
       appveyor PushArtifact brew.tar.gz
 
