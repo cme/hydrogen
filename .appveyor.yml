@@ -70,6 +70,10 @@ for:
       echo "Trace it"
       /usr/bin/env -i HOME=/Users/colin SHELL=/bin/bash PATH=/usr/bin:/bin:/usr/sbin:/sbin TERM=screen-256color LOGNAME=colin USER=colin HOMEBREW_BREW_FILE=/usr/local/bin/brew HOMEBREW_LIBRARY=/usr/local/Homebrew/Library HOMEBREW_PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Users/colin/perl5/bin:/Users/colin/repo/bin HOMEBREW_PREFIX=/usr/local HOMEBREW_REPOSITORY=/usr/local/Homebrew /bin/bash -x /usr/local/Homebrew/Library/Homebrew/brew.sh --prefix qt
 
+      echo "XXX: script contents"
+      cat /usr/local/Homebrew/Library/Homebrew/brew.sh
+      echo "XXX"
+
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
