@@ -47,7 +47,7 @@ for:
 
         echo "Creating cache tarball $cache"
         mkdir cache_dir
-        tar czf $cache /usr/local/{Cellar,Homebrew,var/homebrew}
+        tar czf $cache --exclude appveyor-build-agent /usr/local/{Cellar,Homebrew,var/homebrew}
         ls -l $cache
       fi
 
