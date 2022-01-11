@@ -50,6 +50,8 @@ for:
         echo "Creating cache tarball $cache"
         mkdir cache_dir
         tar czf /tmp/t.tar.gz /usr/local/{Cellar,Homebrew,var/homebrew}
+        ls -ald cache_dir
+        ls -l /tmp/t.tar.gz
         mv /tmp/t.tar.gz $cache
         ls -l $cache
       fi
