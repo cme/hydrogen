@@ -36,6 +36,11 @@ for:
         ( cd /; tar xf $cache )
       else
         echo "Building dependencies"
+
+        echo "Recording /usr/local state"
+        python3 ./treestate.py scan /usr/local usrlocal.json
+        echo "Done"
+
         brew update
         # Build libsndfile and bdb from source to enable building for 10.12
         brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
@@ -48,8 +53,12 @@ for:
         brew install libsndfile jack pulseaudio cppunit
 
         echo "Creating cache tarball $cache"
+        echo "Scan updated /usr/local"
+        python3 ./treestate.py updates usrlocal.json /usr/local > updated_list
+        echo $( wc -l updated_list ) updates
         mkdir -p $cdir
-        tar czf $cache /usr/local/{Cellar,Homebrew,var/homebrew}
+        tar czf $cache -T updated_list
+
         ls -ald $cdir
         ls -al $cdir
         ls -l $cache
