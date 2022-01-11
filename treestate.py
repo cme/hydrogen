@@ -10,14 +10,14 @@ FILE = 3
 
 # Scan filesystem
 def scanTreeState(path):
-    if os.path.isdir(path):
+    if os.path.islink(path):
+        yield [LINK, path ]
+    elif os.path.isdir(path):
         yield [DIR, path]
         for leaf in os.listdir(path):
             p = os.path.join(path, leaf)
             for item in scanTreeState(p):
                 yield item
-    elif os.path.islink(path):
-        yield [LINK, path ]
     else:
         yield [FILE, path, os.path.getmtime(path)]
 
