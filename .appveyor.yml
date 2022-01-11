@@ -61,7 +61,12 @@ for:
 
         ls -ald $cdir
         ls -al $cdir
-        ls -l $cache
+        du -h /usr/local | tail
+
+        appveyor PushArtifact updated_list
+        gzip -9 usrlocal.json
+        appveyor PushArtifact usrlocal.json
+
       fi
 
     build_script: |-
