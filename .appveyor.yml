@@ -18,7 +18,7 @@ matrix:
 
 for:
   - 
-    cache: cache_dir
+    cache: /Users/appveyor/cache_dir
     matrix:
       only:
         - job_group: 'Mac OS X'
@@ -26,12 +26,12 @@ for:
     before_build: |-
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
+      cdir=$HOME/cache_dir
+      cache=$cdir/usrlocal.tar.gz
 
       echo Dirs: $HOME and $PWD
 
-      cache=$PWD/cache_dir/usr_local.tar.gz
-
-      if [ -d cache_dir ] && [ -f $cache ]; then
+      if [ -d $cdir ] && [ -f $cache ]; then
         echo "Using cached Homebrew"
         ( cd /; tar xf $cache )
       else
@@ -48,11 +48,10 @@ for:
         brew install libsndfile jack pulseaudio cppunit
 
         echo "Creating cache tarball $cache"
-        mkdir cache_dir
-        tar czf /tmp/t.tar.gz /usr/local/{Cellar,Homebrew,var/homebrew}
-        ls -ald cache_dir
-        ls -l /tmp/t.tar.gz
-        mv /tmp/t.tar.gz $cache
+        mkdir -p $cdir
+        tar czf $cache /usr/local/{Cellar,Homebrew,var/homebrew}
+        ls -ald $cdir
+        ls -al $cdir
         ls -l $cache
       fi
 
