@@ -63,9 +63,15 @@ for:
         ls -al $cdir
         du -h /usr/local | tail
 
-        appveyor PushArtifact updated_list
-        gzip -9 usrlocal.json
-        appveyor PushArtifact usrlocal.json
+        ( gzip -9 updated_list
+        appveyor PushArtifact updated_list.gz )&
+    
+        ( gzip -9 usrlocal.json
+        appveyor PushArtifact usrlocal.json.gz )&
+
+        gzip -9 update.log
+        appveyor PushArtifact update.log.gz
+        wait
 
       fi
 

@@ -35,6 +35,7 @@ def readTree(filename):
 
 # Find updates
 def findUpdates(a, b):
+    log = open('update.log', 'w')
     a_map = {}
     # print("Building map")
     for o in a:
@@ -49,11 +50,17 @@ def findUpdates(a, b):
             # print("Existing object " + o[1])
             if o[0] == FILE and o[2] != a_map[ o[1] ]:
                 # print("Updated file")
+                log.write("UPDATE " + o[1] + "\n")
                 print(o[1])
+            else:
+                log.write("       " + o[1] + "\n")
+
         elif o[0] == FILE or o[0] == LINK:
             #print("New object " + o[1])
             #print(o)
             print(o[1])
+            log.write("NEW    " + o[1] + "\n")
+
 
 def help():
     print(sys.argv[0] + " scan path stateFile")
