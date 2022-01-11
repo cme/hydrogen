@@ -34,6 +34,7 @@ for:
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Using cached Homebrew"
         ( cd /; tar xf $cache )
+        echo "done"
       else
         echo "Building dependencies"
 
@@ -48,8 +49,8 @@ for:
         brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
         brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-        brew install qt5; export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-        brew install libarchive; export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+        brew install qt5
+        brew install libarchive
         brew install libsndfile jack pulseaudio cppunit
 
         echo "Creating cache tarball $cache"
@@ -74,6 +75,8 @@ for:
         wait
 
       fi
+      export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+      export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
 
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
