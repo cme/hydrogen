@@ -204,7 +204,7 @@ for:
       only:
         - job_group: 'Windows'
 
-    cache: .ccache
+    cache: "%HOME%\.ccache"
     before_build:
       cmd: |-
 
@@ -289,6 +289,7 @@ for:
           %PYTHON% -m pytest %APPVEYOR_BUILD_FOLDER%\windows\ci\test_installation.py --junitxml=test_installation.xml
 
           ccache -s
+          dir %HOME%\.ccache
 
 on_finish:
   - cmd: if %APPVEYOR_REPO_BRANCH%==%ARTIFACT_BRANCH%  appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\CMakeCache.txt
