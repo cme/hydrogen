@@ -79,18 +79,23 @@ for:
       # needed macOS components in each build takes far longer than
       # the Hydrogen build itself.
       #
-      # However, the Homebrew installation is much larger than 
-      # the size of cache that Appveyor allows, so we archive only
-      # objects that are new or modified relative to the pre-existing
-      # 'clean' VM state, using `treestate.py` to compare.
+      # However, the Homebrew installation is much larger than the
+      # size of cache that Appveyor allows (1GB per project, shared
+      # between all configurations), so we archive only objects that
+      # are new or modified relative to the pre-existing 'clean' VM
+      # state, using `treestate.py` to compare.
       #
-      # For most build jobs, we just unpack the cached Homebrew
-      # on top of the existing Homebrew installation.
+      # For most build jobs, we just unpack the cached Homebrew on top
+      # of the existing Homebrew installation.
       #
       # If the cache is cleaned or out of date, we first record the
       # state of the Homebrew installation, then update it and install
       # prerequisites, and build a new archive of the current Homebrew
       # installation.
+      #
+      # Currently the necessary changes, compressed with xz, occupy
+      # about 170Mb of cache space.
+      #
 
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
