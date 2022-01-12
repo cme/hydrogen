@@ -24,11 +24,6 @@ for:
         - job_group: 'Mac OS X'
 
     before_build: |-
-
-      echo "Which xz " $( which xz )
-      echo $$
-      echo $$
-      
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
       cdir=$HOME/cache_dir
@@ -66,20 +61,19 @@ for:
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
-      echo "Which xz " $( which xz )
-      echo $$
-      echo $$
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Building using cached homebrew from $cache"
       else
-        echo "=== Creating cache tarball $cache ==="
-        echo "Scan updated /usr/local"
-        python3 ./treestate.py updates usrlocal.json /usr/local | fgrep -v .git > updated_list
-        echo $( wc -l updated_list ) updates
-        mkdir -p $cdir
-        tar czf $cache -T updated_list
-        ls -al $cdir
+        (
+          echo "=== Creating cache tarball $cache ==="
+          echo "Scan updated /usr/local"
+          python3 ./treestate.py updates usrlocal.json /usr/local | fgrep -v .git > updated_list
+          echo $( wc -l updated_list ) updates
+          mkdir -p $cdir
+          nice tar czf $cache -T updated_list
+          ls -al $cdir
+        ) 2>&1 | sed 's/^/CACHE: /' &
       fi
 
 
@@ -88,14 +82,21 @@ for:
       echo "Building with $CPUS cpus"
       mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make -j $CPUS
 
-      PATH="$(brew --prefix qt5)/bin:$PATH"
-      ../macos/build_dmg.sh -v src/gui/hydrogen.app Hydrogen${PKG_SUFFIX}.dmg
+      (
+        PATH="$(brew --prefix qt5)/bin:$PATH"
+        ../macos/build_dmg.sh -v src/gui/hydrogen.app Hydrogen${PKG_SUFFIX}.dmg
 
-      #deploy dmg only on branch $ARTIFACT_BRANCH
-      if [ "$APPVEYOR_REPO_BRANCH" = "$ARTIFACT_BRANCH" ]; then appveyor PushArtifact Hydrogen*.dmg -DeploymentName Installer; fi
+        #deploy dmg only on branch $ARTIFACT_BRANCH
+        if [ "$APPVEYOR_REPO_BRANCH" = "$ARTIFACT_BRANCH" ]; then appveyor PushArtifact Hydrogen*.dmg -DeploymentName Installer; fi
+      ) | sed 's/^/DMG: /' &
+      echo "Done? PID is $$"
 
     test_script: |-
-      TMPDIR=/tmp src/tests/tests --appveyor || true
+      echo "Test PID $$"
+      TMPDIR=/tmp src/tests/tests --appveyor
+      RV=$?
+      wait
+      return $RV
 
   -
     matrix:
