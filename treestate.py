@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Record the current state of a tree in the filesystem
 
 import os
 import sys
