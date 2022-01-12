@@ -31,8 +31,6 @@ for:
 
       echo Dirs: $HOME and $PWD
 
-      rm $cache
-
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Using cached Homebrew"
         ( cd /; tar xf $cache )
@@ -61,7 +59,6 @@ for:
         echo $( wc -l updated_list ) updates
         mkdir -p $cdir
         tar czf $cache -T updated_list
-        appveyor PushArtifact $cache
 
         ls -ald $cdir
         ls -al $cdir
