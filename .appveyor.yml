@@ -31,8 +31,6 @@ for:
       cache=$cache_tar.xz
       export $cache
 
-      rm -rf $cdir
-
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached Homebrew $cache ==="
         ( cd /; tar xf $cache )
