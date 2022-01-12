@@ -52,6 +52,9 @@ for:
       cdir=$HOME/cache_dir
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
+      export cache cache_tar cdir
+
+      CPUS=$(sysctl -n hw.ncpu)
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached Homebrew $cache ==="
@@ -62,6 +65,8 @@ for:
         echo "done"
       else
         echo "=== Building dependencies ==="
+        echo "Couldn't find cache $cache"
+        ls -alrt "$cdir"
 
         echo "Recording /usr/local state"
         python3 ./treestate.py scan /usr/local usrlocal.json
@@ -88,8 +93,9 @@ for:
 
           mkdir -p $cdir
           rm -f $cdir/*
-          nice tar cf $cache_tar -T updated_list && \
-          nice xz -9v -T$CPUS $cache_tar
+          nice tar cf $cache_tar -T updated_list
+          echo nice xz -9 -T$CPUS $cache_tar
+          nice xz -9 -T$CPUS $cache_tar
           du -h $cdir
         ) 2>&1 | sed 's/^/CACHE: /' &
 
@@ -100,8 +106,6 @@ for:
     build_script: |-
       # fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
-
-      CPUS=$(sysctl -n hw.ncpu)
       echo "Building with $CPUS cpus"
 
       git submodule init && git submodule update
