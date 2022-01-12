@@ -23,50 +23,46 @@ def scanTreeState(path):
 
 # Write the tree in JSON format
 def writeTree(filename, tree):
-    f = open(filename, 'w')
-    json.dump(list(tree), f, indent=1)
-    f.close()
+    with open(filename, 'w') as f:
+        json.dump(list(tree), f, indent=1)
 
 def readTree(filename):
     with open(filename, "r") as f:
         if f == None:
-            print("*** couldn't open " + filename)
+            print(f"*** couldn't open {filename} ***")
         return json.load(f)
 
-# Find updates
+# Find updates in tree between states A and B
 def findUpdates(a, b):
-    log = open('update.log', 'w')
     a_map = {}
-    # print("Building map")
+
+    # Build mapping of filename -> modified time in A
     for o in a:
         if o[0] == FILE:
             a_map[ o[1] ] = o[2]
         else:
             a_map[ o[1] ] = True
 
-    # print("Finding updates")
+    # Find updated or new items in B
     for o in b:
         if o[1] in a_map:
-            # print("Existing object " + o[1])
             if o[0] == FILE and o[2] != a_map[ o[1] ]:
-                # print("Updated file")
-                log.write("UPDATE " + o[1] + "\n")
                 print(o[1])
-            else:
-                log.write("       " + o[1] + "\n")
 
         elif o[0] == FILE or o[0] == LINK:
-            #print("New object " + o[1])
-            #print(o)
             print(o[1])
-            log.write("NEW    " + o[1] + "\n")
 
 
 def help():
-    print(sys.argv[0] + " scan path stateFile")
+    print("Syntax:")
+    print(f"  {sys.argv[0]} scan path stateFile")
+    print(f"      Record the state of <path> in <stateFile>")
+    print(f"  {sys.argv[0]} updates stateFile path")
+    print(f"      Print the paths of objects in <path> which have updated since <stateFile>")
     exit()
 
 
+# Process arguments
 if len(sys.argv) < 2:
     help()
 
@@ -90,6 +86,6 @@ elif sys.argv[1] == 'updates':
     findUpdates(readTree(a), scanTreeState(b))
 
 else:
-    print("Unknown command: " + sys.argv[1])
+    print(f"Unknown command: {sys.argv[1]}")
     help()
 

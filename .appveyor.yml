@@ -28,11 +28,13 @@ for:
       sudo ln -s /usr/local /opt/local;
       cdir=$HOME/cache_dir
       cache=$cdir/usrlocal.tar.gz
+      export $cache
 
       echo Dirs: $HOME and $PWD
+      rm $cache
 
       if [ -d $cdir ] && [ -f $cache ]; then
-        echo "Using cached Homebrew"
+        echo "Unpacking cached Homebrew $cache"
         ( cd /; tar xf $cache )
         echo "done"
       else
@@ -53,27 +55,6 @@ for:
         brew install libarchive
         brew install libsndfile jack pulseaudio cppunit
 
-        echo "Creating cache tarball $cache"
-        echo "Scan updated /usr/local"
-        python3 ./treestate.py updates usrlocal.json /usr/local > updated_list
-        echo $( wc -l updated_list ) updates
-        mkdir -p $cdir
-        tar czf $cache -T updated_list
-
-        ls -ald $cdir
-        ls -al $cdir
-        du -h /usr/local | tail
-
-        ( gzip -9 updated_list
-        appveyor PushArtifact updated_list.gz )&
-    
-        ( gzip -9 usrlocal.json
-        appveyor PushArtifact usrlocal.json.gz )&
-
-        gzip -9 update.log
-        appveyor PushArtifact update.log.gz
-        wait
-
       fi
       export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
@@ -81,6 +62,19 @@ for:
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
+
+      if [ -d $cdir ] && [ -f $cache ]; then
+        echo "Building using cached homebrew from $cache"
+      else
+        echo "Creating cache tarball $cache"
+        echo "Scan updated /usr/local"
+        python3 ./treestate.py updates usrlocal.json /usr/local | fgrep -v .git > updated_list
+        echo $( wc -l updated_list ) updates
+        mkdir -p $cdir
+        tar czf $cache -T updated_list
+        ls -al $cdir
+      fi
+
 
       git submodule init && git submodule update
       CPUS=$(sysctl -n hw.ncpu)
