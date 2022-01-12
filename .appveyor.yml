@@ -24,15 +24,16 @@ for:
         - job_group: 'Mac OS X'
 
     before_build: |-
+
+      echo "Which xz " $( which xz )
+      echo $$
+      echo $$
+      
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
       cdir=$HOME/cache_dir
       cache=$cdir/usrlocal.tar.gz
       export $cache
-
-      echo "Which xz " $( which xz )
-      echo $$
-      echo $$
 
       echo Dirs: $HOME and $PWD
 
@@ -65,6 +66,9 @@ for:
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
+      echo "Which xz " $( which xz )
+      echo $$
+      echo $$
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Building using cached homebrew from $cache"
