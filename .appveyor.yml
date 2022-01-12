@@ -31,7 +31,6 @@ for:
       export $cache
 
       echo Dirs: $HOME and $PWD
-      rm $cache
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Unpacking cached Homebrew $cache"
