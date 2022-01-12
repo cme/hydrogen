@@ -37,7 +37,7 @@ for:
         ( cd /; tar xf $cache )
         echo "done"
       else
-        echo "Building dependencies"
+        echo "=== Building dependencies ==="
 
         echo "Recording /usr/local state"
         python3 ./treestate.py scan /usr/local usrlocal.json
@@ -61,11 +61,14 @@ for:
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
+      echo "Which xz " $( which xz )
+      echo $$
+      echo $$
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Building using cached homebrew from $cache"
       else
-        echo "Creating cache tarball $cache"
+        echo "=== Creating cache tarball $cache ==="
         echo "Scan updated /usr/local"
         python3 ./treestate.py updates usrlocal.json /usr/local | fgrep -v .git > updated_list
         echo $( wc -l updated_list ) updates
