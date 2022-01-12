@@ -47,19 +47,26 @@ for:
       only:
         - job_group: 'Linux'
 
+    cache: $HOME/.ccache
+
     before_build: |-
       echo 'Linux build script'
       sudo apt-get update
       sudo apt-get install -y clang qt5-default qttools5-dev qttools5-dev-tools libqt5xmlpatterns5-dev libarchive-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev libqt5svg5-dev
       sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk
       sudo rm /usr/local/bin/doxygen
+      ccache -M 256M
 
     build_script: |-
       git submodule init && git submodule update
 
       CPUS=$(nproc)
       echo "Building with $CPUS cpus"
-      mkdir build && cd build && cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. && make -j $CPUS
+      mkdir build && cd build && \
+        cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          && \
+        make -j $CPUS
 
     test_script: |-
       TMPDIR=/tmp src/tests/tests --appveyor
