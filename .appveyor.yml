@@ -30,6 +30,10 @@ for:
       cache=$cdir/usrlocal.tar.gz
       export $cache
 
+      echo "Which xz " $( which xz )
+      echo $$
+      echo $$
+
       echo Dirs: $HOME and $PWD
 
       if [ -d $cdir ] && [ -f $cache ]; then
@@ -61,9 +65,6 @@ for:
     build_script: |-
       #fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
-      echo "Which xz " $( which xz )
-      echo $$
-      echo $$
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "Building using cached homebrew from $cache"
