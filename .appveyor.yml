@@ -234,7 +234,7 @@ for:
           c:\msys64\usr\bin\pacman --noconfirm -S -q %MSYS_REPO%-ccache
 
           ccache -M 256M
-          ccache -S
+          ccache -s
 
           REM *** INIT SUBMODULES ***
           git submodule init
