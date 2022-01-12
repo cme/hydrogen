@@ -56,6 +56,7 @@ for:
       sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk ccache
       sudo rm /usr/local/bin/doxygen
       ccache -M 256M
+      ccache -s
 
     build_script: |-
       git submodule init && git submodule update
@@ -67,6 +68,7 @@ for:
               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           && \
         make -j $CPUS
+      ccache -s
 
     test_script: |-
       TMPDIR=/tmp src/tests/tests --appveyor
