@@ -57,6 +57,7 @@ for:
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
 
+      mkdir -p $cdir/ccache
       ln -s $cdir/ccache $HOME/.ccache
 
       if [ -d $cdir ] && [ -f $cache ]; then
