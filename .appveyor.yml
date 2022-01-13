@@ -204,7 +204,7 @@ for:
       only:
         - job_group: 'Windows'
 
-    cache: "%HOME%\.ccache"
+    cache: '%USERPROFILE%\.ccache'
     before_build:
       cmd: |-
 
@@ -290,6 +290,7 @@ for:
 
           ccache -s
           dir %HOME%\.ccache
+          dir %USERPROFILE%\.ccache
 
 on_finish:
   - cmd: if %APPVEYOR_REPO_BRANCH%==%ARTIFACT_BRANCH%  appveyor PushArtifact %APPVEYOR_BUILD_FOLDER%\build\CMakeCache.txt
