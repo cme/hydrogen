@@ -204,7 +204,7 @@ for:
       only:
         - job_group: 'Windows'
 
-    cache: '%USERPROFILE%\.ccache'
+    cache: '%USERPROFILE%\AppData\Roaming\ccache'
     before_build:
       cmd: |-
 
@@ -235,7 +235,6 @@ for:
 
           ccache -M 256M
           ccache -s
-          ccache -p
 
           REM *** INIT SUBMODULES ***
           git submodule init
