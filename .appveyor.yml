@@ -48,23 +48,43 @@ for:
         - job_group: 'Linux'
 
     cache: $HOME/.ccache
+    cache: $HOME/cache_dir
 
     before_build: |-
-      echo 'Linux build script'
-      sudo python3 ./treestate.py scan /usr usr.json
-      sudo apt-get update
-      sudo apt-get install -y clang qt5-default qttools5-dev qttools5-dev-tools libqt5xmlpatterns5-dev libarchive-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev libqt5svg5-dev
-      sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk ccache
-      sudo rm /usr/local/bin/doxygen
-      ccache -M 256M
-      ccache -s
 
-      sudo python3 ./treestate.py updates usr.json /usr > updates
-      echo $(wc -l updates) updates
-      sudo tar cf usr.tar -T updates
-      du -h usr.tar
-      xz -9 -T0 usr.tar
-      du -h usr.tar.xz
+      cache_tag=usr_cache # this can be modified to rebuild deps
+
+      cdir=$HOME/cache_dir
+      cache_tar=$cdir/$cache_tag.tar
+      cache=$cache_tar.xz
+
+      if [ -d $cdir ] && [ -f $cache ]; then
+        echo "=== Unpacking cached /var $cache ==="
+        (
+          cd /
+          tar xf $cache
+        )
+        echo "done"
+      else
+        echo "=== Building dependencies ==="
+
+        sudo python3 ./treestate.py scan /usr usr.json
+        sudo apt-get update
+        sudo apt-get install -y clang qt5-default qttools5-dev qttools5-dev-tools libqt5xmlpatterns5-dev libarchive-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev libqt5svg5-dev
+        sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk ccache
+        sudo rm /usr/local/bi/doxygen
+        ccache -M 256M
+        ccache -s
+
+        (
+          sudo python3 ./treestate.py updates usr.json /usr > updates
+          echo $(wc -l updates) updates
+          sudo tar cf $cache_tar -T updates
+          du -h $cache_tar
+          nice xz -9 -T0 $cache_tar
+          du -h $cache
+        ) 2>&1 | sed 's/^/CACHE: /' &
+      fi
 
     build_script: |-
       git submodule init && git submodule update
@@ -78,7 +98,10 @@ for:
         make -j $CPUS
       ccache -s
 
+      wait
+
     test_script: |-
+
       TMPDIR=/tmp src/tests/tests --appveyor
 
   - 
