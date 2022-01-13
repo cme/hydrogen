@@ -51,7 +51,7 @@ for:
 
     before_build: |-
       echo 'Linux build script'
-      sudo python3 ./statetree.py scan /usr usr.json
+      sudo python3 ./treestate.py scan /usr usr.json
       sudo apt-get update
       sudo apt-get install -y clang qt5-default qttools5-dev qttools5-dev-tools libqt5xmlpatterns5-dev libarchive-dev libsndfile1-dev libasound2-dev libjack-jackd2-dev libqt5svg5-dev
       sudo apt-get install -y liblo-dev libpulse-dev libportmidi-dev portaudio19-dev libcppunit-dev liblrdf-dev librubberband-dev ladspa-sdk ccache
@@ -59,12 +59,12 @@ for:
       ccache -M 256M
       ccache -s
 
-      sudo python3 ./statetree.py updates usr.json /usr > updates
+      sudo python3 ./treestate.py updates usr.json /usr > updates
       echo $(wc -l updates) updates
       sudo tar cf usr.tar -T updates
       du -h usr.tar
-      gip usr.tar
-      du -h usr.tar.gz
+      xz -9 -T0 usr.tar
+      du -h usr.tar.xz
 
     build_script: |-
       git submodule init && git submodule update
