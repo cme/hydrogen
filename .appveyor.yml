@@ -47,7 +47,6 @@ for:
       only:
         - job_group: 'Linux'
 
-    cache: $HOME/.ccache
     cache: $HOME/cache_dir
 
     before_build: |-
@@ -58,6 +57,8 @@ for:
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
 
+      ln -n $cdir/ccache $HOME/.ccache
+
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached /var $cache ==="
         (
@@ -67,6 +68,8 @@ for:
         echo "done"
       else
         echo "=== Building dependencies ==="
+
+        mkdir -p $cdir
 
         sudo python3 ./treestate.py scan /usr usr.json
         sudo apt-get update
@@ -83,6 +86,8 @@ for:
           du -h $cache_tar
           nice xz -9 -T0 $cache_tar
           du -h $cache
+
+          du -h $cdir
         ) 2>&1 | sed 's/^/CACHE: /' &
       fi
 
@@ -96,6 +101,7 @@ for:
               -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           && \
         make -j $CPUS
+
       ccache -s
 
       wait
