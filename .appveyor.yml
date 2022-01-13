@@ -183,6 +183,7 @@ for:
 
       # Build installation DMG
       (
+        cd build
         PATH="$(brew --prefix qt5)/bin:$PATH"
         ../macos/build_dmg.sh -v src/gui/hydrogen.app Hydrogen${PKG_SUFFIX}.dmg
 
@@ -193,6 +194,7 @@ for:
       ) | sed 's/^/DMG: /' &
 
     test_script: |-
+      cd build
       TMPDIR=/tmp src/tests/tests --appveyor || exit 1
 
       echo "Waiting for installer creation and cache archiving"
