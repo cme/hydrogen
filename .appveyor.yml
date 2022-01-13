@@ -63,7 +63,7 @@ for:
         echo "=== Unpacking cached /var $cache ==="
         (
           cd /
-          tar xf $cache
+          sudo tar xf $cache
         )
         echo "done"
       else
@@ -84,7 +84,7 @@ for:
           echo $(wc -l updates) updates
           sudo tar cf $cache_tar -T updates
           du -h $cache_tar
-          nice xz -9 -T0 $cache_tar
+          sudo nice xz -9 -T0 $cache_tar
           du -h $cache
 
           du -h $cdir
