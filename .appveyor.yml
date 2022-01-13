@@ -57,7 +57,7 @@ for:
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
 
-      ln -n $cdir/ccache $HOME/.ccache
+      ln -s $cdir/ccache $HOME/.ccache
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached /var $cache ==="
