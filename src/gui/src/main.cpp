@@ -271,8 +271,10 @@ int main(int argc, char *argv[])
 			{
 				logLevelOpt =  H2Core::Logger::parse_log_level( sVerbosityString.toLocal8Bit() );
 			} else {
-				logLevelOpt = H2Core::Logger::Error|H2Core::Logger::Warning;
+				logLevelOpt = H2Core::Logger::Error|H2Core::Logger::Warning|H2Core::Logger::Info|H2Core::Logger::Debug;
 			}
+		} else {
+			logLevelOpt = H2Core::Logger::Error|H2Core::Logger::Warning|H2Core::Logger::Info|H2Core::Logger::Debug;
 		}
 
 		// Operating system GUIs typically pass documents to open as

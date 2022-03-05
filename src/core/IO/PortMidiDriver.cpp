@@ -60,12 +60,11 @@ void* PortMidiDriver_thread( void* param )
 		status = Pm_Poll( instance->m_pMidiIn );
 		if ( status == TRUE ) {
 			length = Pm_Read( instance->m_pMidiIn, buffer, 1 );
-			___DEBUGLOG( QString( "MIDI message length %1" ).arg( length ) );
 			if ( length > 0 ) {
 				MidiMessage msg;
 
 				int nEventType = Pm_MessageStatus( buffer[0].message );
-				___DEBUGLOG( QString( "MIDI message event type %1" ).arg( length ) );
+				___DEBUGLOG( QString( "MIDI message event type %1 length %2" ).arg( nEventType ).arg( length ) );
 				if ( ( nEventType >= 128 ) && ( nEventType < 144 ) ) {	// note off
 					msg.m_nChannel = nEventType - 128;
 					msg.m_type = MidiMessage::NOTE_OFF;
@@ -99,7 +98,7 @@ void* PortMidiDriver_thread( void* param )
 					__INFOLOG( QString::number( Pm_MessageData2( buffer[0].message ) ) );
 				}
 
-				___DEBUGLOG( QString( "event type %1 channel %2 data %3 %4" )
+				___DEBUGLOG( QString( "Got event type %1 channel %2 data %3 %4" )
 							 .arg( msg.m_type)
 							 .arg( msg.m_nChannel )
 							 .arg( msg.m_nData1 )
@@ -171,21 +170,29 @@ void PortMidiDriver::open()
 	int nDeviceId = -1;
 	int nOutDeviceId = -1;
 	QString sMidiPortName = Preferences::get_instance()->m_sMidiPortName;
+	DEBUGLOG( QString( "Opening '%1'" ).arg( sMidiPortName ) );
+	
 	int nDevices = Pm_CountDevices();
+	DEBUGLOG( QString( "PortMidi knows about %1 devices" ).arg( nDevices ) );
 	for ( int i = 0; i < nDevices; i++ ) {
 		const PmDeviceInfo *pInfo = Pm_GetDeviceInfo( i );
 		
 		if ( pInfo == nullptr ) {
-			ERRORLOG( "Could not open input device" );
+			ERRORLOG( QString( "Could not open input device %1" ).arg( i ) );
 		} else {
+			DEBUGLOG( QString( "  [%3%4] %1: '%2' on '%5'" ).arg( i ).arg( pInfo->name )
+					  .arg( pInfo->input?'I':'-' ).arg( pInfo->output?'O':'-' )
+					  .arg( pInfo->interf ) );
 			if ( pInfo->input == TRUE ) {
 				if ( strcmp( pInfo->name, sMidiPortName.toLocal8Bit().constData() ) == 0 ) {
+					DEBUGLOG( QString("    use as input'") );
 					nDeviceId = i;
 				}
 			}
-	
+
 			if ( pInfo->output == TRUE ) {
 				if ( strcmp( pInfo->name, sMidiPortName.toLocal8Bit().constData() ) == 0 ) {
+					DEBUGLOG( QString("    use as output'") );
 					nOutDeviceId = i;
 				}
 			}
