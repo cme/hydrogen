@@ -170,10 +170,10 @@ void PortMidiDriver::open()
 	int nDeviceId = -1;
 	int nOutDeviceId = -1;
 	QString sMidiPortName = Preferences::get_instance()->m_sMidiPortName;
-	DEBUGLOG( QString( "Opening '%1'" ).arg( sMidiPortName ) );
-	
+	QString sMidiOutputPortName = Preferences::get_instance()->m_sMidiOutputPortName;
 	int nDevices = Pm_CountDevices();
-	DEBUGLOG( QString( "PortMidi knows about %1 devices" ).arg( nDevices ) );
+
+	// Find named devices
 	for ( int i = 0; i < nDevices; i++ ) {
 		const PmDeviceInfo *pInfo = Pm_GetDeviceInfo( i );
 		
@@ -191,7 +191,7 @@ void PortMidiDriver::open()
 			}
 
 			if ( pInfo->output == TRUE ) {
-				if ( strcmp( pInfo->name, sMidiPortName.toLocal8Bit().constData() ) == 0 ) {
+				if ( strcmp( pInfo->name, sMidiOutputPortName.toLocal8Bit().constData() ) == 0 ) {
 					DEBUGLOG( QString("    use as output'") );
 					nOutDeviceId = i;
 				}
@@ -199,56 +199,62 @@ void PortMidiDriver::open()
 		}
 	}
 
-	if ( nDeviceId == -1 ) {
+	// Open input device if found
+	if ( nDeviceId != -1 ) {
+		const PmDeviceInfo *info = Pm_GetDeviceInfo( nDeviceId );
+		if ( info == nullptr ) {
+			ERRORLOG( "Error opening midi input device" );
+		}
+
+		//INFOLOG( string( "Device: " ).append( info->interf ).append( " " ).append( info->name ) );
+		TIME_START;
+
+		PmError err = Pm_OpenInput(
+								   &m_pMidiIn,
+								   nDeviceId,
+								   nullptr,
+								   nInputBufferSize,
+								   TIME_PROC,
+								   nullptr
+								   );
+
+		if ( err != pmNoError ) {
+			ERRORLOG( "Error in Pm_OpenInput" );
+			m_pMidiIn = nullptr;
+		}
+	} else {
 		INFOLOG( "Midi input device not found." );
-		return;
+		m_pMidiIn = nullptr;
 	}
 
-	if ( nOutDeviceId == -1 ) {
+	// Open output device if found
+	if ( nOutDeviceId != -1 ) {
+		PmError err = Pm_OpenOutput(
+									&m_pMidiOut,
+									nOutDeviceId,
+									nullptr,
+									nInputBufferSize,
+									TIME_PROC,
+									nullptr,
+									0
+									);
+
+		if ( err != pmNoError ) {
+			ERRORLOG( "Error in Pm_OpenInput" );
+			m_pMidiOut = nullptr;
+		}
+	} else {
 		INFOLOG( "Midi output device not found." );
-		return;
+		m_pMidiOut = nullptr;
 	}
 
-	const PmDeviceInfo *info = Pm_GetDeviceInfo( nDeviceId );
-	if ( info == nullptr ) {
-		ERRORLOG( "Error opening midi input device" );
+	if ( m_pMidiOut || m_pMidiIn ) {
+		m_bRunning = true;
+
+		pthread_attr_t attr;
+		pthread_attr_init( &attr );
+		pthread_create( &PortMidiDriverThread, &attr, PortMidiDriver_thread, ( void* )this );
 	}
-
-	//INFOLOG( string( "Device: " ).append( info->interf ).append( " " ).append( info->name ) );
-	TIME_START;
-
-	PmError err = Pm_OpenInput(
-					  &m_pMidiIn,
-					  nDeviceId,
-					  nullptr,
-					  nInputBufferSize,
-					  TIME_PROC,
-					  nullptr
-				  );
-
-	if ( err != pmNoError ) {
-		ERRORLOG( "Error in Pm_OpenInput" );
-	}
-
-	err = Pm_OpenOutput(
-					  &m_pMidiOut,
-					  nOutDeviceId,
-					  nullptr,
-					  nInputBufferSize,
-					  TIME_PROC,
-					  nullptr,
-			  0
-				  );
-
-	if ( err != pmNoError ) {
-		ERRORLOG( "Error in Pm_OpenInput" );
-	}
-
-	m_bRunning = true;
-
-	pthread_attr_t attr;
-	pthread_attr_init( &attr );
-	pthread_create( &PortMidiDriverThread, &attr, PortMidiDriver_thread, ( void* )this );
 }
 
 
