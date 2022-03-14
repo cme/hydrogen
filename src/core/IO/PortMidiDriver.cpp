@@ -328,7 +328,7 @@ void PortMidiDriver::handleQueueNote(Note* pNote)
 	DEBUGLOG( QString( "Sending event to channel %1 note %2 velocity %3" ).arg( channel ).arg( key ).arg( velocity ) );
 	//Note off
 	event.message = Pm_Message(0x80 | channel, key, velocity);
-	PmEvent error = Pm_Write(m_pMidiOut, &event, 1);
+	PmError error = Pm_Write(m_pMidiOut, &event, 1);
 	if ( error != pmNoError ) {
 		ERRORLOG( "Error writing note_on" );
 	}
