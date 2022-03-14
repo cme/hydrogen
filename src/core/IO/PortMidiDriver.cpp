@@ -310,12 +310,12 @@ std::vector<QString> PortMidiDriver::getOutputPortList()
 void PortMidiDriver::handleQueueNote(Note* pNote)
 {
 	if ( m_pMidiOut == nullptr ) {
-		ERRORLOG( "m_pMidiOut = nullptr " );
+		DEBUGLOG( "m_pMidiOut = nullptr " );
 		return;
 	}
-
 	int channel = pNote->get_instrument()->get_midi_out_channel();
 	if (channel < 0) {
+		DEBUGLOG( QString( "Invalid channel (%1)" ).arg( channel ) );
 		return;
 	}
 
@@ -325,13 +325,21 @@ void PortMidiDriver::handleQueueNote(Note* pNote)
 	PmEvent event;
 	event.timestamp = 0;
 
+	DEBUGLOG( QString( "Sending event to channel %1 note %2 velocity %3" ).arg( channel ).arg( key ).arg( velocity ) );
 	//Note off
 	event.message = Pm_Message(0x80 | channel, key, velocity);
-	Pm_Write(m_pMidiOut, &event, 1);
+	PmEvent error = Pm_Write(m_pMidiOut, &event, 1);
+	if ( error != pmNoError ) {
+		ERRORLOG( "Error writing note_on" );
+	}
 
 	//Note on
 	event.message = Pm_Message(0x90 | channel, key, velocity);
-	Pm_Write(m_pMidiOut, &event, 1);
+	error = Pm_Write(m_pMidiOut, &event, 1);
+	if ( error != pmNoError ) {
+		ERRORLOG( "Error writing note_off" );
+	}
+
 }
 
 void PortMidiDriver::handleQueueNoteOff( int channel, int key, int velocity )
