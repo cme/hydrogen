@@ -24,22 +24,23 @@
 
 #include <QtGui>
 #include <QtWidgets>
+#include <memory>
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Basics/Instrument.h>
 #include "../EventListener.h"
+#include "../Widgets/WidgetWithScalableFont.h"
 
 namespace H2Core
 {
 class InstrumentLayer;
 }
 
-using H2Core::InstrumentLayer;
-
-
-class LayerPreview : public QWidget, public H2Core::Object, public EventListener
+/** \ingroup docGUI*/
+class LayerPreview :  public QWidget, protected WidgetWithScalableFont<5, 6, 7>,  public H2Core::Object<LayerPreview>, public EventListener
 {
-    H2_OBJECT
+    H2_OBJECT(LayerPreview)
 	Q_OBJECT
 
 	public:
@@ -54,11 +55,15 @@ class LayerPreview : public QWidget, public H2Core::Object, public EventListener
 		virtual void mouseMoveEvent ( QMouseEvent *ev ) override;
 
 		void set_selected_component( int SelectedComponent );
+	void setSelectedLayer( int nSelectedLayer );
 
+public slots:
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
+	
 	private:
 		static const int		m_nLayerHeight = 10;
 		QPixmap					m_speakerPixmap;
-		H2Core::Instrument *	m_pInstrument;
+		std::shared_ptr<H2Core::Instrument>	m_pInstrument;
 		int						m_nSelectedLayer;
 		int						m_nSelectedComponent;
 		bool					m_bMouseGrab;
@@ -79,7 +84,7 @@ class LayerPreview : public QWidget, public H2Core::Object, public EventListener
 		 * @param pLayer    The layer
 		 * @param pEvent    The event carrying mouse position
 		 */
-		void showLayerStartVelocity( const InstrumentLayer* pLayer, const QMouseEvent* pEvent );
+		void showLayerStartVelocity( const std::shared_ptr<H2Core::InstrumentLayer> pLayer, const QMouseEvent* pEvent );
 
 		/**
 		 * display a layer's end velocity in a tooltip
@@ -87,10 +92,19 @@ class LayerPreview : public QWidget, public H2Core::Object, public EventListener
 		 * @param pLayer    The layer
 		 * @param pEvent    The event carrying mouse position
 		 */
-		void showLayerEndVelocity( const InstrumentLayer* pLayer, const QMouseEvent* pEvent );
+		void showLayerEndVelocity( const std::shared_ptr<H2Core::InstrumentLayer> pLayer, const QMouseEvent* pEvent );
 
 		virtual void selectedInstrumentChangedEvent() override;
+	virtual void drumkitLoadedEvent() override;
+	virtual void updateSongEvent(int) override;
+		/** Used to detect changed in the font*/
+		int getPointSizeButton() const;
 };
 
+inline void LayerPreview::setSelectedLayer( int nLayer ) {
+	if ( nLayer != m_nSelectedLayer ) {
+		m_nSelectedLayer = nLayer;
+	}
+}
 
 #endif

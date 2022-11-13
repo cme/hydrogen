@@ -28,8 +28,12 @@
 #include <QDomNode>
 #include <vector>
 #include <map>
+#include <memory>
 
+#include <core/License.h>
 #include <core/Object.h>
+#include <core/Helpers/Filesystem.h>
+#include <core/Helpers/Xml.h>
 
 class TiXmlNode;
 
@@ -42,29 +46,97 @@ class Note;
 class Instrument;
 class InstrumentList;
 class Pattern;
-class Song;
+class Drumkit;
 class DrumkitComponent;
 class PatternList;
 class AutomationPath;
+class Timeline;
 
 /**
 \ingroup H2CORE
 \brief	Song class
 */
-class Song : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class Song : public H2Core::Object<Song>, public std::enable_shared_from_this<Song>
 {
-		H2_OBJECT
+		H2_OBJECT(Song)
 	public:
-		enum SongMode {
-			PATTERN_MODE,
-			SONG_MODE
+		enum class Mode {
+			Pattern = 0,
+			Song = 1,
+			/** Used in case no song is set and both pattern and song
+				editor are not ready to operate yet.*/
+			None = 2
 		};
+
+		/** Defines the type of user interaction experienced in the 
+			SongEditor.*/
+		enum class ActionMode {
+			/** Holding a pressed left mouse key will draw a rectangle to
+				select a group of Notes.*/
+			selectMode = 0,
+			/** Holding a pressed left mouse key will draw/delete patterns
+				in all grid cells encountered.*/
+			drawMode = 1,
+			/** Used in case no song is set and both pattern and song
+				editor are not ready to operate yet.*/
+			None = 2
+		};
+
+		enum class LoopMode {
+			Disabled = 0,
+			Enabled = 1,
+			/**
+			 * Transport is still in loop mode (frames and ticks
+			 * larger than song size are allowed) but playback ends
+			 * the next time the end of the song is reached.
+			 */
+			Finishing = 2
+		};
+
+	/** Determines how patterns will be added to
+	 * AudioEngine::m_pPlayingPatterns if transport is in
+	 * Song::Mode::Pattern.
+	 */
+	enum class PatternMode {
+		/** An arbitrary number of pattern can be played.*/
+		Stacked = 0,
+		/** Only one pattern - the one currently selected in the GUI -
+		 * will be played back.*/
+		Selected = 1,
+		/** Null element used to indicate that either no song is
+		 * present or Song::Mode::Song was selected
+		 */
+		None = 2
+	};
+
+	/** Determines the state of the Playback track with respect to
+		audio processing*/
+	enum class PlaybackTrack {
+		/** No proper playback track file set yet*/
+		Unavailable = 0,
+		/** Valid file set but the playback track is muted via the GUI*/
+		Muted = 1,
+		/** Valid file set and ready for playback.*/
+		Enabled = 2,
+		/** Null element used to indicate that either no song is
+		 * present*/
+		None = 3
+	};
 
 		Song( const QString& sName, const QString& sAuthor, float fBpm, float fVolume );
 		~Song();
 
-		static Song* getEmptySong();
-		static Song* getDefaultSong();
+		static std::shared_ptr<Song> getEmptySong();
+
+	static std::shared_ptr<Song> 	load( const QString& sFilename, bool bSilent = false );
+	bool 			save( const QString& sFilename, bool bSilent = false );
+
+	bool getIsTimelineActivated() const;
+	void setIsTimelineActivated( bool bIsTimelineActivated );
+	
+	bool getIsPatternEditorLocked() const;
+	void setIsPatternEditorLocked( bool bIsPatternEditorLocked );
 
 		bool getIsMuted() const;
 		void setIsMuted( bool bIsMuted );
@@ -103,26 +175,16 @@ class Song : public H2Core::Object
 		void setPatternGroupVector( std::vector<PatternList*>* pGroupVect );
 
 		/** get the length of the song, in tick units */
-		int lengthInTicks() const;
+		long lengthInTicks() const;
 
-		static Song* 	load( const QString& sFilename );
-		bool 			save( const QString& sFilename );
-
-		/**
-		  Remove all the notes in the song that play on instrument I.
-		  The function is real-time safe (it locks the audio data while deleting notes)
-		*/
-		void purgeInstrument( Instrument* pInstr );
-
-
-		InstrumentList*		getInstrumentList() const;
-		void			setInstrumentList( InstrumentList* pList );
+		std::shared_ptr<InstrumentList>		getInstrumentList() const;
+		void			setInstrumentList( std::shared_ptr<InstrumentList> pList );
 
 		void			setNotes( const QString& sNotes );
 		const QString&		getNotes() const;
 
-		void			setLicense( const QString& sLicense );
-		const QString&		getLicense() const;
+		void			setLicense( const License& license );
+		const License&		getLicense() const;
 
 		void			setAuthor( const QString& sAuthor );
 		const QString&		getAuthor() const;
@@ -130,8 +192,12 @@ class Song : public H2Core::Object
 		const QString&		getFilename() const;
 		void			setFilename( const QString& sFilename );
 							
-		bool			getIsLoopEnabled() const;
-		void			setIsLoopEnabled( bool bEnabled );
+		LoopMode		getLoopMode() const;
+		void			setLoopMode( LoopMode loopMode );
+		bool			isLoopEnabled() const;
+							
+		PatternMode		getPatternMode() const;
+		void			setPatternMode( PatternMode patternMode );
 							
 		float			getHumanizeTimeValue() const;
 		void			setHumanizeTimeValue( float fValue );
@@ -141,58 +207,47 @@ class Song : public H2Core::Object
 							
 		float			getSwingFactor() const;
 		void			setSwingFactor( float fFactor );
-							
-		SongMode		getMode() const;
-		void			setMode( SongMode mode );
-							
-		void			setIsModified( bool bIsModified);
-		bool			getIsModified() const;
 
-		std::vector<DrumkitComponent*>* getComponents() const;
+		Mode			getMode() const;
+		void			setMode( Mode mode );
+							
+		bool			getIsModified() const;
+		void			setIsModified( bool bIsModified);
+
+	std::shared_ptr<std::vector<std::shared_ptr<DrumkitComponent>>> getComponents() const;
 
 		AutomationPath *	getVelocityAutomationPath() const;
 
-		DrumkitComponent*	getComponent( int nID ) const;
+		std::shared_ptr<DrumkitComponent>	getComponent( int nID ) const;
 
 		void			readTempPatternList( const QString& sFilename );
 		bool			writeTempPatternList( const QString& sFilename );
 							
-		QString			copyInstrumentLineToString( int nSelectedPattern, int selectedInstrument );
-		bool			pasteInstrumentLineFromString( const QString& sSerialized, int nSelectedPattern, int nSelectedInstrument, std::list<Pattern *>& pPatterns );
+		QString			copyInstrumentLineToString( int selectedInstrument );
+		bool			pasteInstrumentLineFromString( const QString& sSerialized, int nSelectedInstrument, std::list<Pattern *>& patterns );
 							
 		int			getLatestRoundRobin( float fStartVelocity );
 		void			setLatestRoundRobin( float fStartVelocity, int nLatestRoundRobin );
 		/** \return #m_sPlaybackTrackFilename */
 		const QString&		getPlaybackTrackFilename() const;
-		/** \param filename Sets #m_sPlaybackTrackFilename. */
+		/** \param sFilename Sets #m_sPlaybackTrackFilename. */
 		void			setPlaybackTrackFilename( const QString sFilename );
 							
 		/** \return #m_bPlaybackTrackEnabled */
 		bool			getPlaybackTrackEnabled() const;
 		/** Specifies whether a playback track should be used.
 		 *
-		 * If #m_sPlaybackTrackFilename is set to nullptr,
-		 * #m_bPlaybackTrackEnabled will be set to false
-		 * regardless of the choice in @a enabled.
-		 *
-		 * \param enabled Sets #m_bPlaybackTrackEnabled. */
-		bool			setPlaybackTrackEnabled( const bool bEnabled );
+		 * \param bEnabled Sets #m_bPlaybackTrackEnabled. */
+		void			setPlaybackTrackEnabled( const bool bEnabled );
 							
 		/** \return #m_fPlaybackTrackVolume */
 		float			getPlaybackTrackVolume() const;
-		/** \param volume Sets #m_fPlaybackTrackVolume. */
+		/** \param fVolume Sets #m_fPlaybackTrackVolume. */
 		void			setPlaybackTrackVolume( const float fVolume );
 
-		/** Defines the type of user interaction experienced in the 
-			SongEditor.*/
-		enum class ActionMode {
-			/** Holding a pressed left mouse key will draw a rectangle to
-				select a group of Notes.*/
-			selectMode = 0,
-			/** Holding a pressed left mouse key will draw/delete patterns
-				in all grid cells encountered.*/
-			drawMode = 1
-		};
+	PlaybackTrack getPlaybackTrackState() const;
+
+	
 		ActionMode		getActionMode() const;
 		void			setActionMode( const ActionMode actionMode );
 
@@ -205,6 +260,33 @@ class Song : public H2Core::Object
 		int getPanLawType() const;
 		void setPanLawKNorm( float fKNorm );
 		float getPanLawKNorm() const;
+
+		bool isPatternActive( int nColumn, int nRow ) const;
+
+	std::shared_ptr<Timeline> getTimeline() const;
+
+	void setDrumkit( std::shared_ptr<Drumkit> pDrumkit, bool bConditional );
+	void removeInstrument( int nInstrumentNumber, bool bConditional );
+
+	std::vector<std::shared_ptr<Note>> getAllNotes() const;
+
+	/** Checks whether a component of name @a sComponentName exists in
+	 * #m_pComponents.
+	 *
+	 * \return Component ID on success and -1 on failure.
+	 */
+	int findExistingComponent( const QString& sComponentName ) const;
+	int findFreeComponentID( int nStartingID = 0 ) const;
+	/** Ensures @a sComponentName is not used by any other component
+		loaded into the song yet.*/
+	QString makeComponentNameUnique( const QString& sComponentName ) const;
+
+
+	const QString& getLastLoadedDrumkitName() const;
+	void setLastLoadedDrumkitName( const QString& sName );
+	QString getLastLoadedDrumkitPath() const;
+	void setLastLoadedDrumkitPath( const QString& sPath );
+	
 		/** Formatted string version for debugging purposes.
 		 * \param sPrefix String prefix which will be added in front of
 		 * every new line
@@ -214,19 +296,29 @@ class Song : public H2Core::Object
 		 *
 		 * \return String presentation of current object.*/
 		QString toQString( const QString& sPrefix, bool bShort = true ) const override;
+	
+private:
 
-	private:
+	static std::shared_ptr<Song> loadFrom( XMLNode* pNode, const QString& sFilename, bool bSilent = false );
+	void writeTo( XMLNode* pNode, bool bSilent = false );
 
+	void loadVirtualPatternsFrom( XMLNode* pNode, bool bSilent = false );
+	void loadPatternGroupVectorFrom( XMLNode* pNode, bool bSilent = false );
+	void writeVirtualPatternsTo( XMLNode* pNode, bool bSilent = false );
+	void writePatternGroupVectorTo( XMLNode* pNode, bool bSilent = false );
+
+	/** Whether the Timeline button was pressed in the GUI or it was
+		activated via an OSC command. */
+	bool m_bIsTimelineActivated;
+							
 		bool m_bIsMuted;
 		///< Resolution of the song (number of ticks per quarter)
 		unsigned m_resolution;
 		/**
 		 * Current speed in beats per minutes.
 		 *
-		 * One of its purposes is an intermediate storage of the
-		 * tempo at the current transport position in
-		 * Hydrogen::setTimelineBpm() in order to detect local changes
-		 * in speed (set by the user). Bounded by [#MIN_BPM,#MAX_BPM].
+		 * See TransportPosition::m_fBpm for how the handling of the
+		 * different tempo instances work.
 		 */
 		float m_fBpm;
 		
@@ -245,20 +337,40 @@ class Song : public H2Core::Object
 		///< Sequence of pattern groups
 		std::vector<PatternList*>* m_pPatternGroupSequence;
 		///< Instrument list
-		InstrumentList*	       	m_pInstrumentList;
+		std::shared_ptr<InstrumentList>	       	m_pInstrumentList;
 		///< list of drumkit component
-		std::vector<DrumkitComponent*>*	m_pComponents;				
+	std::shared_ptr<std::vector<std::shared_ptr<DrumkitComponent>>>	m_pComponents;				
 		QString			m_sFilename;
-		bool			m_bIsLoopEnabled;
+
+		/**
+		 * The three states of this enum is just a way to handle the
+		 * playback within Hydrogen. Not its content but the output of
+		 * isLoopEnabled(), whether enabled or disabled, will be
+		 * written to disk.
+		 */
+		LoopMode		m_loopMode;
+		PatternMode		m_patternMode;
+		/**
+		 * Factor to scale the random contribution when humanizing
+		 * timing between 0 and #AudioEngine::fHumanizeTimingSD.
+		 *
+		 * Supported range [0,1].
+		 */
 		float			m_fHumanizeTimeValue;
+		/**
+		 * Factor to scale the random contribution when humanizing
+		 * velocity between 0 and #AudioEngine::fHumanizeVelocitySD.
+		 *
+		 * Supported range [0,1].
+		 */
 		float			m_fHumanizeVelocityValue;
 		float			m_fSwingFactor;
 		bool			m_bIsModified;
 		std::map< float, int> 	m_latestRoundRobins;
-		SongMode		m_songMode;
+		Mode			m_mode;
 		
 		/** Name of the file to be loaded as playback track.
-		 *
+		*
 		 * It is set by setPlaybackTrackFilename() and
 		 * queried by getPlaybackTrackFilename().
 		 *
@@ -286,16 +398,68 @@ class Song : public H2Core::Object
 		float			m_fPlaybackTrackVolume;
 		AutomationPath*		m_pVelocityAutomationPath;
 		///< license of the song
-		QString			m_sLicense;
+		License			m_license;
 
 		/** Stores the type of interaction with the SongEditor. */
 		ActionMode		m_actionMode;
+
+	/**
+	 * If set to true, the user won't be able to select a pattern via
+	 * the SongEditor. Instead, the pattern recorded note would be
+	 * inserted into is displayed. In single pattern/selected pattern
+	 * mode this is the one pattern being played back and in stacked
+	 * pattern mode this is the bottom-most one.
+	 *
+	 * This mode is only supported in Song mode.
+	 */
+	bool m_bIsPatternEditorLocked;
 		
 		int m_nPanLawType;
 		// k such that L^k+R^k = 1. Used in constant k-Norm pan law
 		float m_fPanLawKNorm;
 
+	void setTimeline( std::shared_ptr<Timeline> pTimeline );
+	std::shared_ptr<Timeline> m_pTimeline;
+
+	/** Unique identifier of the drumkit last loaded.
+	 *
+	 * As the instruments and corresponding samples use their own
+	 * drumkits stored within them, this variable only serves for
+	 * references when storing patterns, highlighting in the GUI, and
+	 * other helper purposes.
+	 *
+	 * It's only semi-useful to associate the last loaded drumkit with
+	 * a song as the user is free to remove instruments and add an
+	 * arbitrary number of instruments from other drumkits. But the
+	 * most common use case of Hydrogen is probably with a stack or
+	 * custom drumkit loaded and not altering the associated
+	 * instrument list.
+	 */
+	QString m_sLastLoadedDrumkitPath;
+	/** Convenience variable holding the name of the drumkit last
+	 * loaded. */
+	QString m_sLastLoadedDrumkitName;
+
 };
+
+inline bool Song::getIsTimelineActivated() const {
+	return m_bIsTimelineActivated;
+}
+inline void Song::setIsTimelineActivated( bool bIsTimelineActivated ) {
+	m_bIsTimelineActivated = bIsTimelineActivated;
+}
+inline bool Song::getIsPatternEditorLocked() const {
+	return m_bIsPatternEditorLocked;
+}
+inline void Song::setIsPatternEditorLocked( bool bIsPatternEditorLocked ) {
+	m_bIsPatternEditorLocked = bIsPatternEditorLocked;
+}
+inline std::shared_ptr<Timeline> Song::getTimeline() const {
+	return m_pTimeline;
+}
+inline void Song::setTimeline( std::shared_ptr<Timeline> pTimeline ) {
+	m_pTimeline = pTimeline;
+}
 
 inline bool Song::getIsMuted() const
 {
@@ -357,12 +521,12 @@ inline bool Song::getIsModified() const
 	return m_bIsModified;
 }
 
-inline InstrumentList* Song::getInstrumentList() const
+inline std::shared_ptr<InstrumentList> Song::getInstrumentList() const
 {
 	return m_pInstrumentList;
 }
 
-inline void Song::setInstrumentList( InstrumentList* pList )
+inline void Song::setInstrumentList( std::shared_ptr<InstrumentList> pList )
 {
 	m_pInstrumentList = pList;
 }
@@ -401,14 +565,14 @@ inline const QString& Song::getNotes() const
 	return m_sNotes;
 }
 
-inline void Song::setLicense( const QString& sLicense )
+inline void Song::setLicense( const License& license )
 {
-	m_sLicense = sLicense;
+	m_license = license;
 }
 
-inline const QString& Song::getLicense() const
+inline const License& Song::getLicense() const
 {
-	return m_sLicense;
+	return m_license;
 }
 
 inline void Song::setAuthor( const QString& sAuthor )
@@ -431,14 +595,28 @@ inline void Song::setFilename( const QString& sFilename )
 	m_sFilename = sFilename;
 }
 
-inline bool Song::getIsLoopEnabled() const
+inline bool Song::isLoopEnabled() const
 {
-	return m_bIsLoopEnabled;
+	return m_loopMode == LoopMode::Enabled ||
+		m_loopMode == LoopMode::Finishing;
 }
 
-inline void Song::setIsLoopEnabled( bool bEnabled )
+inline Song::LoopMode Song::getLoopMode() const
 {
-	m_bIsLoopEnabled = bEnabled;
+	return m_loopMode;
+}
+inline void Song::setLoopMode( Song::LoopMode loopMode )
+{
+	m_loopMode = loopMode;
+}
+
+inline Song::PatternMode Song::getPatternMode() const
+{
+	return m_patternMode;
+}
+inline void Song::setPatternMode( Song::PatternMode patternMode )
+{
+	m_patternMode = patternMode;
 }
 
 inline float Song::getHumanizeTimeValue() const
@@ -466,17 +644,17 @@ inline float Song::getSwingFactor() const
 	return m_fSwingFactor;
 }
 
-inline Song::SongMode Song::getMode() const
+inline Song::Mode Song::getMode() const
 {
-	return m_songMode;
+	return m_mode;
 }
 
-inline void Song::setMode( Song::SongMode mode )
+inline void Song::setMode( Song::Mode mode )
 {
-	m_songMode = mode;
+	m_mode = mode;
 }
 
-inline std::vector<DrumkitComponent*>* Song::getComponents() const
+inline std::shared_ptr<std::vector<std::shared_ptr<DrumkitComponent>>> Song::getComponents() const
 {
 	return m_pComponents;
 }
@@ -488,10 +666,11 @@ inline AutomationPath* Song::getVelocityAutomationPath() const
 
 inline int Song::getLatestRoundRobin( float fStartVelocity )
 {
-	if ( m_latestRoundRobins.find( fStartVelocity ) == m_latestRoundRobins.end() )
+	if ( m_latestRoundRobins.find( fStartVelocity ) == m_latestRoundRobins.end() ) {
 		return 0;
-	else
+	} else {
 		return m_latestRoundRobins[ fStartVelocity ];
+	}
 }
 
 inline void Song::setLatestRoundRobin( float fStartVelocity, int nLatestRoundRobin )
@@ -514,13 +693,9 @@ inline bool Song::getPlaybackTrackEnabled() const
 	return m_bPlaybackTrackEnabled;
 }
 
-inline bool Song::setPlaybackTrackEnabled( const bool bEnabled )
+inline void Song::setPlaybackTrackEnabled( const bool bEnabled )
 {
-	if ( m_sPlaybackTrackFilename == nullptr ) {
-		return false;
-	}
 	m_bPlaybackTrackEnabled = bEnabled;
-	return bEnabled;
 }
 
 inline float Song::getPlaybackTrackVolume() const
@@ -531,6 +706,17 @@ inline float Song::getPlaybackTrackVolume() const
 inline void Song::setPlaybackTrackVolume( const float fVolume )
 {
 	m_fPlaybackTrackVolume = fVolume;
+}
+inline Song::PlaybackTrack Song::getPlaybackTrackState() const {
+	if ( m_sPlaybackTrackFilename.isEmpty() ) {
+		return PlaybackTrack::Unavailable;
+	}
+
+	if ( ! m_bPlaybackTrackEnabled ) {
+		return PlaybackTrack::Muted;
+	}
+
+	return PlaybackTrack::Enabled;
 }
 
 inline Song::ActionMode Song::getActionMode() const {
@@ -549,26 +735,18 @@ inline float Song::getPanLawKNorm() const {
 	return m_fPanLawKNorm;
 }
 
-/**
-\ingroup H2CORE
-\brief	Read XML file of a song
-*/
-class SongReader : public H2Core::Object
+inline const QString& Song::getLastLoadedDrumkitName() const
 {
-		H2_OBJECT
-	public:
-		SongReader();
-		~SongReader();
-		const QString getPath( const QString& filename ) const;
-		Song* readSong( const QString& filename );
-
-	private:
-		QString m_sSongVersion;
-
-		/// Dato un XmlNode restituisce un oggetto Pattern
-		Pattern* getPattern( QDomNode pattern, InstrumentList* instrList );
-};
-
+	return m_sLastLoadedDrumkitName;
+}
+inline void Song::setLastLoadedDrumkitName( const QString& sName )
+{
+	m_sLastLoadedDrumkitName = sName;
+}
+inline void Song::setLastLoadedDrumkitPath( const QString& sPath )
+{
+	m_sLastLoadedDrumkitPath = sPath;
+}
 };
 
 #endif

@@ -2,7 +2,7 @@
 # CMAKE SETUP
 #
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.11)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.8)
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 # The CMake Policy mechanism is designed to help keep existing projects building as new versions of CMake introduce changes in behavior.
 # http://www.cmake.org/cmake/help/cmake2.6docs.html#command:cmake_policy
@@ -17,8 +17,7 @@ ENDIF()
 PROJECT(hydrogen)
 SET(VERSION_MAJOR "1")
 SET(VERSION_MINOR "1")
-SET(VERSION_PATCH "0")
-#SET(VERSION_SUFFIX "rc1")
+SET(VERSION_PATCH "1")
 
 SET(VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
@@ -29,6 +28,14 @@ ELSE()
 	EXECUTE_PROCESS(COMMAND git log --pretty=format:'%h' -n 1 OUTPUT_VARIABLE GIT_REVISION )
 	SET(DISPLAY_VERSION "${VERSION}-${GIT_REVISION}")
 ENDIF(VERSION_SUFFIX)
+
+# Consider any tagged commit as a release build
+EXECUTE_PROCESS(COMMAND git describe --exact-match --tags OUTPUT_VARIABLE GIT_TAG)
+IF(GIT_TAG)
+        SET(IS_DEVEL_BUILD "false")
+ELSE()
+        SET(IS_DEVEL_BUILD "true")
+ENDIF()
 
 
 SET(LIBSNDFILE_VERSION_PREV "1.0.17")
@@ -81,9 +88,9 @@ IF(APPLE)
 ENDIF()
 
 OPTION(WANT_CPPUNIT         "Include CppUnit test suite" ON)
-OPTION(FIXME_DISABLE_OPTIMIZATIONS "Fix broken builds by turning off optimizations" OFF)
 
 include(Sanitizers)
+INCLUDE(StatusSupportOptions)
 
 IF(WANT_DEBUG)
     SET(CMAKE_BUILD_TYPE Debug)
@@ -93,15 +100,21 @@ ELSE()
     SET(H2CORE_HAVE_DEBUG FALSE)
 ENDIF()
 
-OPTION(WANT_CLANG_TIDY "Use clang-tidy to check the sourcecode" OFF)
-IF(WANT_CLANG_TIDY)
-	find_program(CLANG_TIDY_CMD NAMES clang-tidy)
-	IF(CLANG_TIDY_CMD)
-		#use config from .clang-tidy
-		SET(CMAKE_CXX_CLANG_TIDY clang-tidy)
-	ENDIF()
-ENDIF()
 
+OPTION(WANT_CLANG_TIDY "Use clang-tidy to check the sourcecode" OFF)
+find_program(CLANG_TIDY_CMD NAMES clang-tidy)
+IF(CLANG_TIDY_CMD)
+  #use config from .clang-tidy
+  SET(CLANG_TIDY_LIBRARIES ${CLANG_TIDY_CMD}) # Required for summary
+  SET(CLANG_TIDY_FOUND TRUE) # Required for summary
+ELSE()
+  SET(CLANG_TIDY_FOUND FALSE) # Required for summary
+ENDIF()
+IF(CLANG_TIDY_CMD AND WANT_CLANG_TIDY)
+  #use config from .clang-tidy
+  SET(CMAKE_CXX_CLANG_TIDY clang-tidy)
+ENDIF()
+COMPUTE_PKGS_FLAGS(CLANG_TIDY) # Required for summary
 
 IF(WANT_BUNDLE)
     SET(H2CORE_HAVE_BUNDLE TRUE)
@@ -118,7 +131,7 @@ ENDIF()
 IF(WANT_DEBUG)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 ELSE()
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -ffast-math")
 ENDIF()
 
 IF(USE_WEAK_JACK)
@@ -134,23 +147,16 @@ SET(CMAKE_CXX_FLAGS_RELEASE "")
 
 SET(CMAKE_CXX_FLAGS_DEBUG "-g ")#-Winline")
 
-IF(FIXME_DISABLE_OPTIMIZATIONS)
-    string(REGEX REPLACE "-O[0123s]" "-O0" CMAKE_CXX_FLAGS                "${CMAKE_CXX_FLAGS}")
-    string(REGEX REPLACE "-O[0123s]" "-O0" CMAKE_CXX_FLAGS_RELEASE        "${CMAKE_CXX_FLAGS_RELEASE}")
-    string(REGEX REPLACE "-O[0123s]" "-O0" CMAKE_CXX_FLAGS_DEBUG          "${CMAKE_CXX_FLAGS_DEBUG}")
-    string(REGEX REPLACE "-O[0123s]" "-O0" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-ENDIF()
-
 #
 # MANDATORY PKGS AND DEFAULT OPTIONS
 #
-INCLUDE(StatusSupportOptions)
 MANDATORY_PKG(Threads)
 MANDATORY_PKG(LIBSNDFILE)
 
 # http://doc.qt.io/qt-5/cmake-manual.html
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5Test REQUIRED)
+FIND_PACKAGE(Qt5Svg REQUIRED)
 FIND_PACKAGE(Qt5Xml REQUIRED)
 FIND_PACKAGE(Qt5XmlPatterns REQUIRED)
 FIND_PACKAGE(Qt5LinguistTools REQUIRED)
@@ -204,6 +210,8 @@ COMPILE_HELPER(RTCLOCK ${CMAKE_SOURCE_DIR}/cmake/rtclock rtclock )
 CHECK_INCLUDE_FILES(sys/types.h HAVE_SYS_TYPES_H)
 CHECK_INCLUDE_FILES(sys/stat.h HAVE_SYS_STAT_H)
 CHECK_INCLUDE_FILES(libtar.h HAVE_LIBTAR_H)
+CHECK_INCLUDE_FILES(execinfo.h HAVE_EXECINFO_H)
+FIND_PACKAGE(Backtrace)
 CHECK_LIBRARY_EXISTS(tar tar_open "" HAVE_LIBTAR_OPEN)
 CHECK_LIBRARY_EXISTS(tar tar_close "" HAVE_LIBTAR_CLOSE)
 CHECK_LIBRARY_EXISTS(tar tar_extract_all "" HAVE_LIBTAR_EXTRACT_ALL)
@@ -266,9 +274,11 @@ if(DOXYGEN_FOUND)
 	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
 	add_custom_target(doc_dir ALL COMMAND ${CMAKE_COMMAND}
 		-E make_directory ${CMAKE_CURRENT_BINARY_DIR}/docs)
+	add_custom_target(doxygen_dir ALL COMMAND ${CMAKE_COMMAND}
+		-E make_directory ${CMAKE_CURRENT_BINARY_DIR}/doxygen)
 	add_custom_target(doc
 		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-		DEPENDS doc_dir
+		DEPENDS doc_dir doxygen_dir
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/docs
 		COMMENT "Generating API documentation with Doxygen"
 		VERBATIM)
@@ -296,6 +306,10 @@ SET(LIBRUBBERBAND_MSG "The use of librubberband2 is marked as experimental.
 *				 So long this bug isn't solved, please disable this option.
 *				 If rubberband-cli is installed, the hydrogen rubberband-function
 *				 will work properly as expected.")
+
+IF(WIN32)
+    SET(CMAKE_COLOR_MAKEFILE OFF)
+ENDIF()
 
 #
 # CONFIG PROCESS SUMMARY
@@ -354,7 +368,8 @@ IF(WANT_DEBUG)
 -----------------------------------------
 * realtime clock               : ${HAVE_RTCLOCK}
 * working sscanf               : ${HAVE_SSCANF}
-* unit tests                   : ${CPPUNIT_STATUS}\n"
+* unit tests                   : ${CPPUNIT_STATUS}
+* clang tidy                   : ${CLANG_TIDY_STATUS}\n"
     )
 ENDIF()
 
@@ -435,7 +450,7 @@ IF(MINGW)
     #Program Files for Hydrogen
     SET(WINDOWS_DIR "windows")
     #Install files from the extralibs dir
-    INSTALL(DIRECTORY ${WINDOWS_DIR}/extralibs/ DESTINATION ./)
+    INSTALL(DIRECTORY ${CMAKE_BINARY_DIR}/${WINDOWS_DIR}/extralibs/ DESTINATION ./)
 
 	IF(WANT_FAT_BUILD)
 		INSTALL(DIRECTORY windows/jack_installer DESTINATION ./)
@@ -444,6 +459,11 @@ IF(MINGW)
 
     SET(CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/data\\\\img\\\\h2-icon.bmp")
     #Begin NSIS Customizations
+
+    IF(H2CORE_HAVE_DEBUG)
+        SET(DEBUG_SUFFIX "_dbg")
+    ENDIF()
+
     # Installers for 32- vs. 64-bit CMake:
     #  - Root install directory (displayed to end user at installer-run time)
     #  - "NSIS package/display name" (text used in the installer GUI)
@@ -456,7 +476,7 @@ IF(MINGW)
     ELSE()
 		SET(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES")
 		SET(CPACK_NSIS_PACKAGE_NAME "Hydrogen - ${DISPLAY_VERSION}")
-		SET(CPACK_PACKAGE_FILE_NAME "Hydrogen-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-win32")
+		SET(CPACK_PACKAGE_FILE_NAME "Hydrogen-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-win32${DEBUG_SUFFIX}")
 		#SET(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${CPACK_PACKAGE_NAME}${CPACK_PACKAGE_VERSION}")
     ENDIF()
 

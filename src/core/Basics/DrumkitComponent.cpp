@@ -23,8 +23,9 @@
 #include <core/Basics/DrumkitComponent.h>
 
 #include <cassert>
+#include <memory>
 
-#include <core/AudioEngine.h>
+#include <core/Hydrogen.h>
 
 #include <core/Helpers/Xml.h>
 #include <core/Helpers/Filesystem.h>
@@ -39,11 +40,9 @@
 namespace H2Core
 {
 
-const char* DrumkitComponent::__class_name = "DrumkitComponent";
 
 DrumkitComponent::DrumkitComponent( const int id, const QString& name )
-	: Object( __class_name )
-	, __id( id )
+	: __id( id )
 	, __name( name )
 	, __volume( 1.0 )
 	, __muted( false )
@@ -57,9 +56,8 @@ DrumkitComponent::DrumkitComponent( const int id, const QString& name )
 	__out_R = new float[ MAX_BUFFER_SIZE ];
 }
 
-DrumkitComponent::DrumkitComponent( DrumkitComponent* other )
-	: Object( __class_name )
-	, __id( other->get_id() )
+DrumkitComponent::DrumkitComponent( std::shared_ptr<DrumkitComponent> other )
+	: __id( other->get_id() )
 	, __name( other->get_name() )
 	, __volume( other->__volume )
 	, __muted( other->__muted )
@@ -85,12 +83,6 @@ void DrumkitComponent::reset_outs( uint32_t nFrames )
 	memset( __out_R, 0, nFrames * sizeof( float ) );
 }
 
-void DrumkitComponent::set_outs( int nBufferPos, float valL, float valR )
-{
-	__out_L[nBufferPos] += valL;
-	__out_R[nBufferPos] += valR;
-}
-
 float DrumkitComponent::get_out_L( int nBufferPos )
 {
 	return __out_L[nBufferPos];
@@ -101,30 +93,23 @@ float DrumkitComponent::get_out_R( int nBufferPos )
 	return __out_R[nBufferPos];
 }
 
-void DrumkitComponent::load_from( DrumkitComponent* component, bool is_live )
+void DrumkitComponent::load_from( std::shared_ptr<DrumkitComponent> component )
 {
-	if ( is_live ) {
-		AudioEngine::get_instance()->lock( RIGHT_HERE );
-	}
-
 	this->set_id( component->get_id() );
 	this->set_name( component->get_name() );
 	this->set_muted( component->is_muted() );
 	this->set_volume( component->get_volume() );
-
-	if ( is_live ) {
-		AudioEngine::get_instance()->unlock();
-	}
 }
 
-DrumkitComponent* DrumkitComponent::load_from( XMLNode* node, const QString& dk_path )
+std::shared_ptr<DrumkitComponent> DrumkitComponent::load_from( XMLNode* node )
 {
 	int id = node->read_int( "id", EMPTY_INSTR_ID, false, false );
 	if ( id==EMPTY_INSTR_ID ) {
 		return nullptr;
 	}
 
-	DrumkitComponent* pDrumkitComponent = new DrumkitComponent( id, node->read_string( "name", "" ) );
+	auto pDrumkitComponent =
+		std::make_shared<DrumkitComponent>( id, node->read_string( "name", "", false, false ) );
 	pDrumkitComponent->set_volume( node->read_float( "volume", 1.0f, true, false ) );
 
 	return pDrumkitComponent;
@@ -139,7 +124,7 @@ void DrumkitComponent::save_to( XMLNode* node )
 }
 
 QString DrumkitComponent::toQString( const QString& sPrefix, bool bShort ) const {
-	QString s = Object::sPrintIndention;
+	QString s = Base::sPrintIndention;
 	QString sOutput;
 	if ( ! bShort ) {
 		sOutput = QString( "%1[DrumkitComponent]\n" ).arg( sPrefix )

@@ -30,9 +30,10 @@ namespace Ui {
 class FilesystemInfoForm;
 }
 
-class FilesystemInfoForm : public QWidget, public H2Core::Object
+/** \ingroup docGUI docDebugging*/
+class FilesystemInfoForm :  public QWidget,  public H2Core::Object<FilesystemInfoForm>
 {
-	H2_OBJECT
+	H2_OBJECT(FilesystemInfoForm)
 	Q_OBJECT
 	
 public:
@@ -49,7 +50,7 @@ private slots:
 	void	on_openUsrButton_clicked();
 	void	on_openSysButton_clicked();
 	
-	void	showEvent ( QShowEvent* );
+	virtual void showEvent ( QShowEvent* ) override;
 };
 
 #endif // FILESYSTEMINFOFORM_H

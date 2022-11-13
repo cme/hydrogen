@@ -33,14 +33,14 @@
 namespace H2Core
 {
 
-typedef int  ( *audioProcessCallback )( uint32_t, void * );
-
+	void* diskWriterDriver_thread( void *param );
 ///
 /// Driver for export audio to disk
 ///
-class DiskWriterDriver : public AudioOutput
+/** \ingroup docCore docAudioDriver */
+class DiskWriterDriver : public Object<DiskWriterDriver>, public AudioOutput
 {
-	H2_OBJECT
+	H2_OBJECT(DiskWriterDriver)
 	public:
 
 		unsigned				m_nSampleRate;
@@ -51,43 +51,38 @@ class DiskWriterDriver : public AudioOutput
 		float*					m_pOut_L;
 		float*					m_pOut_R;
 
-		DiskWriterDriver( audioProcessCallback processCallback, unsigned nSamplerate, int nSampleDepth );
+		DiskWriterDriver( audioProcessCallback processCallback );
 		~DiskWriterDriver();
 
-		int init( unsigned nBufferSize );
+		virtual int init( unsigned nBufferSize ) override;
 
-		int connect();
-		void disconnect();
+		virtual int connect() override;
+		virtual void disconnect() override;
 
-		void write( float* buffer_L, float* buffer_R, unsigned int bufferSize );
+		void write();
 
-		void audioEngine_process_checkBPMChanged();
-
-		unsigned getBufferSize() {
+		virtual unsigned getBufferSize() override {
 			return m_nBufferSize;
 		}
 
-		unsigned getSampleRate();
+		virtual unsigned getSampleRate() override;
+	void setSampleRate( unsigned nNewRate ) {
+		m_nSampleRate = nNewRate;
+	}
+	void setSampleDepth( int nNewDepth ) {
+		m_nSampleDepth = nNewDepth;
+	}
 		
-		float* getOut_L() {
+		virtual float* getOut_L() override {
 			return m_pOut_L;
 		}
-		float* getOut_R() {
+		virtual float* getOut_R() override {
 			return m_pOut_R;
 		}
 		
 		void  setFileName( const QString& sFilename ){
 			m_sFilename = sFilename;
 		}
-
-		virtual void play();
-		virtual void stop();
-		virtual void locate( unsigned long nFrame );
-		virtual void updateTransportInfo();
-		virtual void setBpm( float fBPM );
-		
-
-		
 
 	private:
 

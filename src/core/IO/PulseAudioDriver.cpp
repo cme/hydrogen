@@ -25,14 +25,14 @@
 #if defined(H2CORE_HAVE_PULSEAUDIO) || _DOXYGEN_
 
 #include <fcntl.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 
 
 namespace H2Core
 {
 
 PulseAudioDriver::PulseAudioDriver(audioProcessCallback processCallback)
-	:	AudioOutput("PulseAudioDriver"),
+	:	AudioOutput(),
 		m_callback(processCallback),
 		m_main_loop(nullptr),
 		m_ctx(nullptr),
@@ -70,10 +70,12 @@ int PulseAudioDriver::init( unsigned nBufferSize )
 int PulseAudioDriver::connect()
 {
 	if (m_connected) {
+		ERRORLOG( "already connected" );
 		return 1;
 	}
 
 	if (pipe(m_pipe)) {
+		ERRORLOG( "unable to open pipe." );
 		return 1;
 	}
 
@@ -84,6 +86,7 @@ int PulseAudioDriver::connect()
 	{
 		close(m_pipe[0]);
 		close(m_pipe[1]);
+		ERRORLOG( "unable to start thread." );
 		return 1;
 	}
 
@@ -98,6 +101,7 @@ int PulseAudioDriver::connect()
 		pthread_join(m_thread, nullptr);
 		close(m_pipe[0]);
 		close(m_pipe[1]);
+		ERRORLOG( QString( "unable to run driver. Main loop returned %1" ).arg( m_ready ) );
 		return 1;
 	}
 
@@ -143,36 +147,6 @@ float* PulseAudioDriver::getOut_R()
 {
 	return m_outR;
 }
-
-
-void PulseAudioDriver::updateTransportInfo()
-{
-}
-
-
-void PulseAudioDriver::play()
-{
-	m_transport.m_status = TransportInfo::ROLLING;
-}
-
-
-void PulseAudioDriver::stop()
-{
-	m_transport.m_status = TransportInfo::STOPPED;
-}
-
-
-void PulseAudioDriver::locate( unsigned long nFrame )
-{
-	m_transport.m_nFrames = nFrame;
-}
-
-
-void PulseAudioDriver::setBpm( float fBPM )
-{
-	m_transport.m_fBPM = fBPM;
-}
-
 
 void* PulseAudioDriver::s_thread_body(void* arg)
 {

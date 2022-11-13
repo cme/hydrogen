@@ -26,8 +26,10 @@
 #include "../EventListener.h"
 #include <QtGui>
 #include <QtWidgets>
+#include "../Widgets/WidgetWithScalableFont.h"
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
 class PatternEditorPanel;
 
@@ -36,9 +38,10 @@ namespace H2Core
 	class Pattern;
 }
 
-class PatternEditorRuler : public QWidget, public H2Core::Object, public EventListener
+/** \ingroup docGUI*/
+class PatternEditorRuler :  public QWidget, protected WidgetWithScalableFont<8, 10, 12>,  public H2Core::Object<PatternEditorRuler>, public EventListener
 {
-    H2_OBJECT
+    H2_OBJECT(PatternEditorRuler)
 	Q_OBJECT
 
 	public:
@@ -50,34 +53,66 @@ class PatternEditorRuler : public QWidget, public H2Core::Object, public EventLi
 
 		void paintEvent(QPaintEvent *ev) override;
 		void updateStart(bool start);
+	/**
+	 * Queries the audio engine to update the current position of the
+	 * playhead.
+	 *
+	 * \param bForce The transport position is cached and updates in
+	 * the transport position are only propagated to the other member
+	 * of the PatternEditor once it changes. However, this will leave the
+	 * pattern editor in a dirty state during startup since the ruler
+	 * has to wait for all other associated objects being
+	 * constructed. Using the @a bForce option an update is performed
+	 * regardlessly.
+	 */
+	void updatePosition( bool bForce = false );
 
 		void showEvent( QShowEvent *ev ) override;
 		void hideEvent( QHideEvent *ev ) override;
+	void mouseMoveEvent( QMouseEvent *ev ) override;
+	void mousePressEvent( QMouseEvent *ev ) override;
+	void leaveEvent( QEvent *ev ) override;
 
 		void zoomIn();
 		void zoomOut();
 		float getGridWidth() const {
-		return m_fGridWidth;
+			return m_fGridWidth;
 		};
+
+		void createBackground();
+		void invalidateBackground();
+		bool m_bBackgroundInvalid;
 
 	public slots:
 		void updateEditor( bool bRedrawAll = false );
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private:
 		uint m_nRulerWidth;
 		uint m_nRulerHeight;
 		float m_fGridWidth;
 
-		QPixmap *m_pBackground;
-		QPixmap m_tickPosition;
+		QPixmap *m_pBackgroundPixmap;
 
 		QTimer *m_pTimer;
-		int m_nTicks;
-		PatternEditorPanel *m_pPatternEditorPanel;
+		int m_nTick;
 		H2Core::Pattern *m_pPattern;
+
+	int m_nHoveredColumn;
+	/**
+	 * Length of the song in pixels. As soon as the x coordinate of an
+	 * event is smaller than this value, it lies within the active
+	 * range of the song.
+	 */
+	int m_nWidthActive;
+	/** Updates #m_nWidthActive.*/
+	void updateActiveRange();
 
 		// Implements EventListener interface
 		virtual void selectedPatternChangedEvent() override;
+	virtual void stateChangedEvent( H2Core::AudioEngine::State ) override;
+	virtual void songModeActivationEvent() override;
+	virtual void relocationEvent() override;
 		//~ Implements EventListener interface
 };
 

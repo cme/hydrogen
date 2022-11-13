@@ -21,14 +21,14 @@
  */
 
 #include <core/Basics/AutomationPath.h>
+#include <core/Basics/Song.h>
+#include <core/Hydrogen.h>
 
 namespace H2Core
 {
 
-const char* AutomationPath::__class_name = "AutomationPath";
-
 AutomationPath::AutomationPath(float min, float max, float def)
-	: Object(__class_name),
+	: Object(),
 	  _min(min),
 	  _max(max),
 	  _def(def)
@@ -80,6 +80,7 @@ float AutomationPath::get_value(float x) const noexcept
 void AutomationPath::add_point(float x, float y)
 {
 	_points[x] = y;
+	Hydrogen::get_instance()->setIsModified( true );
 }
 
 
@@ -104,7 +105,7 @@ bool operator!=(const AutomationPath &lhs, const AutomationPath &rhs)
 }
 
 QString AutomationPath::toQString( const QString& sPrefix, bool bShort ) const {
-	QString s = Object::sPrintIndention;
+	QString s = Base::sPrintIndention;
 	QString sOutput;
 	if ( ! bShort ) {
 		sOutput = QString( "%1[AutomationPath]\n" ).arg( sPrefix )
@@ -176,6 +177,7 @@ AutomationPath::iterator AutomationPath::move(iterator &in, float x, float y)
 {
 	_points.erase(in);
 	auto rv = _points.insert(std::make_pair(x,y));
+	Hydrogen::get_instance()->setIsModified( true );
 	return rv.first;
 }
 
@@ -190,6 +192,7 @@ void AutomationPath::remove_point(float x)
 	if (it != _points.end()) {
 		_points.erase(it);
 	}
+	Hydrogen::get_instance()->setIsModified( true );
 }
 
 } //namespace H2Core

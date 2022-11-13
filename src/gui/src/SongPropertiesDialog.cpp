@@ -20,10 +20,12 @@
  *
  */
 
+#include "CommonStrings.h"
 #include "SongPropertiesDialog.h"
-#include "Skin.h"
+
 #include <core/Basics/Song.h>
 #include <core/Hydrogen.h>
+#include <core/License.h>
 
 #include <QPixmap>
 
@@ -33,6 +35,8 @@ SongPropertiesDialog::SongPropertiesDialog(QWidget* parent)
  : QDialog(parent)
 {
 	setupUi( this );
+	
+	auto pCommonStrings = HydrogenApp::get_instance()->getCommonStrings();
 
 	adjustSize();
 	setMaximumSize( width(), height() );
@@ -40,12 +44,24 @@ SongPropertiesDialog::SongPropertiesDialog(QWidget* parent)
 
 	setWindowTitle( tr( "Song properties" ) );
 
-	Song *pSong = Hydrogen::get_instance()->getSong();
+	std::shared_ptr<Song> pSong = Hydrogen::get_instance()->getSong();
 	songNameTxt->setText( pSong->getName() );
 
 	authorTxt->setText( pSong->getAuthor() );
 	notesTxt->append( pSong->getNotes() );
-	licenseTxt->setText( pSong->getLicense() );
+	connect( licenseComboBox, SIGNAL( currentIndexChanged( int ) ),
+			 this, SLOT( licenseComboBoxChanged( int ) ) );
+
+	setupLicenseComboBox( licenseComboBox );
+	
+	licenseComboBox->setToolTip( pCommonStrings->getLicenseComboToolTip() );
+	licenseStringTxt->setToolTip( pCommonStrings->getLicenseStringToolTip() );
+	
+	licenseComboBox->setCurrentIndex( static_cast<int>( pSong->getLicense().getType() ) );
+	licenseStringTxt->setText( pSong->getLicense().getLicenseString() );
+	if ( pSong->getLicense().getType() == License::Unspecified ) {
+		licenseStringTxt->hide();
+	}
 }
 
 
@@ -54,6 +70,18 @@ SongPropertiesDialog::~SongPropertiesDialog()
 {
 }
 
+void SongPropertiesDialog::licenseComboBoxChanged( int ) {
+
+	licenseStringTxt->setText( License::LicenseTypeToQString(
+		static_cast<License::LicenseType>( licenseComboBox->currentIndex() ) ) );
+
+	if ( licenseComboBox->currentIndex() == static_cast<int>( License::Unspecified ) ) {
+		licenseStringTxt->hide();
+	}
+	else {
+		licenseStringTxt->show();
+	}
+}
 
 void SongPropertiesDialog::on_cancelBtn_clicked()
 {
@@ -62,12 +90,37 @@ void SongPropertiesDialog::on_cancelBtn_clicked()
 
 void SongPropertiesDialog::on_okBtn_clicked()
 {
-	Song *pSong = Hydrogen::get_instance()->getSong();
+	auto pHydrogen = Hydrogen::get_instance();
+	auto pSong = pHydrogen->getSong();
 
-	pSong->setName( songNameTxt->text() );
-	pSong->setAuthor( authorTxt->text() );
-	pSong->setNotes( notesTxt->toPlainText() );
-	pSong->setLicense( licenseTxt->text() );
+	bool bIsModified = false;
+	if ( songNameTxt->text() != pSong->getName() ) {
+		pSong->setName( songNameTxt->text() );
+		bIsModified = true;
+	}
+	if ( pSong->getAuthor() != authorTxt->text() ) {
+		pSong->setAuthor( authorTxt->text() );
+		bIsModified = true;
+	}
+	if ( pSong->getNotes() != notesTxt->toPlainText() ) {
+		pSong->setNotes( notesTxt->toPlainText() );
+		bIsModified = true;
+	}
+
+	QString sNewLicenseString( licenseStringTxt->text() );
+	if ( licenseComboBox->currentIndex() ==
+		 static_cast<int>(License::Unspecified) ) {
+		sNewLicenseString = "";
+	}
+	License newLicense( sNewLicenseString );
+	if ( pSong->getLicense() != newLicense ) {
+		pSong->setLicense( newLicense );
+		bIsModified = true;
+	}
+
+	if ( bIsModified ) {
+		pHydrogen->setIsModified( true );
+	}
 
 	accept();
 }

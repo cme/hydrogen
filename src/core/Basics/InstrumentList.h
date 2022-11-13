@@ -24,6 +24,8 @@
 #define H2C_INSTRUMENT_LIST_H
 
 #include <vector>
+#include <memory>
+#include <core/License.h>
 #include <core/Object.h>
 
 namespace H2Core
@@ -31,14 +33,39 @@ namespace H2Core
 
 class XMLNode;
 class Instrument;
+class DrumkitComponent;
 
 /**
  * InstrumentList is a collection of instruments used within a song, a drumkit, ...
 */
-class InstrumentList : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class InstrumentList : public H2Core::Object<InstrumentList>
 {
-		H2_OBJECT
+		H2_OBJECT(InstrumentList)
 	public:
+
+		struct Content {
+			QString m_sInstrumentName;
+			QString m_sComponentName;
+			QString m_sSampleName;
+			QString m_sFullSamplePath;
+			License m_license;
+
+			Content( const QString& sInstrumentName,
+					 const QString& sComponentName,
+					 const QString& sSampleName,
+					 const QString& sFullSamplePath,
+					 const License& license ) :
+				m_sInstrumentName( sInstrumentName ),
+				m_sComponentName( sComponentName ),
+				m_sSampleName( sSampleName ),
+				m_sFullSamplePath( sFullSamplePath ),
+				m_license( license ) {
+			};
+			
+			QString toQString( const QString& sPrefix, bool bShort = true ) const;
+		};
+		
 		/** constructor */
 		InstrumentList();
 		/** destructor */
@@ -47,7 +74,7 @@ class InstrumentList : public H2Core::Object
 		 * copy constructor
 		 * \param other
 		 */
-		InstrumentList( InstrumentList* other );
+		InstrumentList( std::shared_ptr<InstrumentList> other );
 
 		/** returns the numbers of instruments */
 		int size() const;
@@ -55,23 +82,30 @@ class InstrumentList : public H2Core::Object
 		 * add an instrument to the list
 		 * \param instrument a pointer to the instrument to add
 		 */
-		void operator<<( Instrument* instrument );
+		void operator<<( std::shared_ptr<Instrument> instrument );
 		/**
 		 * get an instrument from  the list
 		 * \param idx the index to get the instrument from
 		 */
-		Instrument* operator[]( int idx );
+		std::shared_ptr<Instrument> operator[]( int idx );
+	/**
+	 * Superficial comparison check. If it succeeds, both objects are
+	 * identical. If it fails, however, they are not guarantued to be
+	 * not identical.
+	 */
+	bool operator==( std::shared_ptr<InstrumentList> pOther ) const;
+	bool operator!=( std::shared_ptr<InstrumentList> pOther ) const;
 		/**
 		 * add an instrument to the list
 		 * \param instrument a pointer to the instrument to add
 		 */
-		void add( Instrument* instrument );
+		void add( std::shared_ptr<Instrument> instrument );
 		/**
 		 * insert an instrument into the list
 		 * \param idx the index to insert the instrument at
 		 * \param instrument a pointer to the instrument to add
 		 */
-		void insert( int idx, Instrument* instrument );
+		void insert( int idx, std::shared_ptr<Instrument> instrument );
 		
 		/**
 		 * check if there is a idx is a valid index for this list
@@ -83,43 +117,43 @@ class InstrumentList : public H2Core::Object
 		 * get an instrument from  the list
 		 * \param idx the index to get the instrument from
 		 */
-		Instrument* get( int idx );
+		std::shared_ptr<Instrument> get( int idx ) const;
 		/**
 		 * remove the instrument at a given index, does not delete it
 		 * \param idx the index
 		 * \return a pointer to the removed instrument
 		 */
-		Instrument* del( int idx );
+		std::shared_ptr<Instrument> del( int idx );
 		/**
 		 * remove an instrument from the list, does not delete it
 		 * \param instrument the instrument to be removed
 		 * \return a pointer to the removed instrument, 0 if not found
 		 */
-		Instrument* del( Instrument* instrument );
+		std::shared_ptr<Instrument> del( std::shared_ptr<Instrument> instrument );
 		/**
 		 * get the index of an instrument within the instruments
 		 * \param instrument a pointer to the instrument to find
 		 * \return -1 if not found
 		 */
-		int index( Instrument* instrument );
+		int index( std::shared_ptr<Instrument> instrument );
 		/**
 		 * find an instrument within the instruments
 		 * \param i the id of the instrument to find
 		 * \return 0 if not found
 		 */
-		Instrument* find( const int i );
+		std::shared_ptr<Instrument> find( const int i );
 		/**
 		 * find an instrument within the instruments
 		 * \param name the name of the instrument to find
 		 * \return 0 if not found
 		 */
-		Instrument* find( const QString& name );
+		std::shared_ptr<Instrument> find( const QString& name );
 		/**
 		 * find an instrument which play the given midi note
 		 * \param note the Midi note of the instrument to find
 		 * \return 0 if not found
 		 */
-		Instrument* findMidiNote( const int note );
+		std::shared_ptr<Instrument> findMidiNote( const int note );
 		/**
 		 * swap the instruments of two different indexes
 		 * \param idx_a the first index
@@ -136,7 +170,7 @@ class InstrumentList : public H2Core::Object
 		/** Calls the Instrument::load_samples() member
 		 * function of all Instruments in #__instruments.
 		 */
-		void load_samples();
+		void load_samples( float fBpm = 120 );
 		/** Calls the Instrument::unload_samples() member
 		 * function of all Instruments in #__instruments.
 		 */
@@ -146,17 +180,37 @@ class InstrumentList : public H2Core::Object
 		 * \param node the XMLNode to feed
 		 * \param component_id Identifier of the corresponding
 		 * component.
+		 * \param bRecentVersion Whether the drumkit format should be
+		 * supported by Hydrogen 0.9.7 or higher (whether it should be
+		 * composed of DrumkitComponents).
+		 * \param bFull Whether to write all parameters of the
+		 * contained #Sample as well. This will be done when storing
+		 * an #Instrument as part of a #Song but not when storing
+		 * as part of a #Drumkit.
 		 */
-		void save_to( XMLNode* node, int component_id );
+	void save_to( XMLNode* node, int component_id, bool bRecentVersion = true, bool bFull = false );
 		/**
 		 * load an instrument list from an XMLNode
 		 * \param node the XMLDode to read from
-		 * \param dk_path the directory holding the drumkit
-		 * data
-		 * \param dk_name
+		 * \param sDrumkitPath the directory holding the #Drumkit
+		 * \param sDrumkitName name of the #Drumkit found in @a sDrumkitPath
+		 * \param license License assigned to all Samples that will be
+		 * loaded. If empty, the license will be read from @a dk_path.
+		 * \param bSilent if set to true, all log messages except of
+		 * errors and warnings are suppressed.
+		 *
 		 * \return a new InstrumentList instance
 		 */
-		static InstrumentList* load_from( XMLNode* node, const QString& dk_path, const QString& dk_name );
+	static std::shared_ptr<InstrumentList> load_from( XMLNode* node,
+									  const QString& sDrumkitPath,
+									  const QString& sDrumkitName,
+									  const License& license = License(),
+									  bool bSilent = false );
+	/**
+	 * Returns vector of lists containing instrument name, component
+	 * name, file name, the license of all associated samples.
+	 */
+	std::vector<std::shared_ptr<Content>> summarizeContent( const std::shared_ptr<std::vector<std::shared_ptr<DrumkitComponent>>> pDrumkitComponents ) const;
 
 		/**
 		 * Fix GitHub issue #307, so called "Hi Bongo fiasco".
@@ -189,8 +243,15 @@ class InstrumentList : public H2Core::Object
 		 * \return String presentation of current object.*/
 		QString toQString( const QString& sPrefix, bool bShort = true ) const override;
 
+		/** Iteration */
+	std::vector<std::shared_ptr<Instrument>>::iterator begin();
+	std::vector<std::shared_ptr<Instrument>>::iterator end();
+
+		/** Check if any instrument in the list is solo'd */
+		bool isAnyInstrumentSoloed();
+
 	private:
-		std::vector<Instrument*> __instruments;            ///< the list of instruments
+		std::vector<std::shared_ptr<Instrument>> __instruments;            ///< the list of instruments
 };
 
 // DEFINITIONS

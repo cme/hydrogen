@@ -26,13 +26,14 @@
 #include <core/config.h>
 #include <core/Object.h>
 #include <core/Globals.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 
 #include "EventListener.h"
 
 #include <iostream>
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 #include <QtGui>
 #include <QtWidgets>
@@ -68,13 +69,15 @@ class PlaylistDialog;
 class SampleEditor;
 class Director;
 class InfoBar;
+class CommonStrings;
 
-class HydrogenApp : public QObject, public EventListener, public H2Core::Object
+/** \ingroup docGUI*/
+class HydrogenApp :  public QObject, public EventListener,  public H2Core::Object<HydrogenApp>
 {
-		H2_OBJECT
+		H2_OBJECT(HydrogenApp)
 	Q_OBJECT
 	public:
-		HydrogenApp( MainForm* pMainForm, H2Core::Song *pFirstSong );
+		HydrogenApp( MainForm* pMainForm );
 
 		/// Returns the instance of HydrogenApp class
 		static HydrogenApp* get_instance();
@@ -82,11 +85,21 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		virtual ~HydrogenApp();
 
 		/** 
-		 * \param sFilename Absolute path used to load the next Song.
+		 * \param sFilename Absolute or relative path used to load the next #H2Core::Song.
 		 * \return bool true on success
 		 */
-		bool openSong( const QString sFilename );
-		bool openSong( H2Core::Song* pSong );
+		static bool openSong( QString sFilename );
+		static bool openSong( std::shared_ptr<H2Core::Song> pSong );
+	/**
+	 * Specialized version of openSong( QString sFilename ) trying to
+	 * open the autosave file corresponding to current empty song.
+	 *
+	 * This will be used if the last set in Hydrogen was an empty one.
+	 * If the user either decided to discard the changes or Hydrogen
+	 * was terminated untimely, this function allows to restore all
+	 * changes that would have been lost otherwise.
+	 */
+	static bool recoverEmptySong();
 
 		void showPreferencesDialog();
 		void updateMixerCheckbox();
@@ -111,12 +124,12 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		PatternEditorPanel*		getPatternEditorPanel();
 		PlayerControl*			getPlayerControl();
 		InstrumentRack*			getInstrumentRack();
+	std::shared_ptr<CommonStrings>			getCommonStrings();
 		InfoBar *			addInfoBar();
 
 		QUndoStack*			m_pUndoStack;
 
-		void setStatusBarMessage( const QString& msg, int msec = 0 );
-		void setScrollStatusBarMessage( const QString& msg, int msec = 0, bool test = true );
+	void showStatusBarMessage( const QString& sMessage, const QString& sCaller = "" );
 		void updateWindowTitle();
 
 #ifdef H2CORE_HAVE_LADSPA
@@ -126,59 +139,38 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		void removeEventListener( EventListener* pListener );
 		void closeFXProperties();
 
-		void onDrumkitLoad( QString name );
-
 		void cleanupTemporaryFiles();
+
+		enum SetPropertyFlag {
+			SetX = 1 << 0,
+			SetY = 1 << 1,
+			SetWidth = 1 << 2,
+			SetHeight = 1 << 3,
+			SetVisible = 1 << 4,
+			SetAll = SetX + SetY + SetWidth + SetHeight + SetVisible,
+			SetDefault = SetAll
+		};
+
+		void setWindowProperties( QWidget *pWindow, H2Core::WindowProperties &prop, unsigned flags = SetAll );
+		H2Core::WindowProperties getWindowProperties( QWidget *pWindow );
+
+	static bool checkDrumkitLicense( std::shared_ptr<H2Core::Drumkit> pDrumkit );
+
+signals:
+	/** Propagates a change in the Preferences through the GUI.
+	 *
+	 * Triggered by the PreferencesDialog upon a change of the
+	 * underlying options in the Preferences class.
+	 *
+	 * @param changes Or-able options indicating which part of the
+	 * Preferences did change.*/
+	void preferencesChanged( H2Core::Preferences::Changes changes );
 
 	public slots:
 		/**
 		 * Function called every #QUEUE_TIMER_PERIOD
 		 * millisecond to pop all Events from the EventQueue
 		 * and invoke the corresponding functions.
-		 *
-		 * Depending on the H2Core::EventType, the following members
-		 * of EventListener will be called:
-		 * - H2Core::EVENT_STATE -> 
-		     EventListener::stateChangedEvent()
-		 * - H2Core::EVENT_PATTERN_CHANGED -> 
-		     EventListener::patternChangedEvent()
-		 * - H2Core::EVENT_PATTERN_MODIFIED -> 
-		     EventListener::patternModifiedEvent()
-		 * - H2Core::EVENT_SONG_MODIFIED -> 
-		     EventListener::songModifiedEvent()
-		 * - H2Core::EVENT_SELECTED_PATTERN_CHANGED -> 
-		     EventListener::selectedPatternChangedEvent()
-		 * - H2Core::EVENT_SELECTED_INSTRUMENT_CHANGED -> 
-		     EventListener::selectedInstrumentChangedEvent()
-		 * - H2Core::EVENT_PARAMETERS_INSTRUMENT_CHANGED -> 
-		     EventListener::parametersInstrumentChangedEvent()
-		 * - H2Core::EVENT_MIDI_ACTIVITY -> 
-		     EventListener::midiActivityEvent()
-		 * - H2Core::EVENT_NOTEON -> 
-		     EventListener::noteOnEvent()
-		 * - H2Core::EVENT_ERROR -> 
-		     EventListener::errorEvent()
-		 * - H2Core::EVENT_XRUN -> 
-		     EventListener::XRunEvent()
-		 * - H2Core::EVENT_METRONOME -> 
-		     EventListener::metronomeEvent()
-		 * - H2Core::EVENT_RECALCULATERUBBERBAND -> 
-		     EventListener::rubberbandbpmchangeEvent()
-		 * - H2Core::EVENT_PROGRESS -> 
-		     EventListener::progressEvent()
-		 * - H2Core::EVENT_JACK_SESSION -> 
-		     EventListener::jacksessionEvent()
-		 * - H2Core::EVENT_PLAYLIST_LOADSONG -> 
-		     EventListener::playlistLoadSongEvent()
-		 * - H2Core::EVENT_UNDO_REDO -> 
-		     EventListener::undoRedoActionEvent()
-		 * - H2Core::EVENT_TEMPO_CHANGED -> 
-		     EventListener::tempoChangedEvent()
-		 * - H2Core::EVENT_UPDATE_PREFERENCES -> 
-		     EventListener::updatePreferencesEvent()
-		 * - H2Core::EVENT_UPDATE_SONG -> 
-		     EventListener::updateSongEvent()
-		 * - H2Core::EVENT_NONE -> nothing
 		 *
 		 * In addition, all MIDI notes in
 		 * H2Core::EventQueue::m_addMidiNoteVector will converted into
@@ -187,6 +179,17 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		*/
 		void onEventQueueTimer();
 		void currentTabChanged(int);
+
+	/** Propagates a change in the Preferences through the GUI.
+	 *
+	 * Triggered by the PreferencesDialog upon a change of the
+	 * underlying options in the Preferences class.
+	 */
+	void changePreferences( H2Core::Preferences::Changes changes );
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
+
+private slots:
+	void propagatePreferences();
 
 	private:
 		static HydrogenApp *		m_pInstance;	///< HydrogenApp instance
@@ -211,14 +214,19 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		QTabWidget *				m_pTab;
 		QSplitter *					m_pSplitter;
 		QVBoxLayout *				m_pMainVBox;
+	std::shared_ptr<CommonStrings>				m_pCommonStrings;
 
 		bool						m_bHideKeyboardCursor;
+		QTimer *					m_pPreferencesUpdateTimer;
+		int						    m_nPreferencesUpdateTimeout;
+	H2Core::Preferences::Changes m_bufferedChanges;  
 
 		// implement EngineListener interface
 		void engineError(uint nErrorCode);
 
 		void setupSinglePanedInterface();
 		virtual void songModifiedEvent() override;
+	virtual void XRunEvent() override;
 
 		/** Handles the loading and saving of the H2Core::Preferences
 		 * from the core part of H2Core::Hydrogen.
@@ -242,23 +250,22 @@ class HydrogenApp : public QObject, public EventListener, public H2Core::Object
 		 * an OSC message, this command will get core and GUI in sync
 		 * again. 
 		 *
-		 * \param nValue If 0 or 1, loads the Song stored in
-		 *     H2Core::Hydrogen::m_pNextSong. If 1, also restarts the
-		 *     audio driver via H2Core::Hydrogen::restartDrivers(). If
-		 *     2, a message in the status bar will be displayed
-		 *     notifying the user about the saving of the current Song
-		 *     to the config file.
+		 * \param nValue If 0, update the GUI to represent the new song. If
+		 *     1, a message in the status bar will be displayed
+		 *     notifying the user about the saving of the current
+		 *     Song. If 2, notifies the user that the current song is
+		 *     opened in read-only mode.
 		 */
 		virtual void updateSongEvent( int nValue ) override;
-		/**
-		 * Calls closeAll() to shutdown Hydrogen.
-		 *
-		 * \param nValue unused
-		 */
-		virtual void quitEvent( int nValue ) override;
+	virtual void drumkitLoadedEvent() override;
 	
 };
 
+
+/// Return an HydrogenApp m_pInstance
+inline HydrogenApp* HydrogenApp::get_instance() {
+	return m_pInstance;
+}
 
 inline Mixer* HydrogenApp::getMixer()
 {
@@ -308,6 +315,11 @@ inline PlayerControl* HydrogenApp::getPlayerControl()
 inline InstrumentRack* HydrogenApp::getInstrumentRack()
 {
 	return m_pInstrumentRack;
+}
+
+inline std::shared_ptr<CommonStrings> HydrogenApp::getCommonStrings()
+{
+	return m_pCommonStrings;
 }
 
 inline bool HydrogenApp::hideKeyboardCursor()

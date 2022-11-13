@@ -38,33 +38,28 @@ namespace H2Core
 ///
 /// PulseAudio driver.
 ///
-class PulseAudioDriver : public AudioOutput
+/** \ingroup docCore docAudioDriver */
+class PulseAudioDriver : public Object<PulseAudioDriver>, public AudioOutput
 {
-	H2_OBJECT
+	H2_OBJECT(PulseAudioDriver)
 public:
-	typedef int (*audioProcessCallback)(uint32_t, void *);
-
 	PulseAudioDriver(audioProcessCallback processCallback);
 	~PulseAudioDriver();
 
-	virtual int init( unsigned nBufferSize );
-	virtual int connect();
-	virtual void disconnect();
-	virtual unsigned getBufferSize();
-	virtual unsigned getSampleRate();
-	virtual float* getOut_L();
-	virtual float* getOut_R();
-
-	virtual void updateTransportInfo();
-	virtual void play();
-	virtual void stop();
-	virtual void locate( unsigned long nFrame );
-	virtual void setBpm( float fBPM );
+	virtual int init( unsigned nBufferSize ) override;
+	virtual int connect() override;
+	virtual void disconnect() override;
+	virtual unsigned getBufferSize() override;
+	virtual unsigned getSampleRate() override;
+	virtual float* getOut_L() override;
+	virtual float* getOut_R() override;
 
 private:
 	pthread_t				m_thread;
 	pthread_mutex_t			m_mutex;
 	pthread_cond_t			m_cond;
+	/** File descriptors used to write data to (m_pipe[1]) and read
+		data from (m_pipe[0]) the pipe.*/
 	int						m_pipe[2];
 	audioProcessCallback	m_callback;
 	pa_mainloop*			m_main_loop;
@@ -94,9 +89,10 @@ private:
 #include <core/IO/NullDriver.h>
 
 namespace H2Core {
+/** \ingroup docCore docAudioDriver */
 	class PulseAudioDriver : public NullDriver
 	{
-		H2_OBJECT
+		H2_OBJECT(PulseAudioDriver)
 	public:
 		PulseAudioDriver( audioProcessCallback processCallback ) : NullDriver( processCallback ) {}
 

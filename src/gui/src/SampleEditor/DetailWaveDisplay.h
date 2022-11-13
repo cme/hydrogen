@@ -33,9 +33,10 @@ namespace H2Core
 	class Sample;
 }
 
-class DetailWaveDisplay : public QWidget, public H2Core::Object
+/** \ingroup docGUI*/
+class DetailWaveDisplay :  public QWidget,  public H2Core::Object<DetailWaveDisplay>
 {
-    H2_OBJECT
+    H2_OBJECT(DetailWaveDisplay)
 	Q_OBJECT
 
 	public:
@@ -44,7 +45,7 @@ class DetailWaveDisplay : public QWidget, public H2Core::Object
 
 		void updateDisplay( QString filename );
 
-		void paintEvent(QPaintEvent *ev);
+		virtual void paintEvent(QPaintEvent *ev) override;
 		void setDetailSamplePosition( unsigned posi, float zoomfactor, QString type);
 
 	private:

@@ -29,54 +29,14 @@
 
 #include <QFileInfo>
 
+#include "TestHelper.h"
+
 #include <iostream>
 #include <stdexcept>
 
 using namespace H2Core;
 
 #define ASSERT_INSTRUMENT_MIDI_NOTE(name, note, instr) checkInstrumentMidiNote(name, note, instr, CPPUNIT_SOURCELINE())
-void
-checkInstrumentMidiNote(std::string name, int note, Instrument *instr, CppUnit::SourceLine sl)
-{
-	auto instrName = instr->get_name().toStdString();
-	auto instrIdx = instr->get_id();
-	auto instrNote = instr->get_midi_out_note();
-
-	if (instrName != name) {
-		std::string msg = "Bad instrument at index " + std::to_string(instrIdx);
-		::CppUnit::Asserter::failNotEqual(name, instrName, sl, CppUnit::AdditionalMessage(), msg);
-	}
-
-	if (instrNote != note) {
-		std::string msg = "Bad MIDI out note for instrument " + instrName;
-		::CppUnit::Asserter::failNotEqual(std::to_string(note), std::to_string(instrNote), sl, CppUnit::AdditionalMessage(), msg);
-	}
-}
-
-
-/* Find test file
- *
- * This function tries to find test files in several directories,
- * so they can be found whether tests have been run from project
- * root or build directory.
- *
- * Exception of class std::runtime_error is thrown when file
- * can't be found.
- */
-static QString
-get_test_file(const QString &name)
-{
-	std::vector<QString> paths = { "./src", "../src" };
-	for (auto const &path : paths) {
-		QString fileName = path + "/tests/data/" + name;
-		QFileInfo fi(fileName);
-		if ( fi.exists() ) {
-			return fileName;
-		}
-	}
-	throw std::runtime_error(std::string("Can't find test file ") + name.toStdString());
-}
-
 
 class MidiNoteTest : public CppUnit::TestCase {
 	CPPUNIT_TEST_SUITE( MidiNoteTest );
@@ -103,11 +63,10 @@ class MidiNoteTest : public CppUnit::TestCase {
 		 * instruments sequential numbers starting from 36,
 		 * preserving legacy behavior. */
 
-		SongReader reader;
-		auto song = reader.readSong( get_test_file("song/test_song_0.9.6.h2song") );
-		CPPUNIT_ASSERT( song != nullptr );
+		auto pSong = H2Core::Song::load( H2TEST_FILE( "song/test_song_0.9.6.h2song" ) );
+		CPPUNIT_ASSERT( pSong != nullptr );
 
-		auto instruments = song->getInstrumentList();
+		auto instruments = pSong->getInstrumentList();
 		CPPUNIT_ASSERT( instruments != nullptr );
 		CPPUNIT_ASSERT_EQUAL( 16, instruments->size() );
 
@@ -124,11 +83,10 @@ class MidiNoteTest : public CppUnit::TestCase {
 		 * MIDI notes. Check that loading that song does not
 		 * change that mapping */
 
-		SongReader reader;
-		auto song = reader.readSong( get_test_file("song/test_song_0.9.7.h2song") );
-		CPPUNIT_ASSERT( song != nullptr );
+		auto pSong = H2Core::Song::load( H2TEST_FILE( "song/test_song_0.9.7.h2song" ) );
+		CPPUNIT_ASSERT( pSong != nullptr );
 
-		auto instruments = song->getInstrumentList();
+		auto instruments = pSong->getInstrumentList();
 		CPPUNIT_ASSERT( instruments != nullptr );
 		CPPUNIT_ASSERT_EQUAL( 4, instruments->size() );
 
@@ -137,6 +95,44 @@ class MidiNoteTest : public CppUnit::TestCase {
 		ASSERT_INSTRUMENT_MIDI_NOTE( "Crash",      49, instruments->get(2) );
 		ASSERT_INSTRUMENT_MIDI_NOTE( "Ride Rock",  59, instruments->get(3) );
 	}
+
+private:
+	void checkInstrumentMidiNote(std::string name, int note, std::shared_ptr<Instrument> instr, CppUnit::SourceLine sl) {
+		auto instrName = instr->get_name().toStdString();
+		auto instrIdx = instr->get_id();
+		auto instrNote = instr->get_midi_out_note();
+
+		if (instrName != name) {
+			std::string msg = "Bad instrument at index " + std::to_string(instrIdx);
+			::CppUnit::Asserter::failNotEqual(name, instrName, sl, CppUnit::AdditionalMessage(), msg);
+		}
+
+		if (instrNote != note) {
+			std::string msg = "Bad MIDI out note for instrument " + instrName;
+			::CppUnit::Asserter::failNotEqual(std::to_string(note), std::to_string(instrNote), sl, CppUnit::AdditionalMessage(), msg);
+		}
+	}
+
+
+	/* Find test file
+	 *
+	 * This function tries to find test files in several directories,
+	 * so they can be found whether tests have been run from project
+	 * root or build directory.
+	 *
+	 * Exception of class std::runtime_error is thrown when file
+	 * can't be found.
+	 */
+	static QString get_test_file(const QString &name) {
+		std::vector<QString> paths = { "./src", "../src" };
+		for (auto const &path : paths) {
+			QString fileName = path + "/tests/data/" + name;
+			QFileInfo fi(fileName);
+			if ( fi.exists() ) {
+				return fileName;
+			}
+		}
+		throw std::runtime_error(std::string("Can't find test file ") + name.toStdString());
+	}
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( MidiNoteTest );

@@ -25,6 +25,7 @@
 
 #include <QtGui>
 #include <QtWidgets>
+#include <memory>
 
 #include <core/Object.h>
 #include "../InstrumentEditor/WaveDisplay.h"
@@ -34,21 +35,29 @@ namespace H2Core
 	class InstrumentLayer;
 }
 
+/** \ingroup docGUI*/
 class PlaybackTrackWaveDisplay : public WaveDisplay
 {
-    H2_OBJECT
+    H2_OBJECT(PlaybackTrackWaveDisplay)
 	Q_OBJECT
 
 	public:
 		explicit PlaybackTrackWaveDisplay(QWidget* pParent);
-		~PlaybackTrackWaveDisplay() = default;
+		~PlaybackTrackWaveDisplay();
 
-		void	updateDisplay( H2Core::InstrumentLayer *pLayer ) override;
+		void	updateDisplay( std::shared_ptr<H2Core::InstrumentLayer> pLayer ) override;
+	void updatePosition( float fTick );
 		
 	public slots:
 		virtual void dragMoveEvent(QDragMoveEvent *event) override;
 		virtual void dropEvent(QDropEvent *event) override;
 		virtual void dragEnterEvent(QDragEnterEvent * event) override;
+	virtual void paintEvent(QPaintEvent * event) override;
+
+private: 
+	QPixmap *m_pBackgroundPixmap;
+	/** Cached position of the playhead.*/
+	float m_fTick;
 };
 
 #endif

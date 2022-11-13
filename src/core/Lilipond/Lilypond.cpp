@@ -30,7 +30,7 @@
  * It contains the notation style (states the position of notes), and for this
  * it follows the "Guide to Standardized Drumset Notation" by Norman Weinberg.
  *
- * Note that the GM-kit uses two unconventionnal instruments: "Stick" and
+ * Note that the GM-kit uses two unconventional instruments: "Stick" and
  * "Hand Clap", so for those I did what I could and used the recommended
  * triangle notehead to distinguish them for drum and cymbal notation.
  */
@@ -70,7 +70,7 @@ void H2Core::LilyPond::extractData( const Song &song ) {
 
 	// Get the main information about the music
 	const std::vector<PatternList *> *group = song.getPatternGroupVector();
-	if ( !group ) {
+	if ( !group || group->size() == 0 ) {
 		m_Measures.clear();
 		return;
 	}

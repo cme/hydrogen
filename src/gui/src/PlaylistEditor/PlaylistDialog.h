@@ -24,25 +24,26 @@
 #define PLAYLIST_DIALOG_H
 
 
+#include <QMenuBar>
 #include <QDialog>
 #include "ui_PlaylistDialog_UI.h"
 #include <core/Object.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Hydrogen.h>
 #include <core/Basics/Playlist.h>
-
+#include "../Widgets/WidgetWithScalableFont.h"
 
 class Button;
-class ToggleButton;
 class PixmapWidget;
 
 ///
 /// This dialog is used to use the H2PlayList
 ///
-class PlaylistDialog : public QDialog, public Ui_PlaylistDialog_UI, public H2Core::Object
+/** \ingroup docGUI*/
+class PlaylistDialog :  public QDialog, protected WidgetWithScalableFont<8, 10, 12>, public Ui_PlaylistDialog_UI,  public H2Core::Object<PlaylistDialog>
 
 {
-		H2_OBJECT
+		H2_OBJECT(PlaylistDialog)
 	Q_OBJECT
 	public:
 
@@ -51,10 +52,14 @@ class PlaylistDialog : public QDialog, public Ui_PlaylistDialog_UI, public H2Cor
 
 		bool loadListByFileName( QString filename);
 
+public slots:
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private slots:
-		void keyPressEvent( QKeyEvent* ev );
-		void closeEvent( QCloseEvent* ev );
+		virtual void keyPressEvent( QKeyEvent* ev ) override;
+		virtual void closeEvent( QCloseEvent* ev ) override;
+		virtual bool eventFilter ( QObject *o, QEvent *e ) override;
+	
 		void addSong();
 		void addCurrentSong();
 		void removeFromList();
@@ -64,10 +69,10 @@ class PlaylistDialog : public QDialog, public Ui_PlaylistDialog_UI, public H2Cor
 		void saveListAs();
 		void saveList();
 		void loadScript();
-		void ffWDBtnClicked(Button* ref);
-		void nodePlayBTN( Button* ref );
-		void nodeStopBTN( Button* ref );
-		void rewindBtnClicked(Button *ref);
+		void ffWDBtnClicked();
+		void nodePlayBTN();
+		void nodeStopBTN();
+		void rewindBtnClicked();
 		void editScript();
 		void newScript();
 		void on_m_pPlaylistTree_itemClicked ( QTreeWidgetItem * item, int column );
@@ -75,7 +80,6 @@ class PlaylistDialog : public QDialog, public Ui_PlaylistDialog_UI, public H2Cor
 		void o_downBClicked();
 		void on_m_pPlaylistTree_itemDoubleClicked ();
 		void updateActiveSongNumber();
-		bool eventFilter ( QObject *o, QEvent *e );
 
 
 	private:
@@ -83,13 +87,19 @@ class PlaylistDialog : public QDialog, public Ui_PlaylistDialog_UI, public H2Cor
 		void updatePlayListNode( QString file );
 		void updatePlayListVector();
 		void setFirstItemCurrent();
-		Button *zoom_in_btn;
-		QTimer *timer;
+		Button *	zoom_in_btn;
+		QTimer *	m_pTimer;
+		QMenuBar *	m_pMenubar;
+		QMenu *		m_pPlaylistMenu;
+#ifndef WIN32
+	//no scripts under windows
+		QMenu *		m_pScriptMenu;
+#endif
 
-		Button *m_pRwdBtn;
-		ToggleButton *m_pPlayBtn;
-		Button *m_pStopBtn;
-		Button *m_pFfwdBtn;
+		Button *	m_pRwdBtn;
+		Button *	m_pPlayBtn;
+		Button *	m_pStopBtn;
+		Button *	m_pFfwdBtn;
 };
 
 

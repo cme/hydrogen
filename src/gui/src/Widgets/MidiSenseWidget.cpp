@@ -23,15 +23,16 @@
 #include "core/MidiMap.h"
 #include "MidiSenseWidget.h"
 #include <core/Hydrogen.h>
+#include "../HydrogenApp.h"
+#include "../CommonStrings.h"
 
-const char* MidiSenseWidget::__class_name = "MidiSenseWidget";
-
-MidiSenseWidget::MidiSenseWidget(QWidget* pParent, bool directWr, Action* pAction): QDialog( pParent ) , Object(__class_name)
+MidiSenseWidget::MidiSenseWidget(QWidget* pParent, bool bDirectWrite, std::shared_ptr<Action> pAction): QDialog( pParent )
 {
-	m_DirectWrite = directWr;
+	auto pCommonStrings = HydrogenApp::get_instance()->getCommonStrings();
+	m_bDirectWrite = bDirectWrite;
 	m_pAction = pAction;
 
-	setWindowTitle( "Waiting.." );
+	setWindowTitle( pCommonStrings->getMidiSenseWindowTitle() );
 	setFixedSize( 280, 100 );
 
 	bool midiOperable = false;
@@ -40,7 +41,7 @@ MidiSenseWidget::MidiSenseWidget(QWidget* pParent, bool directWr, Action* pActio
 	m_pURLLabel->setAlignment( Qt::AlignCenter );
 
 	if(m_pAction != nullptr){
-		m_pURLLabel->setText( "Waiting for midi input..." );
+		m_pURLLabel->setText( pCommonStrings->getMidiSenseInput() );
 		midiOperable = true;
 	} else {
 
@@ -49,11 +50,11 @@ MidiSenseWidget::MidiSenseWidget(QWidget* pParent, bool directWr, Action* pActio
 		 *   window(directWrite=false) or by clicking on a midiLearn-capable gui item(directWrite=true)
 		 */
 
-		if(m_DirectWrite){
-			m_pURLLabel->setText( tr("This element is not midi operable.") );
+		if(m_bDirectWrite){
+			m_pURLLabel->setText( pCommonStrings->getMidiSenseUnavailable() );
 			midiOperable = false;
 		} else {
-			m_pURLLabel->setText( tr("Waiting for midi input...") );
+			m_pURLLabel->setText( pCommonStrings->getMidiSenseInput() );
 			midiOperable = true;
 		}
 	}
@@ -62,9 +63,9 @@ MidiSenseWidget::MidiSenseWidget(QWidget* pParent, bool directWr, Action* pActio
 	pVBox->addWidget( m_pURLLabel );
 	setLayout( pVBox );
 	
-	H2Core::Hydrogen *pEngine = H2Core::Hydrogen::get_instance();
-	pEngine->lastMidiEvent = "";
-	pEngine->lastMidiEventParameter = 0;
+	H2Core::Hydrogen *pHydrogen = H2Core::Hydrogen::get_instance();
+	pHydrogen->m_LastMidiEvent = "";
+	pHydrogen->m_nLastMidiEventParameter = 0;
 
 	m_LastMidiEventParameter = 0;
 	
@@ -88,21 +89,23 @@ MidiSenseWidget::~MidiSenseWidget(){
 }
 
 void MidiSenseWidget::updateMidi(){
-	H2Core::Hydrogen *pEngine = H2Core::Hydrogen::get_instance();
-	if(	!pEngine->lastMidiEvent.isEmpty() ){
-		m_sLastMidiEvent = pEngine->lastMidiEvent;
-		m_LastMidiEventParameter = pEngine->lastMidiEventParameter;
+	H2Core::Hydrogen *pHydrogen = H2Core::Hydrogen::get_instance();
+	if(	!pHydrogen->m_LastMidiEvent.isEmpty() ){
+		m_sLastMidiEvent = pHydrogen->m_LastMidiEvent;
+		m_LastMidiEventParameter = pHydrogen->m_nLastMidiEventParameter;
 
 
-		if( m_DirectWrite ){
+		if( m_bDirectWrite ){
 			//write the action / parameter combination to the midiMap
 			MidiMap *pMidiMap = MidiMap::get_instance();
 
 			assert(m_pAction);
 
-			Action* pAction = new Action( m_pAction->getType() );
+			std::shared_ptr<Action> pAction = std::make_shared<Action>( m_pAction->getType() );
 
 			pAction->setParameter1( m_pAction->getParameter1() );
+			pAction->setParameter2( m_pAction->getParameter2() );
+			pAction->setParameter3( m_pAction->getParameter3() );
 
 			if( m_sLastMidiEvent.left(2) == "CC" ){
 				pMidiMap->registerCCEvent( m_LastMidiEventParameter , pAction );
@@ -114,8 +117,6 @@ void MidiSenseWidget::updateMidi(){
 				pMidiMap->registerPCEvent( pAction );
 			} else {
 				/* In all other cases, the midiMap cares for deleting the pointer */
-
-				delete pAction;
 			}
 		}
 

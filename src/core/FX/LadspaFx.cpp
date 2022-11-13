@@ -23,7 +23,9 @@
 #include <core/FX/LadspaFX.h>
 
 #if defined(H2CORE_HAVE_LADSPA) || _DOXYGEN_
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
+#include <core/Hydrogen.h>
+#include <core/Basics/Song.h>
 
 #include <QDir>
 
@@ -35,10 +37,7 @@
 namespace H2Core
 {
 
-const char* LadspaFXGroup::__class_name = "LadspaFXGroup";
-
 LadspaFXGroup::LadspaFXGroup( const QString& sName )
-		: Object( __class_name )
 {
 //	infoLog( "INIT - " + sName );
 	m_sName = sName;
@@ -56,15 +55,23 @@ LadspaFXGroup::~LadspaFXGroup()
 
 
 
+void LadspaFXGroup::clear() {
+	m_childGroups.clear();
+	m_ladspaList.clear();
+	Hydrogen::get_instance()->setIsModified( true );
+}
+
 void LadspaFXGroup::addLadspaInfo( LadspaFXInfo *pInfo )
 {
 	m_ladspaList.push_back( pInfo );
+	Hydrogen::get_instance()->setIsModified( true );
 }
 
 
 void LadspaFXGroup::addChild( LadspaFXGroup *pChild )
 {
 	m_childGroups.push_back( pChild );
+	Hydrogen::get_instance()->setIsModified( true );
 }
 
 bool LadspaFXGroup::alphabeticOrder( LadspaFXGroup* a, LadspaFXGroup* b )
@@ -76,16 +83,15 @@ void LadspaFXGroup::sort()
 {
 	std::sort( m_ladspaList.begin(), m_ladspaList.end(), LadspaFXInfo::alphabeticOrder );
 	std::sort( m_childGroups.begin(), m_childGroups.end(), LadspaFXGroup::alphabeticOrder );
+	Hydrogen::get_instance()->setIsModified( true );
 }
 
 
 
 ////////////////
 
-const char* LadspaFXInfo::__class_name = "LadspaFXInfo";
 
 LadspaFXInfo::LadspaFXInfo( const QString& sName )
-		: Object( __class_name )
 {
 //	infoLog( "INIT - " + sName );
 	m_sFilename = "";
@@ -112,13 +118,10 @@ bool LadspaFXInfo::alphabeticOrder( LadspaFXInfo* a, LadspaFXInfo* b )
 ///////////////////
 
 
-const char* LadspaFX::__class_name = "LadspaFX";
-
 // ctor
 LadspaFX::LadspaFX( const QString& sLibraryPath, const QString& sPluginLabel )
-		: Object( __class_name )
 //, m_nBufferSize( 0 )
-		, m_pBuffer_L( nullptr )
+		: m_pBuffer_L( nullptr )
 		, m_pBuffer_R( nullptr )
 		, m_pluginType( UNDEFINED )
 		, m_bEnabled( false )
@@ -169,6 +172,7 @@ LadspaFX::~LadspaFX()
 		if ( m_d->cleanup ) {
 			if ( m_handle ) {
 				INFOLOG( "Cleanup" );
+				Logger::CrashContext cc( &m_sLibraryPath );
 				m_d->cleanup( m_handle );
 			}
 		}
@@ -187,6 +191,20 @@ LadspaFX::~LadspaFX()
 }
 
 
+void LadspaFX::setPluginName( const QString& sName ) {
+	m_sName = sName;
+	
+	if ( Hydrogen::get_instance()->getSong() != nullptr ) {
+		Hydrogen::get_instance()->setIsModified( true );
+	}
+}
+void LadspaFX::setEnabled( bool value ) {
+	m_bEnabled = value;
+	
+	if ( Hydrogen::get_instance()->getSong() != nullptr ) {
+		Hydrogen::get_instance()->setIsModified( true );
+	}
+}
 
 
 // Static
@@ -195,6 +213,8 @@ LadspaFX* LadspaFX::load( const QString& sLibraryPath, const QString& sPluginLab
 	LadspaFX* pFX = new LadspaFX( sLibraryPath, sPluginLabel );
 
 	_INFOLOG( "INIT - " + sLibraryPath + " - " + sPluginLabel );
+
+	Logger::CrashContext ctx( QString( "Initialising LADSPA plugin " ) + sLibraryPath + " - " + sPluginLabel);
 
 	pFX->m_pLibrary = new QLibrary( sLibraryPath );
 	LADSPA_Descriptor_Function desc_func = ( LADSPA_Descriptor_Function )pFX->m_pLibrary->resolve( "ladspa_descriptor" );
@@ -367,7 +387,10 @@ LadspaFX* LadspaFX::load( const QString& sLibraryPath, const QString& sPluginLab
 			_ERRORLOG( "unknown port" );
 		}
 	}
-
+	
+	if ( Hydrogen::get_instance()->getSong() != nullptr ) {
+		Hydrogen::get_instance()->setIsModified( true );
+	}
 	return pFX;
 }
 
@@ -376,7 +399,7 @@ LadspaFX* LadspaFX::load( const QString& sLibraryPath, const QString& sPluginLab
 void LadspaFX::connectAudioPorts( float* pIn_L, float* pIn_R, float* pOut_L, float* pOut_R )
 {
 	INFOLOG( "[connectAudioPorts]" );
-
+	Logger::CrashContext ctx( QString( "Connecting ports on LADSPA plugin " ) + m_sLibraryPath + " - " + m_sLabel);
 	unsigned nAIConn = 0;
 	unsigned nAOConn = 0;
 	for ( unsigned nPort = 0; nPort < m_d->PortCount; nPort++ ) {
@@ -417,6 +440,7 @@ void LadspaFX::processFX( unsigned nFrames )
 {
 //	infoLog( "[LadspaFX::applyFX()]" );
 	if( m_bActivated ) {
+		Logger::CrashContext cc( &m_sLibraryPath );
 		m_d->run( m_handle, nFrames );
 	}
 }
@@ -426,7 +450,9 @@ void LadspaFX::activate()
 	if ( m_d->activate ) {
 		INFOLOG( "activate " + getPluginName() );
 		m_bActivated = true;
+		Logger::CrashContext cc( &m_sLibraryPath );
 		m_d->activate( m_handle );
+		Hydrogen::get_instance()->setIsModified( true );
 	}
 }
 
@@ -436,7 +462,9 @@ void LadspaFX::deactivate()
 	if ( m_d->deactivate && m_bActivated ) {
 		INFOLOG( "deactivate " + getPluginName() );
 		m_bActivated = false;
+		Logger::CrashContext cc( &m_sLibraryPath );
 		m_d->deactivate( m_handle );
+		Hydrogen::get_instance()->setIsModified( true );
 	}
 }
 
@@ -449,6 +477,10 @@ void LadspaFX::setVolume( float fValue )
 		fValue = 0.0;
 	}
 	m_fVolume = fValue;
+
+	if ( Hydrogen::get_instance()->getSong() != nullptr ) {
+		Hydrogen::get_instance()->setIsModified( true );
+	}
 }
 
 

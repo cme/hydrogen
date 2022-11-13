@@ -24,17 +24,14 @@
 #include <QLabel>
 
 #include "ExportMidiDialog.h"
-#include "Skin.h"
 #include "HydrogenApp.h"
 
 #include <core/Basics/Song.h>
 #include <core/Hydrogen.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Smf/SMF.h>
 
 using namespace H2Core;
-
-const char* ExportMidiDialog::__class_name = "ExportMidiDialog";
 
 enum ExportModes { EXPORT_SMF1_SINGLE, EXPORT_SMF1_MULTI, EXPORT_SMF0 };
 
@@ -43,8 +40,8 @@ QString ExportMidiDialog::sLastFilename = "";
 
 ExportMidiDialog::ExportMidiDialog( QWidget* parent )
 	: QDialog( parent )
-	, Object( __class_name )
-	, m_pEngine( Hydrogen::get_instance() )
+	, Object()
+	, m_pHydrogen( Hydrogen::get_instance() )
 	, m_pPreferences( Preferences::get_instance() )
 	, m_bFileSelected( false )
 	, m_sExtension( ".mid" )
@@ -80,16 +77,15 @@ void ExportMidiDialog::saveSettingsToPreferences()
 	}
 	
 	sLastFilename = info.fileName();
-	QString sSelectedDirname = dir.absolutePath();
-	m_pPreferences->setMidiExportDirectory( sSelectedDirname );
+	Preferences::get_instance()->setLastExportMidiDirectory( dir.absolutePath() );
 }
 
 QString ExportMidiDialog::createDefaultFilename()
 {
-	QString sDefaultFilename = m_pEngine->getSong()->getFilename();
+	QString sDefaultFilename = m_pHydrogen->getSong()->getFilename();
 
 	if( sDefaultFilename.isEmpty() ){
-		sDefaultFilename = m_pEngine->getSong()->getName();
+		sDefaultFilename = m_pHydrogen->getSong()->getName();
 	} else {
 		// extracting filename from full path
 		QFileInfo qDefaultFile( sDefaultFilename ); 
@@ -110,7 +106,7 @@ void ExportMidiDialog::restoreSettingsFromPreferences()
 		sLastFilename = createDefaultFilename();
 	}
 
-	QString sDirPath = m_pPreferences->getMidiExportDirectory();
+	QString sDirPath = m_pPreferences->getLastExportMidiDirectory();
 	QDir qd = QDir( sDirPath );
 	
 	// joining filepath with dirname
@@ -124,12 +120,16 @@ void ExportMidiDialog::restoreSettingsFromPreferences()
 
 void ExportMidiDialog::on_browseBtn_clicked()
 {
+	QString sPath = Preferences::get_instance()->getLastExportMidiDirectory();
+	if ( ! Filesystem::dir_writable( sPath, false ) ){
+		sPath = Filesystem::usr_data_path();
+	}
+	
 	QFileDialog fd( this );
-	QString sPrevDir = m_pPreferences->getMidiExportDirectory();
 
 	fd.setFileMode( QFileDialog::AnyFile );
 	fd.setNameFilter( tr("Midi file (*%1)").arg( m_sExtension ) );
-	fd.setDirectory( sPrevDir );
+	fd.setDirectory( sPath );
 	fd.setWindowTitle( tr( "Export MIDI file" ) );
 	fd.setAcceptMode( QFileDialog::AcceptSave );
 
@@ -179,7 +179,7 @@ void ExportMidiDialog::on_okBtn_clicked()
 	
 	saveSettingsToPreferences();
 
-	Song *pSong = m_pEngine->getSong();
+	std::shared_ptr<Song> pSong = m_pHydrogen->getSong();
 	
 	QString sFilename = exportNameTxt->text();
 	QFileInfo qFile( sFilename );

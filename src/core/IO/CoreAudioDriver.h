@@ -38,20 +38,20 @@
 #include <AudioUnit/AudioComponent.h>
 #endif
 
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <inttypes.h>
+#include <vector>
 
-
-typedef int ( *audioProcessCallback )( uint32_t, void * );
 
 namespace H2Core
 {
 
 #if defined(H2CORE_HAVE_COREAUDIO) || _DOXYGEN_
 
-class CoreAudioDriver : public AudioOutput
+/** \ingroup docCore docAudioDriver */
+class CoreAudioDriver : public Object<CoreAudioDriver>, public AudioOutput
 {
-	H2_OBJECT
+	H2_OBJECT(CoreAudioDriver)
 public:
 
 	audioProcessCallback mProcessCallback;
@@ -66,31 +66,33 @@ public:
 	CoreAudioDriver( audioProcessCallback processCallback );
 	virtual ~CoreAudioDriver();
 
-	int init( unsigned bufferSize );
+	virtual int init( unsigned nBufferSize ) override;
 
-	unsigned getSampleRate();
-	unsigned getBufferSize();
+	virtual unsigned getSampleRate() override;
+	virtual unsigned getBufferSize() override;
 
-	int connect();
-	void disconnect();
+	virtual int connect() override;
+	virtual void disconnect() override;
 
-	float* getOut_L();
-	float* getOut_R();
+	virtual float* getOut_L() override;
+	virtual float* getOut_R() override;
 
+	static QStringList getDevices();
 
-	virtual void play();
-	virtual void stop();
-	virtual void locate( unsigned long nFrame );
-	virtual void updateTransportInfo();
-	virtual void setBpm( float fBPM );
-
-
+	virtual int getLatency() override;
 
 private:
-	void retrieveDefaultDevice(void);
+	AudioDeviceID defaultOutputDevice(void);
 	void retrieveBufferSize(void);
 	void printStreamInfo(void);
 
+	// Find the name of a given audio device
+	static QString deviceName( AudioDeviceID deviceID );
+
+	// Find suitable audio output devices
+	static std::vector< AudioDeviceID > outputDeviceIDs();
+
+	AudioDeviceID preferredOutputDevice();
 
 	bool m_bIsRunning;
 	unsigned m_nSampleRate;
@@ -99,9 +101,10 @@ private:
 
 #else
 
-class CoreAudioDriver : public NullDriver
+/** \ingroup docCore docAudioDriver */
+class CoreAudioDriver : public Object<CoreAudioDriver>, public NullDriver
 {
-	H2_OBJECT
+	H2_OBJECT(CoreAudioDriver)
 public:
 	CoreAudioDriver( audioProcessCallback processCallback ) : NullDriver ( processCallback ) {}
 

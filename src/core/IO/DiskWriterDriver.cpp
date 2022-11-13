@@ -22,11 +22,11 @@
 #include <unistd.h>
 
 
-#include <core/Preferences.h>
-#include <core/AudioEngine.h>
+#include <core/Preferences/Preferences.h>
+#include <core/AudioEngine/AudioEngine.h>
 #include <core/EventQueue.h>
+#include <core/CoreActionController.h>
 #include <core/Hydrogen.h>
-#include <core/Timeline.h>
 #include <core/Basics/Pattern.h>
 #include <core/Basics/PatternList.h>
 #include <core/IO/DiskWriterDriver.h>
@@ -53,19 +53,17 @@ pthread_t diskWriterDriverThread;
 
 void* diskWriterDriver_thread( void* param )
 {
-	Object* __object = ( Object* )param;	
+	Base * __object = ( Base * )param;
 	DiskWriterDriver *pDriver = ( DiskWriterDriver* )param;
 
 	EventQueue::get_instance()->push_event( EVENT_PROGRESS, 0 );
-	
-	pDriver->setBpm( Hydrogen::get_instance()->getSong()->getBpm() );
-	pDriver->audioEngine_process_checkBPMChanged();
+
+	auto pAudioEngine = Hydrogen::get_instance()->getAudioEngine();
 	
 	__INFOLOG( "DiskWriterDriver thread start" );
 
 	// always rolling, no user interaction
-	pDriver->m_transport.m_status = TransportInfo::ROLLING;
-
+	pAudioEngine->play();
 	SF_INFO soundInfo;
 	soundInfo.samplerate = pDriver->m_nSampleRate;
 //	soundInfo.frames = -1;//getNFrames();		///\todo: da terminare
@@ -104,7 +102,6 @@ void* diskWriterDriver_thread( void* param )
 	if( pDriver->m_sFilename.endsWith( ".ogg" ) | pDriver->m_sFilename.endsWith( ".OGG" ) ) {
 		soundInfo.format = SF_FORMAT_OGG | SF_FORMAT_VORBIS;
 	}
-
 //	#endif
 
 
@@ -153,111 +150,130 @@ void* diskWriterDriver_thread( void* param )
 	float *pData_R = pDriver->m_pOut_R;
 
 
-	Hydrogen* pEngine = Hydrogen::get_instance();
-	auto pSong = pEngine->getSong();
+	Hydrogen* pHydrogen = Hydrogen::get_instance();
+	auto pSong = pHydrogen->getSong();
+	auto pSampler = pHydrogen->getAudioEngine()->getSampler();
 
 	std::vector<PatternList*> *pPatternColumns = pSong->getPatternGroupVector();
 	int nColumns = pPatternColumns->size();
 	
-	int nPatternSize;
-	int validBpm = pEngine->getSong()->getBpm();
-	float oldBPM = 0;
+	int nPatternSize, nBufferWriteLength;
+	float fBpm;
 	float fTicksize = 0;
-	
+	int nMaxNumberOfSilentFrames = 200;
 	for ( int patternPosition = 0; patternPosition < nColumns; ++patternPosition ) {
+		
 		PatternList *pColumn = ( *pPatternColumns )[ patternPosition ];
 		if ( pColumn->size() != 0 ) {
 			nPatternSize = pColumn->longest_pattern_length();
 		} else {
 			nPatternSize = MAX_NOTES;
 		}
-		
-		// check pattern bpm if timeline bpm is in use
-		Timeline* pTimeline = pEngine->getTimeline();
-		if(Preferences::get_instance()->getUseTimelineBpm() ){
 
-			float fTimelineBpm = pTimeline->getTempoAtBar( patternPosition, true );
-			if ( fTimelineBpm != 0 ) {
-				/* TODO: For now the function returns 0 if the bar is
-				 * positioned _before_ the first tempo marker. This will be
-				 * taken care of with #854. */
-				validBpm = fTimelineBpm;
-			}
-			
-			pDriver->setBpm(validBpm);
-			fTicksize = AudioEngine::compute_tick_size( pDriver->m_nSampleRate,
-														validBpm,
-														pSong->getResolution() );
-			pDriver->audioEngine_process_checkBPMChanged();
-			pEngine->setPatternPos(patternPosition);
-			
-			// delay needed time to calculate all rubberband samples
-			if( Preferences::get_instance()->getRubberBandBatchMode() && validBpm != oldBPM ){
-				EventQueue::get_instance()->push_event( EVENT_RECALCULATERUBBERBAND, -1);
-				int sleepTime = Preferences::get_instance()->getRubberBandCalcTime()+1;
-				while ((sleepTime = sleep(sleepTime)) > 0);
-			}
-			oldBPM = validBpm;
-			
-		}
-		else
-		{
-			fTicksize = AudioEngine::compute_tick_size( pDriver->m_nSampleRate,
-														pSong->getBpm(),
-														pSong->getResolution() );
-			//pDriver->m_transport.m_fTickSize = ticksize;
-		}
-		
+		fBpm = AudioEngine::getBpmAtColumn( patternPosition );
+		fTicksize = AudioEngine::computeTickSize( pDriver->m_nSampleRate, fBpm,
+												  pSong->getResolution() );
 		
 		//here we have the pattern length in frames dependent from bpm and samplerate
-		unsigned patternLengthInFrames = fTicksize * nPatternSize;
-		
-		unsigned frameNumber = 0;
-		int lastRun = 0;
-		while ( frameNumber < patternLengthInFrames ) {
+		int nPatternLengthInFrames = fTicksize * nPatternSize;
+		int nFrameNumber = 0;
+		int nLastRun = 0;
+		int nSuccessiveZeros = 0;
+		while ( ( patternPosition < nColumns - 1 && // render all
+													// frames in
+													// pattern 
+				  nFrameNumber < nPatternLengthInFrames ) ||
+				( patternPosition == nColumns - 1 && // render till
+													 // all notes are
+													 // processed
+				  ( nFrameNumber < nPatternLengthInFrames ||
+					pSampler->isRenderingNotes() ) ) ) {
 			
-			int usedBuffer = pDriver->m_nBufferSize;
+			int nUsedBuffer = pDriver->m_nBufferSize;
 			
-			//this will calculate the size from -last- (end of pattern) used frame buffer,
-			//which is mostly smaller than pDriver->m_nBufferSize
-			if( patternLengthInFrames - frameNumber <  pDriver->m_nBufferSize ){
-				lastRun = patternLengthInFrames - frameNumber;
-				usedBuffer = lastRun;
+			// This will calculate the size from -last- (end of
+			// pattern) used frame buffer, which is mostly smaller
+			// than pDriver->m_nBufferSize. But it only applies for
+			// all patterns except of the last one. The latter we will
+			// let ring until there is no further audio to process.
+			if( patternPosition < nColumns - 1 &&
+				nPatternLengthInFrames - nFrameNumber < pDriver->m_nBufferSize ){
+				nLastRun = nPatternLengthInFrames - nFrameNumber;
+				nUsedBuffer = nLastRun;
 			};
+
+			int ret = pDriver->m_processCallback( nUsedBuffer, nullptr );
 			
-			frameNumber += usedBuffer;
-			
-			//pDriver->m_transport.m_nFrames = frameNumber;
-			
-			int ret = pDriver->m_processCallback( usedBuffer, nullptr );
-			while( ret != 0) {
-				ret = pDriver->m_processCallback( usedBuffer, nullptr );
+			// In case the DiskWriter couldn't acquire the lock of the AudioEngine.
+			while( ret == 2 ) {
+				ret = pDriver->m_processCallback( nUsedBuffer, nullptr );
+			}
+
+			if ( patternPosition == nColumns - 1 &&
+				 nPatternLengthInFrames - nFrameNumber < nUsedBuffer ) {
+				// The next buffer at least partially exceeds the song
+				// size in ticks. As soon as it does we start to count
+				// zeros in both audio channels. The moment we
+				// encounter more than X we will stop the audio
+				// export. Just waiting for the Sampler to finish
+				// rendering is not sufficient because the Sample
+				// itself can be zero padded at the end causing the
+				// resulting .wav file to be inconsistent in terms of
+				// length depending on the buffer sized use during
+				// export.
+				//
+				// We are at the last pattern and just waited for the
+				// Sampler to finish rendering all notes (at an
+				// arbitrary point within the buffer).
+				nBufferWriteLength = 0;
+
+				int nSilentFrames = 0;
+				for ( int ii = 0; ii < nUsedBuffer; ++ii ) {
+					++nBufferWriteLength;
+					
+					if ( std::abs( pData_L[ii] ) == 0 &&
+						 std::abs( pData_R[ii] ) == 0 ) {
+						++nSuccessiveZeros;
+					}
+
+					if ( nSuccessiveZeros == nMaxNumberOfSilentFrames ) {
+						break;
+					}
+				}
+			} else {
+				nBufferWriteLength = nUsedBuffer;
 			}
 			
-			for ( unsigned i = 0; i < usedBuffer; i++ ) {
-				if(pData_L[i] > 1){
-					pData[i * 2] = 1;
-				}
-				else if(pData_L[i] < -1){
-					pData[i * 2] = -1;
-				}else
-				{
-					pData[i * 2] = pData_L[i];
+			nFrameNumber += nBufferWriteLength;
+			
+			for ( unsigned ii = 0; ii < nBufferWriteLength; ii++ ) {
+				if( pData_L[ ii ] > 1 ) {
+					pData[ ii * 2 ] = 1;
+				} else if( pData_L[ ii ] < -1 ) {
+					pData[ ii * 2 ] = -1;
+				} else {
+					pData[ ii * 2 ] = pData_L[ ii ];
 				}
 				
-				if(pData_R[i] > 1){
-					pData[i * 2 + 1] = 1;
-				}
-				else if(pData_R[i] < -1){
-					pData[i * 2 + 1] = -1;
-				}else
-				{
-					pData[i * 2 + 1] = pData_R[i];
+				if( pData_R[ ii ] > 1 ){
+					pData[ ii * 2 + 1 ] = 1;
+				} else if ( pData_R[ ii ] < -1 ) {
+					pData[ ii * 2 + 1 ] = -1;
+				} else {
+					pData[ ii * 2 + 1 ] = pData_R[ ii ];
 				}
 			}
-			int res = sf_writef_float( m_file, pData, usedBuffer );
-			if ( res != ( int )usedBuffer ) {
+			
+			int res = sf_writef_float( m_file, pData, nBufferWriteLength );
+			if ( res != ( int )nBufferWriteLength ) {
 				__ERRORLOG( "Error during sf_write_float" );
+			}
+
+			// Sampler is still rendering notes put we seem to have
+			// reached the zero padding at the end of the
+			// corresponding samples.
+			if ( nSuccessiveZeros == nMaxNumberOfSilentFrames ) {
+				break;
 			}
 		}
 		
@@ -265,7 +281,6 @@ void* diskWriterDriver_thread( void* param )
 		float fPercent = ( float )(patternPosition +1) / ( float )nColumns * 100.0;
 		EventQueue::get_instance()->push_event( EVENT_PROGRESS, ( int )fPercent );
 	}
-
 	delete[] pData;
 	pData = nullptr;
 
@@ -274,68 +289,62 @@ void* diskWriterDriver_thread( void* param )
 	__INFOLOG( "DiskWriterDriver thread end" );
 
 	pthread_exit( nullptr );
-
 	return nullptr;
 }
 
 
 
-const char* DiskWriterDriver::__class_name = "DiskWriterDriver";
-
-DiskWriterDriver::DiskWriterDriver( audioProcessCallback processCallback, unsigned nSamplerate, int nSampleDepth )
-		: AudioOutput( __class_name )
-		, m_nSampleRate( nSamplerate )
-		, m_nSampleDepth ( nSampleDepth )
+DiskWriterDriver::DiskWriterDriver( audioProcessCallback processCallback )
+		: AudioOutput()
+		, m_nSampleRate( 4800 )
+		, m_nSampleDepth( 32 )
 		, m_processCallback( processCallback )
-		, m_nBufferSize( 0 )
+		, m_nBufferSize( 1024 )
 		, m_pOut_L( nullptr )
-		, m_pOut_R( nullptr )
-{
-	INFOLOG( "INIT" );
+		, m_pOut_R( nullptr ) {
 }
 
 
 
-DiskWriterDriver::~DiskWriterDriver()
-{
-	INFOLOG( "DESTROY" );
+DiskWriterDriver::~DiskWriterDriver() {
 }
 
 
 
 int DiskWriterDriver::init( unsigned nBufferSize )
 {
-	INFOLOG( QString( "Init, %1 samples" ).arg( nBufferSize ) );
+	INFOLOG( QString( "Init, buffer size: %1" ).arg( nBufferSize ) );
 
 	m_nBufferSize = nBufferSize;
-	m_pOut_L = new float[nBufferSize];
-	m_pOut_R = new float[nBufferSize];
+	
+	m_pOut_L = new float[ m_nBufferSize ];
+	m_pOut_R = new float[ m_nBufferSize ];
 
 	return 0;
 }
 
-
-///
-/// Connect
-/// return 0: Ok
-///
 int DiskWriterDriver::connect()
 {
-	INFOLOG( "[startExport]" );
+	return 0;
+}
+
+void DiskWriterDriver::write()
+{
+	INFOLOG( "" );
 	
 	pthread_attr_t attr;
 	pthread_attr_init( &attr );
 
 	pthread_create( &diskWriterDriverThread, &attr, diskWriterDriver_thread, this );
-	
-	return 0;
 }
-
 
 /// disconnect
 void DiskWriterDriver::disconnect()
 {
-		INFOLOG( "[disconnect]" );
+	INFOLOG( "" );
+
+	pthread_join( diskWriterDriverThread, NULL );
+
 	delete[] m_pOut_L;
 	m_pOut_L = nullptr;
 
@@ -344,75 +353,8 @@ void DiskWriterDriver::disconnect()
 
 }
 
-
-
 unsigned DiskWriterDriver::getSampleRate()
 {
 	return m_nSampleRate;
 }
-
-
-
-void DiskWriterDriver::play()
-{
-	m_transport.m_status = TransportInfo::ROLLING;
-}
-
-
-
-void DiskWriterDriver::stop()
-{
-	m_transport.m_status = TransportInfo::STOPPED;
-}
-
-
-
-void DiskWriterDriver::locate( unsigned long nFrame )
-{
-	INFOLOG( QString( "Locate: %1" ).arg( nFrame ) );
-	m_transport.m_nFrames = nFrame;
-}
-
-
-
-void DiskWriterDriver::updateTransportInfo()
-{
-//	errorLog( "[updateTransportInfo] not implemented yet" );
-}
-
-
-
-void DiskWriterDriver::setBpm( float fBPM )
-{
-	INFOLOG( QString( "SetBpm: %1" ).arg( fBPM ) );
-	m_transport.m_fBPM = fBPM;
-}
-
-void DiskWriterDriver::audioEngine_process_checkBPMChanged()
-{
-	auto pSong = Hydrogen::get_instance()->getSong();
-	float fNewTickSize = AudioEngine::compute_tick_size( getSampleRate(),
-														 pSong->getBpm(),
-														 pSong->getResolution() );
-
-	if ( fNewTickSize != m_transport.m_fTickSize ) {
-		// cerco di convertire ...
-		float fTickNumber =
-			( float )m_transport.m_nFrames
-			/ ( float )m_transport.m_fTickSize;
-
-		m_transport.m_fTickSize = fNewTickSize;
-
-		if ( m_transport.m_fTickSize == 0 ) {
-			return;
-		}
-
-		// update frame position
-		m_transport.m_nFrames = ( long long )( fTickNumber * fNewTickSize );
-
-		// currently unuseble here
-		//EventQueue::get_instance()->push_event( EVENT_RECALCULATERUBBERBAND, -1);
-	}
-}
-
 };

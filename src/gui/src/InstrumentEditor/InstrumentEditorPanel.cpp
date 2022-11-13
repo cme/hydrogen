@@ -28,12 +28,10 @@
 #include <core/Basics/DrumkitComponent.h>
 
 #include "InstrumentEditorPanel.h"
-#include "../Skin.h"
 #include "../HydrogenApp.h"
 
 
 InstrumentEditorPanel* InstrumentEditorPanel::m_pInstance = nullptr;
-const char* InstrumentEditorPanel::__class_name = "InstrumentEditorPanel";
 
 InstrumentEditorPanel* InstrumentEditorPanel::get_instance()
 {
@@ -46,11 +44,10 @@ InstrumentEditorPanel* InstrumentEditorPanel::get_instance()
 
 
 InstrumentEditorPanel::InstrumentEditorPanel( QWidget *pParent )
- : Object( __class_name )
 {
 	UNUSED( pParent );
 
-	INFOLOG( "INIT" );
+	
 
 	m_pInstance = this;
 	m_pInstrumentEditor = new InstrumentEditor( nullptr );
@@ -75,17 +72,18 @@ InstrumentEditorPanel::~InstrumentEditorPanel()
 	INFOLOG( "DESTROY" );
 }
 
-void InstrumentEditorPanel::parametersInstrumentChangedEvent()
-{
-	notifyOfDrumkitChange();
-}
-
-void InstrumentEditorPanel::notifyOfDrumkitChange()
-{
-	std::vector<H2Core::DrumkitComponent*>* pComponentList = H2Core::Hydrogen::get_instance()->getSong()->getComponents();
+void InstrumentEditorPanel::drumkitLoadedEvent() {
+	auto pComponentList = H2Core::Hydrogen::get_instance()->getSong()->getComponents();
 
 	m_pInstrumentEditor->selectComponent(pComponentList->front()->get_id());
 	m_pInstrumentEditor->selectedInstrumentChangedEvent();
+}
+
+void InstrumentEditorPanel::updateSongEvent( int nValue ) {
+	// A new song got loaded
+	if ( nValue == 0 ) {
+		drumkitLoadedEvent();
+	}
 }
 
 void InstrumentEditorPanel::selectLayer( int nLayer )
@@ -94,6 +92,9 @@ void InstrumentEditorPanel::selectLayer( int nLayer )
 	m_nLayer = nLayer;
 }
 
-
+void InstrumentEditorPanel::updateWaveDisplay()
+{
+	selectLayer ( m_nLayer ); // trigger a redisplay of wave preview
+}
 
 

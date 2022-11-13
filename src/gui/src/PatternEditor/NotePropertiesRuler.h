@@ -24,11 +24,14 @@
 #define NOTE_PROPERTIES_RULER_H
 
 #include "../EventListener.h"
+#include "../Widgets/WidgetWithScalableFont.h"
 
 #include <QtGui>
 #include <QtWidgets>
 
+#include <core/Basics/Note.h>
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 #include <map>
 
 #include "PatternEditor.h"
@@ -41,23 +44,17 @@ namespace H2Core
 
 class PatternEditorPanel;
 
-class NotePropertiesRuler : public PatternEditor
+/** \ingroup docGUI*/
+//! NotePropertiesEditor is (currently) a single class instantiated in different "modes" to select
+//! which property it edits. There are individual instances for each property which are hidden and
+//! shown depending on what the user selects.
+class NotePropertiesRuler : public PatternEditor, protected WidgetWithScalableFont<7, 9, 11>
 {
-    H2_OBJECT
+    H2_OBJECT(NotePropertiesRuler)
 	Q_OBJECT
 	public:
-		//! NotePropertiesEditor is (currently) a single class instantiated in different "modes" to select
-		//! which property it edits. There are individual instances for each property which are hidden and
-		//! shown depending on what the user selects.
-		enum NotePropertiesMode {
-			VELOCITY,
-			PAN,
-			LEADLAG,
-			NOTEKEY,
-			PROBABILITY
-		};
 
-		NotePropertiesRuler( QWidget *parent, PatternEditorPanel *pPatternEditorPanel, NotePropertiesMode mode );
+		NotePropertiesRuler( QWidget *parent, PatternEditorPanel *pPatternEditorPanel, Mode mode );
 		~NotePropertiesRuler();
 		
 		NotePropertiesRuler(const NotePropertiesRuler&) = delete;
@@ -77,6 +74,7 @@ class NotePropertiesRuler : public PatternEditor
 		//! @{
 		virtual std::vector<SelectionIndex> elementsIntersecting( QRect r ) override;
 		virtual void mouseClickEvent( QMouseEvent *ev ) override;
+	virtual void mousePressEvent( QMouseEvent *ev ) override;
 		virtual void mouseDragStartEvent( QMouseEvent *ev ) override;
 		virtual void mouseDragUpdateEvent( QMouseEvent *ev ) override;
 		virtual void mouseDragEndEvent( QMouseEvent *ev ) override;
@@ -86,6 +84,7 @@ class NotePropertiesRuler : public PatternEditor
 		virtual QRect getKeyboardCursorRect() override;
 		//! @}
 
+
 	public slots:
 		virtual void updateEditor( bool bPatternOnly = false ) override;
 		virtual void selectAll() override;
@@ -93,31 +92,30 @@ class NotePropertiesRuler : public PatternEditor
 		virtual void copy() override {}
 		virtual void paste() override {}
 		virtual void cut() override {}
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
+		void scrolled( int );
 
 	private:
 
 		bool m_bNeedsUpdate;
-		void finishUpdateEditor();
-
-		NotePropertiesMode m_Mode;
-
-		QPixmap *m_pBackground;
+		void createBackground() override;
+	void drawDefaultBackground( QPainter& painter, int nHeight = 0, int nIncrement = 0 );
+		void drawFocus( QPainter& painter );
 
 		double m_fLastSetValue;
 		bool m_bValueHasBeenSet;
 
-		void createVelocityBackground(QPixmap *pixmap);
-		void createPanBackground(QPixmap *pixmap);
-		void createLeadLagBackground(QPixmap *pixmap);
+		void createNormalizedBackground(QPixmap *pixmap);
+		void createCenteredBackground(QPixmap *pixmap);
 		void createNoteKeyBackground(QPixmap *pixmap);
 
 		void paintEvent(QPaintEvent *ev) override;
 		void wheelEvent(QWheelEvent *ev) override;
 		void keyPressEvent( QKeyEvent *ev ) override;
-		void focusInEvent( QFocusEvent *ev ) override;
-		void focusOutEvent( QFocusEvent *ev ) override;
 		void addUndoAction();
 		void prepareUndoAction( int x );
+		void enterEvent( QEvent *ev ) override;
+		void leaveEvent( QEvent *ev ) override;
 
 		virtual void mouseMoveEvent( QMouseEvent *ev ) override;
 
@@ -137,6 +135,7 @@ class NotePropertiesRuler : public PatternEditor
 		void adjustNotePropertyDelta( H2Core::Note *pNote, float fDelta, bool bMessage = false );
 
 		int m_nDragPreviousColumn;
+		bool m_bEntered;
 };
 
 

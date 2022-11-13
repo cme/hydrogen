@@ -24,100 +24,179 @@
 #ifndef BUTTON_H
 #define BUTTON_H
 
+#include <memory>
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 #include <core/MidiAction.h>
 
 #include "MidiLearnable.h"
+#include "WidgetWithScalableFont.h"
 
 #include <QtGui>
-#include <QtWidgets>
+#include <QPushButton>
 
-
-class PixmapWidget;
 
 /**
- * Generic Button with pixmaps and text.
+ * Generic Button with SVG icons or text.
+ *
+ * The class comes in two different types, as Button::Type::Push and
+ * Button::Type::Toggle. If it is set checkabale via
+ * Button::Type::Toggle, the button will change color after it is
+ * clicked by mouse _and_ the button is released. The action
+ * associated with the button will, however, be triggered once the
+ * button is clicked (this is implemented in the parent wigets and can
+ * be changed. But giving immediate feedback seems to be intuitive.)
+ *
+ * Most icons used are black and white. For those, the black one will
+ * be used in unchecked state and the white one in checked.
+ * 
+ * Buttons are MIDI learnable. This means they can be associated with
+ * a MIDI action. If done, the action (and the binding) will show up
+ * in the tooltip.
  */
-class Button : public QWidget, public H2Core::Object, public MidiLearnable
+/** \ingroup docGUI docWidgets*/
+class Button : public QPushButton, protected WidgetWithScalableFont<6, 8, 10>,  public H2Core::Object<Button>, public MidiLearnable
 {
-    H2_OBJECT
+    H2_OBJECT(Button)
 	Q_OBJECT
 
-	public:
-		Button(
-				QWidget *pParent,
-				const QString& sOnImg,
-				const QString& sOffImg,
-				const QString& sOverImg,
-				QSize size,
-				bool use_skin_style = false,
-				bool enable_press_hold = false
-		);
-		virtual ~Button();
+public:
+
+	enum class Type {
+		/** Button is not set checkable.*/
+		Push,
+		/** Button is set checkable.*/
+		Toggle,
+		/** Button is both flat and has a transparent background. It
+		 * can not be checked and its sole purpose is to show its
+		 * icon.
+		 */
+		Icon
+	};
 	
-		Button(const Button&) = delete;
-		Button& operator=( const Button& rhs ) = delete;
+	/**
+	 * Either the path to a SVG image or a text to be displayed has to
+	 * be provided. If both are given, the icon will be used over the
+	 * text. If the text should be used instead, @a sIcon must the
+	 * an empty string.
+	 *
+	 * \param pParent
+	 * \param size
+	 * \param type
+	 * \param sIcon
+	 * \param sText
+	 * \param bUseRedBackground
+	 * \param iconSize
+	 * \param sBaseTooltip
+	 * \param bColorful If set to false, the icon @a sIcon is expected
+	 * to exist in both subfolders "black" and "white" in the "icons"
+	 * folder. If the button is not checked, the black version is used
+	 * and if checked, the white one is used instead.
+	 * \param bModifyOnChange Whether Hydrogen::setIsModified() is
+	 * invoked with `true` as soon as the value of the widget does
+	 * change.
+	 * \param nBorderRadius Radius of the button in pixel, which will
+	 * be passed to the style sheet.
+	 */
+	Button(
+		   QWidget *pParent,
+		   QSize size = QSize(),
+		   Type type = Type::Toggle,
+		   const QString& sIcon = "",
+		   const QString& sText = "",
+		   bool bUseRedBackground = false,
+		   QSize iconSize = QSize( 0, 0 ),
+		   QString sBaseTooltip = "",
+		   bool bColorful = false,
+		   bool bModifyOnChange = false,
+		   int nBorderRadius = -1
+		   );
+	virtual ~Button();
+	
+	Button(const Button&) = delete;
+	Button& operator=( const Button& rhs ) = delete;
 
-		bool isPressed() {	return m_bPressed;	}
-		void setPressed(bool pressed);
+	void setBaseToolTip( const QString& sNewTip );
+	void setAction( std::shared_ptr<Action> pAction );
+	
+	bool getIsActive() const;
+	void setIsActive( bool bIsActive );
 
-		void setText( const QString& sText );
-		void setFontSize( int size );
+	Type getType() const;
+	void setType( Type type );
 
-	signals:
-		void clicked(Button *pBtn);
-		void rightClicked(Button *pBtn);
-		void mousePress(Button *pBtn);
+	void setSize( QSize size );
+	/**  Overwrites the automatically set value. If @a nPixelSize is
+		 negative, the automatically set value will be used instead.*/
+	void setFixedFontSize( int nPixelSize );
+	int getFixedFontSize() const;
 
-	protected slots:
-		void buttonPressed_timer_timeout();
+	void setUseRedBackground( bool bUseRedBackground );
+	bool getUseRedBackground() const;
 
-	protected:
-		bool m_bPressed;
+	void setBorderRadius( int nBorderRadius );
+	int getBorderRadius() const;
 
-		QFont m_textFont;
-		QString m_sText;
+public slots:
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
-		QPixmap m_onPixmap;
-		QPixmap m_offPixmap;
-		QPixmap m_overPixmap;
+private slots:
+	void onClick();
 
-	private:
-		bool m_bMouseOver;
-		bool __use_skin_style;
-		bool __enable_press_hold;
+signals:
+	void rightClicked();
 
-		void mousePressEvent(QMouseEvent *ev);
-		void mouseReleaseEvent(QMouseEvent *ev);
-		void enterEvent(QEvent *ev);
-		void leaveEvent(QEvent *ev);
-		void paintEvent( QPaintEvent* ev);
+private:
+	void updateStyleSheet();
+	void updateFont();
+	void updateTooltip();
+	void updateIcon();
 
-		QTimer *m_timer;
-		int m_timerTimeout;
+	bool m_bUseRedBackground;
+	Type m_type;
+	QSize m_size;
+	QSize m_iconSize;
+	QString m_sBaseTooltip;
+	QString m_sRegisteredMidiEvent;
+	QString m_sIcon;
+	int m_nRegisteredMidiParameter;
+	int m_nFixedFontSize;
 
-		bool loadImage( const QString& sFilename, QPixmap& pixmap );
+	int m_nBorderRadius;
+
+	bool m_bColorful;
+	bool m_bLastCheckedState;
+
+	bool m_bIsActive;
+	
+	/** Whether Hydrogen::setIsModified() is invoked with `true` as
+		soon as the value of the widget does change.*/
+	bool m_bModifyOnChange;
+
+	virtual void mousePressEvent(QMouseEvent *ev) override;
+	virtual void paintEvent( QPaintEvent* ev) override;
+
 };
+inline bool Button::getIsActive() const {
+	return m_bIsActive;
+}
 
+inline void Button::setFixedFontSize( int nPixelSize ) {
+	m_nFixedFontSize = nPixelSize;
+}
+inline int Button::getFixedFontSize() const {
+	return m_nFixedFontSize;
+}
+inline bool Button::getUseRedBackground() const {
+	return m_bUseRedBackground;
+}
+inline Button::Type Button::getType() const {
+	return m_type;
+}
 
-
-
-/**
- * A ToggleButton (On/Off).
- */
-class ToggleButton : public Button
-{
-	Q_OBJECT
-
-	public:
-		ToggleButton( QWidget *pParent, const QString& sOnImg, const QString& sOffImg, const QString& sOverImg, QSize size, bool use_skin_style = false );
-		~ToggleButton();
-
-	private:
-		void mousePressEvent( QMouseEvent *ev );
-		void mouseReleaseEvent( QMouseEvent *ev );
-};
-
+inline int Button::getBorderRadius() const {
+	return m_nBorderRadius;
+}
 
 #endif

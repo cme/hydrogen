@@ -25,6 +25,7 @@
 
 #include <QString>
 #include <cassert>
+#include <core/Smf/SMF.h>
 
 class TestHelper {
 	static TestHelper*	m_pInstance;
@@ -36,10 +37,47 @@ class TestHelper {
 	
 		QString getDataDir() const;
 		QString getTestDataDir() const;
-		QString getTestFile(const QString& file);
+		QString getTestFile(const QString& file) const;
+	QStringList findDrumkitBackupFiles( const QString& sDir ) const;
+
+	/**
+	 * Picks different combinations of sample rate and buffer size of
+	 * the FakeDriver, stores them in the Preferences instance, and
+	 * restarts the FakeDriver.
+	 *
+	 * \param nIndex Numbers 0 till 10 correspond to hard-coded
+	 * parameter combinations. For all others random values will be
+	 * used.
+	 * 
+	 * \return true on success
+	 */
+	static void varyAudioDriverConfig( int nIndex );
+
+	/**
+	 * Export Hydrogon song @a sSongFile to audio file @a sFileName;
+	 *
+	 * \param sSongFile Path to Hydrogen file
+	 * \param sFileName Output file name
+	 */
+	static void exportSong( const QString& sSongFile, const QString& sFileName );
+	/**
+	 * Export the current song within Hydrogen to audio file @a sFileName;
+	 *
+	 * \param sFileName Output file name
+	 */
+	static void exportSong( const QString& sFileName );
+
+	/**
+	 * Export Hydrogon song @a sSongFile to MIDI file @a sFileName
+	 * using writer @a writer.
+	 * \param sSongFile Path to Hydrogen file
+	 * \param sFileName Output file name
+	 * \param writer Writer.
+	 **/
+	static void exportMIDI( const QString& sSongFile, const QString& sFileName, H2Core::SMFWriter& writer );
 	
-		static void			createInstance();
-		static TestHelper*	get_instance();
+	static void			createInstance();
+	static TestHelper*	get_instance();
 };
 
 inline TestHelper*	TestHelper::get_instance() 
@@ -57,11 +95,10 @@ inline QString TestHelper::getTestDataDir() const
 	return m_sTestDataDir;
 }
 
-inline QString TestHelper::getTestFile(const QString& file)
+inline QString TestHelper::getTestFile(const QString& file) const
 {
 	return m_sTestDataDir + "/" + file; 
 }
-
 
 #define H2TEST_FILE(name) TestHelper::get_instance()->getTestFile(name)
 

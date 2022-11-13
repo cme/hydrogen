@@ -24,6 +24,7 @@
 #define H2C_DRUMKITCOMPONENT_H
 
 #include <cassert>
+#include <memory>
 #include <inttypes.h>
 #include <core/Object.h>
 
@@ -35,18 +36,19 @@ class ADSR;
 class Drumkit;
 class InstrumentLayer;
 
-class DrumkitComponent : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class DrumkitComponent : public H2Core::Object<DrumkitComponent>
 {
-		H2_OBJECT
+		H2_OBJECT(DrumkitComponent)
 	public:
 		DrumkitComponent( const int id, const QString& name );
-		DrumkitComponent( DrumkitComponent* other );
+		DrumkitComponent( std::shared_ptr<DrumkitComponent> other );
 		~DrumkitComponent();
 
 		void						save_to( XMLNode* node );
-		static DrumkitComponent*	load_from( XMLNode* node, const QString& dk_path );
+		static std::shared_ptr<DrumkitComponent>	load_from( XMLNode* node );
 
-		void						load_from( DrumkitComponent* component, bool is_live = true );
+		void						load_from( std::shared_ptr<DrumkitComponent> component );
 
 		void						set_name( const QString& name );
 		const QString&				get_name() const;
@@ -171,7 +173,12 @@ inline float DrumkitComponent::get_peak_r() const
 	return __peak_r;
 }
 
-};
+inline void DrumkitComponent::set_outs( int nBufferPos, float valL, float valR )
+{
+	__out_L[nBufferPos] += valL;
+	__out_R[nBufferPos] += valR;
+}
 
+};
 
 #endif

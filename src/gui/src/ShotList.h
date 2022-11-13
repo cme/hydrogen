@@ -25,6 +25,7 @@
 
 #include <QtGui>
 #include <QtWidgets>
+#include "EventListener.h"
 
 /// Shot List
 ///
@@ -32,19 +33,21 @@
 ///
 /// Commands are word-oriented
 ///
-///  - grab <WidgetName|WidgetClass>   -- grab widget named "WidgetName" or of any class inheriting from "WidgetClass"
-///     + [ size <w> <h> ]             -- size of area to grab. 0 or (-)ve mean widget's entire width or height
-///     + [ ofset <x> <y> ]            -- offset from the widget's origin for beginning of grab
-///     + [ as <filename> ]            -- filename to save as, including file type extension
-///  - slot <widget> <slot> [<arg>...] -- invoke a slot method on widget.
-///  - dump                            -- dump object tree(s)
-///  - # <text>                        -- commentary (note that the space is needed!)
-///  - fin                             -- quit Hydrogen
+///  - grab \<WidgetName|WidgetClass\>       -- grab widget named "WidgetName" or of any class inheriting from "WidgetClass"
+///     + [ size \<w\> \<h\> ]               -- size of area to grab. 0 or (-)ve mean widget's entire width or height
+///     + [ ofset \<x\> \<y\> ]              -- offset from the widget's origin for beginning of grab
+///     + [ as \<filename\> ]                -- filename to save as, including file type extension
+///  - slot \<widget\> \<slot\> [\<arg\>...] -- invoke a slot method on widget.
+///  - dump                                  -- dump object tree(s)
+///  - # \<text\>                            -- commentary (note that the space is needed!)
+///  - fin                                   -- quit Hydrogen
 ///
 /// By naming widgets appropriately and exposing their functionality as slots, it should be possible for the
 /// application to allow a lot of flexibility in how screenshots are set up in shot lists.
 ///
-class ShotList : public QObject {
+/** \ingroup docGUI*/
+class ShotList : public QObject, public EventListener {
+	Q_OBJECT
 
 	/// Find a widget which inherits the named class
 	static QWidget *findWidgetInheriting( QObject *pObject, QString &sName );
@@ -91,12 +94,12 @@ private:
 	void shoot( QString s );
 
 public:
-	ShotList( QStringList shots ) {
-		m_shots = shots;
-	}
+	ShotList( QStringList shots );
 	ShotList( QString sShotsFilename );
+	~ShotList();
 
 	void shoot();
+	void nextShotEvent() override;
 
 public slots:
 	void nextShot( void );

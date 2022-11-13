@@ -25,22 +25,23 @@
 #define PATTERN_EDITOR_PANEL_H
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
+#include <core/AudioEngine/AudioEngine.h>
 
 #include "PianoRollEditor.h"
 #include "../EventListener.h"
 #include "../Widgets/LCDCombo.h"
-#include "../Widgets/LCD.h"
+#include "../Widgets/WidgetWithScalableFont.h"
 
 class Button;
-class ToggleButton;
 class Fader;
 class PatternEditorRuler;
 class PatternEditorInstrumentList;
 class NotePropertiesRuler;
-class LCDCombo;
 class DrumPatternEditor;
 class PianoRollEditor;
-
+class ClickableLabel;
+class LCDSpinBox;
 
 enum patternEditorRightClickMode { VELOCITY_SELECTED, PAN_SELECTED, LEAD_LAG_SELECTED };
 
@@ -52,9 +53,10 @@ namespace H2Core
 ///
 /// Pattern Editor Panel
 ///
-class PatternEditorPanel : public QWidget, public EventListener, public H2Core::Object
+/** \ingroup docGUI*/
+class PatternEditorPanel :  public QWidget, protected WidgetWithScalableFont<8, 10, 12>, public EventListener,  public H2Core::Object<PatternEditorPanel>
 {
-	H2_OBJECT
+	H2_OBJECT(PatternEditorPanel)
 	Q_OBJECT
 
 	public:
@@ -69,14 +71,30 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		NotePropertiesRuler* getProbabilityEditor() {	return m_pNoteProbabilityEditor;	}
 		PatternEditorInstrumentList* getInstrumentList() {	return m_pInstrumentList;	}
 		PianoRollEditor* getPianoRollEditor() {		return m_pPianoRollEditor;	}
-		int getPropertiesComboValue(){ return __pPropertiesCombo->selected(); }
+		PatternEditorRuler* getPatternEditorRuler() {		return m_pPatternEditorRuler;  }
+		const QScrollArea* getDrumPatternEditorScrollArea() const { return m_pEditorScrollView; }
+		const QScrollArea* getPianoRollEditorScrollArea() const { return m_pPianoRollScrollView; }
+		const QScrollArea* getNoteVelocityScrollArea() const { return m_pNoteVelocityScrollView; }
+		const QScrollArea* getNotePanScrollArea() const { return m_pNotePanScrollView; }
+		const QScrollArea* getNoteLeadLagScrollArea() const { return m_pNoteLeadLagScrollView; }
+		const QScrollArea* getNoteNoteKeyScrollArea() const { return m_pNoteNoteKeyScrollView; }
+		const QScrollArea* getNoteProbabilityScrollArea() const { return m_pNoteProbabilityScrollView; }
+		const QScrollBar* getVerticalScrollBar() const { return m_pPatternEditorVScrollBar; }
+		const QScrollBar* getHorizontalScrollBar() const { return m_pPatternEditorHScrollBar; }
+	NotePropertiesRuler::Mode getNotePropertiesMode() const;
+	
 
 		void updateSLnameLabel();
-		void updatePianorollEditor();
 
 		// Implements EventListener interface
 		virtual void selectedPatternChangedEvent() override;
 		virtual void selectedInstrumentChangedEvent() override;
+	virtual void patternModifiedEvent() override;
+	virtual void playingPatternsChangedEvent() override;
+	virtual void drumkitLoadedEvent() override;
+	virtual void updateSongEvent( int nValue ) override;
+	virtual void songModeActivationEvent() override;
+	virtual void stackedModeActivationEvent( int ) override;
 		//~ Implements EventListener interface
 
 		void ensureCursorVisible();
@@ -87,25 +105,28 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 
 		void selectInstrumentNotes( int nInstrument );
 
+		void updatePatternInfo();
+
 		void updateEditors( bool bPatternOnly = false );
+
+	void patternSizeChangedAction( int nLength, double fDenominator,
+								   int nSelectedPatternNumber );
 
 	public slots:
 		void showDrumEditor();
 		void showPianoRollEditor();
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private slots:
 		void gridResolutionChanged( int nSelected );
 		void propertiesComboChanged( int nSelected );
-		void patternLengthChanged();
+	/** Batch version for setting the values of the pattern size spin boxes.*/
 		void updatePatternSizeLCD();
-		void patternSizeLCDClicked();
-		void denominatorWarningClicked();
 
+		void hearNotesBtnClick();
+		void quantizeEventsBtnClick();
 
-		void hearNotesBtnClick(Button *ref);
-		void quantizeEventsBtnClick(Button *ref);
-
-		void showDrumEditorBtnClick(Button *ref);
+		void showDrumEditorBtnClick();
 
 		void syncToExternalHorizontalScrollbar(int);
 		void contentsMoving(int dummy);
@@ -113,27 +134,47 @@ class PatternEditorPanel : public QWidget, public EventListener, public H2Core::
 		void on_patternEditorHScroll(int);
 
 
-		void zoomInBtnClicked(Button *ref);
-		void zoomOutBtnClicked(Button *ref);
+		void zoomInBtnClicked();
+		void zoomOutBtnClicked();
 
-		void moveDownBtnClicked(Button *);
-		void moveUpBtnClicked(Button *);
+	void patternSizeChanged( double );
+	void switchPatternSizeFocus();
 
 	private:
+	void updateStyleSheet();
+	
 		H2Core::Pattern *	m_pPattern;
+	int m_nSelectedPatternNumber;
 		QPixmap				m_backgroundPixmap;
-		QLabel *			pSLlabel;
+		QLabel *			m_pSLlabel;
+
+	QWidget* m_pEditorTop1;
+	QWidget* m_pEditorTop2;
+	QWidget* m_pSizeResol;
+	QWidget* m_pRec;
+
+	LCDSpinBox* m_pLCDSpinBoxNumerator;
+	LCDSpinBox* m_pLCDSpinBoxDenominator;
+	/** Indicates whether the LCD spin boxes for the pattern size have
+		been altered by Hydrogen or by the user.*/
+	bool m_bArmPatternSizeSpinBoxes;
 
 		// Editor top
-		LCDDisplay *			__pattern_size_LCD;
-		Button *			m_pDenominatorWarning;
-		LCDCombo *			__resolution_combo;
-		ToggleButton *		__show_drum_btn;
-		ToggleButton *		__show_piano_btn;
+		LCDCombo *			m_pResolutionCombo;
+		Button *		__show_drum_btn;
+		Button *		__show_piano_btn;
+	Button *		m_pHearNotesBtn;
+	Button *		m_pQuantizeEventsBtn;
+	
+		ClickableLabel*		m_pPatternSizeLbl;
+		ClickableLabel*		m_pResolutionLbl;
+		ClickableLabel*		m_pHearNotesLbl;
+		ClickableLabel*		m_pQuantizeEventsLbl;
+		ClickableLabel*		m_pShowPianoLbl;
 		// ~Editor top
 
 		//note properties combo
-		LCDCombo *			__pPropertiesCombo;
+		LCDCombo *			m_pPropertiesCombo;
 
 		// drum editor
 		QScrollArea*		m_pEditorScrollView;

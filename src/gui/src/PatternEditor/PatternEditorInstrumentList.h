@@ -31,8 +31,12 @@
 #include <QtWidgets>
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 #include "../Widgets/PixmapWidget.h"
+#include "../EventListener.h"
 #include "../Selection.h"
+#include "../Widgets/WidgetWithScalableFont.h"
+#include "../Widgets/WidgetWithHighlightedList.h"
 
 namespace H2Core
 {
@@ -40,23 +44,32 @@ namespace H2Core
 }
 
 class PatternEditorPanel;
-class ToggleButton;
 class Button;
 
+/** \ingroup docGUI*/
 class InstrumentLine : public PixmapWidget
+					 , protected WidgetWithScalableFont<8, 10, 12>
+					 , protected WidgetWithHighlightedList
 {
-    H2_OBJECT
+    H2_OBJECT(InstrumentLine)
 	Q_OBJECT
 
 	public:
 		explicit InstrumentLine(QWidget* pParent);
 
+	int getNumber() const;
+	
 		void setName(const QString& sName);
 		void setSelected(bool isSelected);
 		void setNumber(int nIndex);
 		void setMuted(bool isMuted);
 		void setSoloed( bool soloed );
 		void setSamplesMissing( bool bSamplesMissing );
+
+	static constexpr int m_nButtonWidth = 18;
+
+public slots:
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private slots:
 		void functionClearNotes();
@@ -72,12 +85,10 @@ class InstrumentLine : public PixmapWidget
 		void functionFillNotes( int every );
 		void functionCopyAllInstrumentPatterns();
 		void functionPasteAllInstrumentPatterns();
-		void functionPasteInstrumentPatternExec(int patternID);
 		void functionDeleteNotesAllPatterns();
 		void functionCutNotesAllPatterns();
 
 		void functionRandomizeVelocity();
-		void functionDeleteInstrument();
 		void functionRenameInstrument();
 		void muteClicked();
 		void soloClicked();
@@ -92,31 +103,53 @@ class InstrumentLine : public PixmapWidget
 		QLabel *m_pNameLbl;
 		bool m_bIsSelected;
 		int m_nInstrumentNumber;	///< The related instrument number
-		ToggleButton *m_pMuteBtn;
-		ToggleButton *m_pSoloBtn;
+		Button *m_pMuteBtn;
+		Button *m_pSoloBtn;
 		Button *m_pSampleWarning;
 
-		virtual void mousePressEvent(QMouseEvent *ev);
+		virtual void mousePressEvent(QMouseEvent *ev) override;
+	virtual void mouseDoubleClickEvent( QMouseEvent* ev ) override;
+	virtual void enterEvent( QEvent *ev );
+	virtual void leaveEvent( QEvent *ev );
+	virtual void paintEvent( QPaintEvent* ev ) override;
 		H2Core::Pattern* getCurrentPattern();
+
+	void updateStyleSheet();
+	void setRowSelection( RowSelection rowSelection );
+
+	/** Whether the cursor entered the boundary of the widget.*/
+	bool m_bEntered;
 };
 
+inline int InstrumentLine::getNumber() const {
+	return m_nInstrumentNumber;
+}
 
-class PatternEditorInstrumentList : public QWidget, public H2Core::Object {
-	H2_OBJECT
+
+/** \ingroup docGUI*/
+class PatternEditorInstrumentList :  public QWidget,
+									 public EventListener,
+									 public H2Core::Object<PatternEditorInstrumentList> {
+	H2_OBJECT(PatternEditorInstrumentList)
 	Q_OBJECT
 
 	public:
 		PatternEditorInstrumentList( QWidget *parent, PatternEditorPanel *pPatternEditorPanel );
 		~PatternEditorInstrumentList();
 
-		virtual void mousePressEvent(QMouseEvent *event);
-		virtual void mouseMoveEvent(QMouseEvent *event);
+		virtual void mousePressEvent(QMouseEvent *event) override;
+		virtual void mouseMoveEvent(QMouseEvent *event) override;
 
 
-		virtual void dragEnterEvent(QDragEnterEvent *event);
-		virtual void dropEvent(QDropEvent *event);
+		virtual void dragEnterEvent(QDragEnterEvent *event) override;
+		virtual void dropEvent(QDropEvent *event) override;
 
-
+	virtual void selectedInstrumentChangedEvent() override;
+	virtual void updateSongEvent( int nEvent ) override;
+	virtual void drumkitLoadedEvent() override;
+	virtual void instrumentParametersChangedEvent( int ) override;
+	
+	void repaintInstrumentLines();
 	public slots:
 		void updateInstrumentLines();
 
@@ -135,6 +168,8 @@ class PatternEditorInstrumentList : public QWidget, public H2Core::Object {
 
 		InstrumentLine* createInstrumentLine();
 
+private:
+	void drawFocus( QPainter& painter );
 };
 
 

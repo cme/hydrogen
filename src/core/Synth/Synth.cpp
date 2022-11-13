@@ -31,12 +31,10 @@
 namespace H2Core
 {
 
-const char* Synth::__class_name = "Synth";
-
 Synth::Synth()
-		: Object( __class_name )
+		: Object()
 {
-	INFOLOG( "INIT" );
+	
 
 	m_pOut_L = new float[ MAX_BUFFER_SIZE ];
 	m_pOut_R = new float[ MAX_BUFFER_SIZE ];

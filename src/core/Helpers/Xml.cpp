@@ -21,6 +21,7 @@
  */
 
 #include <core/Helpers/Xml.h>
+#include <core/Helpers/Legacy.h>
 
 #include <QtCore/QFile>
 #include <QtCore/QLocale>
@@ -55,10 +56,9 @@ protected:
 };
 
 
-const char* XMLNode::__class_name ="XMLNode";
 
-XMLNode::XMLNode() : Object( __class_name ) { }
-XMLNode::XMLNode( QDomNode node ) : Object( __class_name ), QDomNode( node ) { }
+XMLNode::XMLNode() { }
+XMLNode::XMLNode( QDomNode node ) : QDomNode( node ) { }
 
 XMLNode XMLNode::createNode( const QString& name )
 {
@@ -67,61 +67,128 @@ XMLNode XMLNode::createNode( const QString& name )
 	return node;
 }
 
-QString XMLNode::read_child_node( const QString& node, bool inexistent_ok, bool empty_ok )
+QString XMLNode::read_child_node( const QString& node, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
 	if( isNull() ) {
-		DEBUGLOG( QString( "try to read %1 XML node from an empty parent %2." ).arg( node ).arg( nodeName() ) );
+		ERRORLOG( QString( "try to read %1 XML node from an empty parent %2." )
+				  .arg( node ).arg( nodeName() ) );
 		return nullptr;
 	}
 	QDomElement el = firstChildElement( node );
 	if( el.isNull() ) {
-		if( !inexistent_ok ) DEBUGLOG( QString( "XML node %1->%2 should exists." ).arg( nodeName() ).arg( node ) );
+		if ( !inexistent_ok && ! bSilent ) {
+			WARNINGLOG( QString( "XML node %1->%2 should exists." )
+						.arg( nodeName() ).arg( node ) );
+		}
 		return nullptr;
 	}
 	if( el.text().isEmpty() ) {
-		if( !empty_ok ) DEBUGLOG( QString( "XML node %1->%2 should not be empty." ).arg( nodeName() ).arg( node ) );
+		if( !empty_ok && ! bSilent ) {
+			WARNINGLOG( QString( "XML node %1->%2 should not be empty." )
+						.arg( nodeName() ).arg( node ) );
+		}
 		return nullptr;
 	}
 	return el.text();
 }
 
-QString XMLNode::read_string( const QString& node, const QString& default_value, bool inexistent_ok, bool empty_ok )
+QString XMLNode::read_string( const QString& node, const QString& sDefaultValue, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
-	QString ret = read_child_node( node, inexistent_ok, empty_ok );
-	if( ret.isNull() ) {
-		DEBUGLOG( QString( "Using default value %1 for %2" ).arg( default_value ).arg( node ) );
-		return default_value;
+	QString sText = read_child_node( node, inexistent_ok, empty_ok, bSilent );
+	if ( sText.isNull() && ! sDefaultValue.isEmpty() ) {
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( sDefaultValue ).arg( node ) );
+		}
+		return sDefaultValue;
 	}
-	return ret;
+	return sText;
+}
+QColor XMLNode::read_color( const QString& node, const QColor& default_value, bool inexistent_ok, bool empty_ok, bool bSilent )
+{
+	QString text = read_child_node( node, inexistent_ok, empty_ok, bSilent );
+	
+	if ( ! text.isEmpty() ) {
+		QStringList textList = text.split( QLatin1Char( ',' ) );
+		if ( textList.size() != 3 ) {
+			if ( ! bSilent ) {
+				WARNINGLOG( QString( "Invalid color format [%1] for node [%2]" )
+							.arg( default_value.name() ).arg( node ) );
+			}
+			return default_value;
+		}
+		
+		QColor color( textList[ 0 ].toInt(), textList[ 1 ].toInt(), textList[ 2 ].toInt() );
+		if ( ! color.isValid() ) {
+			if ( ! bSilent ) {
+				WARNINGLOG( QString( "Invalid color values [%1] for node [%2]" )
+							.arg( default_value.name() ).arg( node ) );
+			}
+			return default_value;
+		}
+		return color;
+	}
+
+	if ( ! bSilent ) {
+		WARNINGLOG( QString( "Using default value [%1] for node [%2]" )
+					.arg( default_value.name() ).arg( node ) );
+	}
+	return default_value;
 }
 
-float XMLNode::read_float( const QString& node, float default_value, bool inexistent_ok, bool empty_ok )
+float XMLNode::read_float( const QString& node, float default_value, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
-	QString ret = read_child_node( node, inexistent_ok, empty_ok );
+	QString ret = read_child_node( node, inexistent_ok, empty_ok, bSilent );
 	if( ret.isNull() ) {
-		DEBUGLOG( QString( "Using default value %1 for %2" ).arg( default_value ).arg( node ) );
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( default_value ).arg( node ) );
+		}
 		return default_value;
 	}
 	QLocale c_locale = QLocale::c();
 	return c_locale.toFloat( ret );
 }
 
-int XMLNode::read_int( const QString& node, int default_value, bool inexistent_ok, bool empty_ok )
+float XMLNode::read_float( const QString& node, float default_value, bool *pFound, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
-	QString ret = read_child_node( node, inexistent_ok, empty_ok );
+	QString ret = read_child_node( node, inexistent_ok, empty_ok, bSilent );
 	if( ret.isNull() ) {
-		DEBUGLOG( QString( "Using default value %1 for %2" ).arg( default_value ).arg( node ) );
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( default_value ).arg( node ) );
+		}
+		*pFound = false;
+		return default_value;
+	} else {
+		*pFound = true;
+		QLocale c_locale = QLocale::c();
+		return c_locale.toFloat( ret );
+	}
+}
+
+int XMLNode::read_int( const QString& node, int default_value, bool inexistent_ok, bool empty_ok, bool bSilent )
+{
+	QString ret = read_child_node( node, inexistent_ok, empty_ok, bSilent );
+	if( ret.isNull() ) {
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( default_value ).arg( node ) );
+		}
 		return default_value;
 	}
 	QLocale c_locale = QLocale::c();
 	return c_locale.toInt( ret );
 }
 
-bool XMLNode::read_bool( const QString& node, bool default_value, bool inexistent_ok, bool empty_ok )
+bool XMLNode::read_bool( const QString& node, bool default_value, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
-	QString ret = read_child_node( node, inexistent_ok, empty_ok );
+	QString ret = read_child_node( node, inexistent_ok, empty_ok, bSilent );
 	if( ret.isNull() ) {
-		DEBUGLOG( QString( "Using default value %1 for %2" ).arg( default_value ).arg( node ) );
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( default_value ).arg( node ) );
+		}
 		return default_value;
 	}
 	if( ret=="true" ) {
@@ -131,26 +198,56 @@ bool XMLNode::read_bool( const QString& node, bool default_value, bool inexisten
 	}
 }
 
-QString XMLNode::read_text( bool empty_ok )
+bool XMLNode::read_bool( const QString& node, bool default_value, bool* pFound, bool inexistent_ok, bool empty_ok, bool bSilent )
+{
+	QString ret = read_child_node( node, inexistent_ok, empty_ok, bSilent );
+	if( ret.isNull() ) {
+		*pFound = false;
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for %2" )
+						.arg( default_value ).arg( node ) );
+		}
+		return default_value;
+	}
+
+	*pFound = true;
+	if( ret=="true" ) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+QString XMLNode::read_text( bool empty_ok, bool bSilent )
 {
 	QString text = toElement().text();
-	if ( !empty_ok && text.isEmpty() ) {
-		DEBUGLOG( QString( "XML node %1 should not be empty." ).arg( nodeName() ) );
+	if ( !empty_ok && text.isEmpty() && ! bSilent ) {
+		WARNINGLOG( QString( "XML node %1 should not be empty." ).arg( nodeName() ) );
 	}
 	return text;
 }
 
-QString XMLNode::read_attribute( const QString& attribute, const QString& default_value, bool inexistent_ok, bool empty_ok )
+QString XMLNode::read_attribute( const QString& attribute, const QString& default_value, bool inexistent_ok, bool empty_ok, bool bSilent )
 {
 	QDomElement el = toElement();
 	if ( !inexistent_ok && !el.hasAttribute( attribute ) ) {
-		DEBUGLOG( QString( "XML node %1 attribute %2 should exists." ).arg( nodeName() ).arg( attribute ) );
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "XML node %1 attribute %2 should exists." )
+						.arg( nodeName() ).arg( attribute ) );
+		}
 		return default_value;
 	}
 	QString attr = el.attribute( attribute );
 	if ( attr.isEmpty() ) {
-		if( !empty_ok ) DEBUGLOG( QString( "XML node %1 attribute %2 should not be empty." ).arg( nodeName() ).arg( attribute ) );
-		DEBUGLOG( QString( "Using default value %1 for attribute %2" ).arg( default_value ).arg( attribute ) );
+		if( !empty_ok && ! bSilent ) {
+			WARNINGLOG( QString( "XML node %1 attribute %2 should not be empty." )
+						.arg( nodeName() ).arg( attribute ) );
+		}
+
+		if ( ! bSilent ) {
+			WARNINGLOG( QString( "Using default value %1 for attribute %2" )
+						.arg( default_value ).arg( attribute ) );
+		}
 		return default_value;
 	}
 	return attr;
@@ -173,6 +270,13 @@ void XMLNode::write_string( const QString& node, const QString& value )
 {
 	write_child_node( node, value );
 }
+void XMLNode::write_color( const QString& node, const QColor& color )
+{
+	write_child_node( node, QString( "%1,%2,%3" )
+					  .arg( color.red() )
+					  .arg( color.green() )
+					  .arg( color.blue() ) );
+}
 void XMLNode::write_float( const QString& node, const float value )
 {
 	write_child_node( node, QString::number( value ) );
@@ -186,55 +290,77 @@ void XMLNode::write_bool( const QString& name, const bool value )
 	write_child_node( name, QString( ( value ? "true" : "false" ) ) );
 }
 
-const char* XMLDoc::__class_name ="XMLDoc";
 
-XMLDoc::XMLDoc( ) : Object( __class_name ) { }
+XMLDoc::XMLDoc( ) { }
 
-bool XMLDoc::read( const QString& filepath, const QString& schemapath )
+bool XMLDoc::read( const QString& sFilePath, const QString& sSchemaPath, bool bSilent )
 {
-	SilentMessageHandler Handler;
+	
+	QFile file( sFilePath );
+	if ( !file.open( QIODevice::ReadOnly ) ) {
+		ERRORLOG( QString( "Unable to open [%1] for reading" )
+				  .arg( sFilePath ) );
+		return false;
+	}
+	
+	SilentMessageHandler handler;
 	QXmlSchema schema;
-	schema.setMessageHandler( &Handler );
+	schema.setMessageHandler( &handler );
 	
-	bool schema_usable = false;
+	bool bSchemaUsable = false;
 	
-	if( schemapath!=nullptr ) {
-		QFile file( schemapath );
+	if ( ! sSchemaPath.isEmpty() ) {
+		QFile file( sSchemaPath );
 		if ( !file.open( QIODevice::ReadOnly ) ) {
-			ERRORLOG( QString( "Unable to open XML schema %1 for reading" ).arg( schemapath ) );
+			ERRORLOG( QString( "Unable to open XML schema [%1] for reading." )
+					  .arg( sSchemaPath ) );
 		} else {
 			schema.load( &file, QUrl::fromLocalFile( file.fileName() ) );
 			file.close();
 			if ( schema.isValid() ) {
-				schema_usable = true;
+				bSchemaUsable = true;
 			} else {
-				ERRORLOG( QString( "%2 XML schema is not valid" ).arg( schemapath ) );
+				ERRORLOG( QString( "XML schema [%1] is not valid. File [%2] will not be validated" )
+						  .arg( sSchemaPath ).arg( sFilePath ) );
 			}
 		}
 	}
 	
-	QFile file( filepath );
-	if ( !file.open( QIODevice::ReadOnly ) ) {
-		ERRORLOG( QString( "Unable to open %1 for reading" ).arg( filepath ) );
-		return false;
-	}
-	
-	if ( schema_usable ) {
+	if ( bSchemaUsable ) {
 		QXmlSchemaValidator validator( schema );
 		if ( !validator.validate( &file, QUrl::fromLocalFile( file.fileName() ) ) ) {
-			WARNINGLOG( QString( "XML document %1 is not valid (%2), loading may fail" ).arg( filepath ).arg( schemapath ) );
+			if ( ! bSilent ) {
+				WARNINGLOG( QString( "XML document [%1] is not valid with respect to schema [%2], loading may fail" )
+							.arg( sFilePath ).arg( sSchemaPath ) );
+			}
 			file.close();
 			return false;
-		} else {
-			INFOLOG( QString( "XML document %1 is valid (%2)" ).arg( filepath ).arg( schemapath ) );
+		}
+		else if ( ! bSilent ) {
+			INFOLOG( QString( "XML document [%1] is valid with respect to schema [%2]" )
+					 .arg( sFilePath ).arg( sSchemaPath ) );
 		}
 		file.seek( 0 );
 	}
-	
-	if( !setContent( &file ) ) {
-		ERRORLOG( QString( "Unable to read XML document %1" ).arg( filepath ) );
-		file.close();
-		return false;
+
+	if ( Legacy::checkTinyXMLCompatMode( &file ) ) {
+		// Document was created using TinyXML and not using QtXML. We
+		// need to convert it first.
+		if ( ! setContent( Legacy::convertFromTinyXML( &file ) ) ) {
+			ERRORLOG( QString( "Unable to read conversion result document [%1]" )
+					  .arg( sFilePath ) );
+			file.close();
+			return false;
+		}
+	}
+	else  {
+		// File was written using current format.
+		if ( ! setContent( &file ) ) {
+			ERRORLOG( QString( "Unable to read XML document [%1]" )
+					  .arg( sFilePath ) );
+			file.close();
+			return false;
+		}
 	}
 	file.close();
 	
@@ -249,6 +375,7 @@ bool XMLDoc::write( const QString& filepath )
 		return false;
 	}
 	QTextStream out( &file );
+	out.setCodec( "UTF-8" );
 	out << toString().toUtf8();
 	out.flush();
 

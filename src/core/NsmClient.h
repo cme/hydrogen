@@ -41,25 +41,22 @@
 * Linux systems as well as for the actual application - the
 * non-session-manager - implementing it.
 *
-* Hydrogen is compliant with the standard, send dirty flag to the NSM
+* Hydrogen is compliant with the standard, sends dirty flag to the NSM
 * server to indicate unsaved changes, and is able to switch between
 * different sessions without restarting the entire
 * application. However, Hydrogen does use several files to store all
 * options the user is able to customize and not all of them are stored
-* inside the folder provided by the NSM server. While the song file
-* will be kept there, both the drumkit and preferences are stored
-* elsewhere. Altering either of them can very well affect the state of
-* the individual session, e.g. by disabling a prior set the per track
-* output option of the JACK driver outside of the session and
-* restarting it. So, be very careful. 
+* inside the folder provided by the NSM server. Both the song and a
+* custom copy of the preferences will be stored in the session
+* folder. But the drumkit used in the song will only be linked into it.
 *
 * @author Sebastian Moors
 *
 */
-
-class NsmClient : public H2Core::Object
+/** \ingroup docCore docAutomation*/
+class NsmClient : public H2Core::Object<NsmClient>
 {
-	H2_OBJECT
+	H2_OBJECT(NsmClient)
 	public:
 		/**
 		 * Object holding the current NsmClient singleton. It
@@ -123,30 +120,52 @@ class NsmClient : public H2Core::Object
 
 		/** Causes the NSM client to not process events anymore.
 		 *
-		 * Sets #NsmShutdown to true.*/
+		 * Sets #bNsmShutdown to true.*/
 		void shutdown();
+	
 	/**
-	 * Part of OpenCallback() responsible for linking and loading of
-	 * the drumkit samples.
+	 * Responsible for linking a drumkit on user or system level into
+	 * the session folder and updating all corresponding references in
+	 * @a pSong.
 	 *
-	 * Upon first invocation of this function in a new project, a
-	 * symbolic link to the folder containing the samples of the
-	 * current drumkit will be created in @name /`drumkit`. In all
-	 * following runs of the session the linked samples will be used
-	 * over the default ones.
-	 *
-	 * If the session were archived, the symbolic link would had
+	 * If the session was archived, the symbolic link had
 	 * been replaced by a folder containing the samples. In such an
 	 * occasion the samples located in the folder will be loaded. This
 	 * ensure portability of Hydrogen within a session regardless of
 	 * the local drumkits present in the user's home.
 	 *
-	 * \param name Absolute path to the session folder.
-	 * \param bCheckLinkage Whether or not the linked drumkit should
-	 * be verified to correspond to @a name. If set to none, the
-	 * drumkit will always be relinked.
+	 * \param pSong @H2Core::Song containing references to global
+	 * drumkit.
 	 */
-	static void linkDrumkit( const char* name, bool bCheckLinkage );
+	static void linkDrumkit( std::shared_ptr<H2Core::Song> pSong );
+
+	/**
+	 * Replaces a path in Song::m_sLastLoadedDrumkitPath pointing to
+	 * the session folder with one pointing to the corresponding kit
+	 * in the data folder.
+	 *
+	 * In case the session drumkit does not exist at neither system
+	 * nor user level, Song::m_sLastLoadedDrumkitPath will be replaced
+	 * by an empty string.
+	 *
+	 * \return 0 : success. -1 : general error, -2 : drumkit is
+	 * present as directory in session folder. But a drumkit holding
+	 * the same name couldn't be found on the system.
+	 */
+	static int dereferenceDrumkit( std::shared_ptr<H2Core::Song> pSong );
+
+	/**
+	 * Replaces @H2Core::Song::m_sLastLoadedDrumkitPath as well as all
+	 * @H2Core::Instrument::__drumkit_path bearing the same value in
+	 * @a pSong with @a sDrumkitPath.
+	 *
+	 * This is required when telling a #H2Core::Song to use the
+	 * drumkit linked/found in the session folder instead of its
+	 * counterpart in the user's or system's drumkit data folder or
+	 * the over way around when exporting the song of the session.
+	 */
+	static void replaceDrumkitPath( std::shared_ptr<H2Core::Song> pSong, const QString& sDrumkitPath );
+	
 	/** Custom function to print a colored error message.
 	 *
 	 * Since the OpenCallback() and SaveCallback() functions will be
@@ -169,13 +188,11 @@ class NsmClient : public H2Core::Object
 	/** \return m_bUnderSessionManagement*/
 	bool getUnderSessionManagement() const;
 
-		/** Folder all the content of the current session will be
-		 * stored in.
-		 *
-		 * Set at the beginning of each session in
-		 * NsmClient::OpenCallback().
-		 */
-		QString m_sSessionFolderPath;
+	QString getSessionFolderPath() const;
+	void setSessionFolderPath( const QString& sPath );
+
+	bool getIsNewSession() const;
+	void setIsNewSession( bool bNew );
 
 	private:
 		/**Private constructor to allow construction only via
@@ -184,62 +201,45 @@ class NsmClient : public H2Core::Object
 		
 		/**
 		 * Stores the current instance of the NSM client.
-		 *
-		 * Used in sendDirtyState() to establish a communication to
-		 * the NSM server.
 		 */
 		nsm_client_t* m_pNsm;
 	
 		/**
-		 * To determine whether Hydrogen is under Non session management,
+		 * To determine whether Hydrogen is under NON session management,
 		 * it is not sufficient to check whether the NSM_URL environmental
 		 * variable is set but also whether the NSM server did respond
 		 * to the announce message appropriately. Therefore,
 		 * createInitialClient() has to be called first.
 		 */
 		bool m_bUnderSessionManagement;
+
+		/** Folder all the content of the current session will be
+		 * stored in.
+		 *
+		 * Set at the beginning of each session in
+		 * NsmClient::OpenCallback().
+		 */
+		QString m_sSessionFolderPath;
+
+	/**
+	 * Indicates whether a song file was already found in the session
+	 * folder and successfully loaded or the session was initialized
+	 * with an empty song.
+	 */
+	bool m_bIsNewSession;
 	
 	/**
 	 * Callback function for the NSM server to tell Hydrogen to open a
 	 * H2Core::Song.
 	 *
-	 * This function has two separate purposes: 
-	 * 1. it is used to load the
-	 * initial session including its H2Core::Song and to set up the audio
-	 * driver when started via the NSM server. 
-	 * 2. It handles the switching
-	 * between sessions by loading the H2Core::Song, the
-	 * H2Core::Preferences, and the H2Core::Drumkit of the new session
-	 * without the need to restart the whole application.
+	 * It also handles the switching between sessions by loading the
+	 * H2Core::Song, the H2Core::Preferences, and the H2Core::Drumkit
+	 * of the new session without the need to restart the whole
+	 * application.
 	 *
-	 * To fulfill the 1. purpose, it is important to know that the
+	 * It is important to know that the
 	 * core part of H2Core::Hydrogen is already initialized when this
-	 * function is called, but the GUI isn't. In order to allow for a
-	 * rewiring of all per track JACK output ports, the
-	 * H2Core::JackAudioDriver::init() function _must_ register them
-	 * alongside the main left and right output ports in the very
-	 * initialization and not at a later stage. Therefore, the
-	 * starting of the audio driver is prohibited whenever the
-	 * "NSM_URL" environmental variable is set,
-	 * H2Core::Hydrogen::setInitialSong() is used to store the loaded
-	 * H2Core::Song, and H2Core::Hydrogen::restartDrivers() to start
-	 * the audio driver and - if JACK is chosen - to create all per
-	 * track output ports right away. In addition, is also calls
-	 * H2Core::Hydrogen::restartLadspaFX() and
-	 * H2Core::Sampler::reinitialize_playback_track() to set up the
-	 * missing core parts of Hydrogen.
-	 *
-	 * In the 2. case of switching between session the function will
-	 * construct an Action of type "OPEN_SONG" - or "NEW_SONG" if no file
-	 * exists with the provided file path - triggering
-	 * MidiActionManager::open_song() or
-	 * MidiActionManager::new_song().
-	 *
-	 * If the GUI is present, it waits - up to 11 seconds - until the
-	 * H2Core::Song was asynchronously set by the GUI (as a response
-	 * to the action). This (regular) procedure is only done if a GUI
-	 * is present and fully loaded and thus
-	 * H2Core::Hydrogen::m_GUIState is set to H2Core::Hydrogen::GUIState::ready.
+	 * function is called, but the GUI isn't.
 	 *
 	 * All files and symbolic links will be stored in a folder created
 	 * by this function and named according to @a name.
@@ -278,9 +278,6 @@ class NsmClient : public H2Core::Object
 	/**
 	 * Callback function for the NSM server to tell Hydrogen to save the
 	 * current session.
-	 *
-	 * It will construct an Action of type "SAVE_ALL" triggering
-	 * MidiActionManager::save_all().
 	 *
 	 * \param outMsg Unused argument. Kept for API compatibility.
 	 * \param userData Unused argument. Kept for API compatibility.
@@ -329,6 +326,19 @@ inline bool NsmClient::getUnderSessionManagement() const {
 	return m_bUnderSessionManagement;
 }
 
+inline QString NsmClient::getSessionFolderPath() const {
+	return m_sSessionFolderPath;
+}
+inline void NsmClient::setSessionFolderPath( const QString& sPath ) {
+	m_sSessionFolderPath = sPath;
+}
+
+inline bool NsmClient::getIsNewSession() const {
+	return m_bIsNewSession;
+}
+inline void NsmClient::setIsNewSession( bool bNew ) {
+	m_bIsNewSession = bNew;
+}
 #endif /* H2CORE_HAVE_OSC */
 
 #endif // NSM_CLIENT_H

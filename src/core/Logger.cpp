@@ -24,6 +24,8 @@
 #include "core/Helpers/Filesystem.h"
 
 #include <cstdio>
+#include <chrono>
+#include <thread>
 #include <QtCore/QDir>
 #include <QtCore/QString>
 
@@ -35,7 +37,8 @@ namespace H2Core {
 
 unsigned Logger::__bit_msk = 0;
 Logger* Logger::__instance=nullptr;
-const char* Logger::__levels[] = { "None", "Error", "Warning", "Info", "Debug" };
+const char* Logger::__levels[] = { "None", "Error", "Warning", "Info", "Debug", "Constructors", "Locks" };
+thread_local QString *Logger::pCrashContext = nullptr;
 
 pthread_t loggerThread;
 
@@ -65,6 +68,7 @@ void* loggerThread_func( void* param ) {
 	Logger::queue_t::iterator it, last;
 
 	while ( logger->__running ) {
+		pthread_mutex_lock( &logger->__mutex );
 		pthread_cond_wait( &logger->__messages_available, &logger->__mutex );
 		pthread_mutex_unlock( &logger->__mutex );
 		if( !queue->empty() ) {
@@ -77,9 +81,8 @@ void* loggerThread_func( void* param ) {
 				}
 			}
 			// remove all in front of last
-			queue->erase( queue->begin(), last );
-			// lock before removing last
 			pthread_mutex_lock( &logger->__mutex );
+			queue->erase( queue->begin(), last );
 			queue->pop_front();
 			pthread_mutex_unlock( &logger->__mutex );
 		}
@@ -92,6 +95,7 @@ void* loggerThread_func( void* param ) {
 	::FreeConsole();
 #endif
 
+	fflush( stdout );
 	pthread_exit( nullptr );
 	return nullptr;
 }
@@ -127,11 +131,11 @@ void Logger::log( unsigned level, const QString& class_name, const char* func_na
 		return;
 	}
 
-	const char* prefix[] = { "", "(E) ", "(W) ", "(I) ", "(D) " };
+	const char* prefix[] = { "", "(E) ", "(W) ", "(I) ", "(D) ", "(C)", "(L) " };
 #ifdef WIN32
-	const char* color[] = { "", "", "", "", "" };
+	const char* color[] = { "", "", "", "", "", "", "" };
 #else
-	const char* color[] = { "", "\033[31m", "\033[36m", "\033[32m", "\033[35m" };
+	const char* color[] = { "", "\033[31m", "\033[36m", "\033[32m", "\033[35m", "\033[35;1m", "\033[35;1m" };
 #endif // WIN32
 
 	int i;
@@ -147,6 +151,12 @@ void Logger::log( unsigned level, const QString& class_name, const char* func_na
 		break;
 	case Debug:
 		i = 4;
+		break;
+	case Constructors:
+		i = 5;
+		break;
+	case Locks:
+		i = 6;
 		break;
 	default:
 		i = 0;
@@ -166,6 +176,19 @@ void Logger::log( unsigned level, const QString& class_name, const char* func_na
 	pthread_cond_broadcast( &__messages_available );
 }
 
+void Logger::flush() const {
+
+	int nTimeout = 100;
+	for ( int ii = 0; ii < nTimeout; ++ii ) {
+		if ( __msg_queue.empty() ) {
+			break;
+		}
+
+		std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+	}
+	return;
+}
+
 unsigned Logger::parse_log_level( const char* level ) {
 	unsigned log_level = Logger::None;
 	if( 0 == strncasecmp( level, __levels[0], strlen( __levels[0] ) ) ) {
@@ -178,6 +201,10 @@ unsigned Logger::parse_log_level( const char* level ) {
 		log_level = Logger::Error | Logger::Warning | Logger::Info;
 	} else if ( 0 == strncasecmp( level, __levels[4], strlen( __levels[4] ) ) ) {
 		log_level = Logger::Error | Logger::Warning | Logger::Info | Logger::Debug;
+	} else if ( 0 == strncasecmp( level, __levels[5], strlen( __levels[5] ) ) ) {
+		log_level = Logger::Error | Logger::Warning | Logger::Info | Logger::Debug | Logger::Constructors;
+	} else if ( 0 == strncasecmp( level, __levels[6], strlen( __levels[6] ) ) ) {
+		log_level = Logger::Error | Logger::Warning | Logger::Info | Logger::Debug | Logger::Locks;
 	} else {
 #ifdef HAVE_SSCANF
 		int val = sscanf( level,"%x",&log_level );
@@ -240,6 +267,27 @@ int Logger::hextoi( const char* str, long len ) {
 	return res;
 }
 #endif // HAVE_SSCANF
+
+
+Logger::CrashContext::CrashContext( QString *pContext ) {
+	pSavedContext = Logger::pCrashContext;
+	Logger::pCrashContext = pContext;
+	pThisContext = nullptr;
+}
+
+Logger::CrashContext::CrashContext( QString sContext ) {
+	pSavedContext = Logger::pCrashContext;
+	// Copy context string
+	pThisContext = new QString( sContext );
+	Logger::pCrashContext = pThisContext;
+}
+
+Logger::CrashContext::~CrashContext() {
+	Logger::pCrashContext = pSavedContext;
+	if ( pThisContext ) {
+		delete pThisContext;
+	}
+}
 
 };
 

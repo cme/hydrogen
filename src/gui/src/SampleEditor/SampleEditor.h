@@ -28,13 +28,12 @@
 
 #include <QDialog>
 #include <core/Object.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Basics/Song.h>
 #include <core/Basics/Sample.h>
 #include <core/Basics/Instrument.h>
 
 
-class Button;
 class 	MainSampleWaveDisplay;
 class	TargetWaveDisplay;
 class	DetailWaveDisplay;
@@ -42,9 +41,10 @@ class	DetailWaveDisplay;
 ///
 /// This dialog is used to preview audiofiles
 ///
-class SampleEditor : public QDialog, public Ui_SampleEditor_UI, public H2Core::Object
+/** \ingroup docGUI*/
+class SampleEditor :  public QDialog, public Ui_SampleEditor_UI,  public H2Core::Object<SampleEditor>
 {
-	H2_OBJECT
+	H2_OBJECT(SampleEditor)
 	Q_OBJECT
 	public:
 		
@@ -55,9 +55,8 @@ class SampleEditor : public QDialog, public Ui_SampleEditor_UI, public H2Core::O
 		bool getCloseQuestion();
 		bool returnAllMainWaveDisplayValues();
 		void returnAllTargetDisplayValues();
-		void setTrue();
-		
-		bool m_bSampleEditorStatus;
+		void setUnclean();
+		void setClean();
 
 		//this values come from the real sample to restore a frm song loaded sample
 		bool m_bSampleIsModified;	///< true if sample is modified
@@ -83,6 +82,8 @@ class SampleEditor : public QDialog, public Ui_SampleEditor_UI, public H2Core::O
 
 	private:
 
+	std::shared_ptr<H2Core::Sample> retrieveSample() const;
+
 		void openDisplays();
 		void getAllFrameInfos();
 		void getAllLocalFrameInfos();
@@ -92,10 +93,10 @@ class SampleEditor : public QDialog, public Ui_SampleEditor_UI, public H2Core::O
 		void setSamplelengthFrames();
 		void createPositionsRulerPath();
 		void testpTimer();
-		void closeEvent(QCloseEvent *event);
 		void checkRatioSettings();
 
-		virtual void mouseReleaseEvent(QMouseEvent *ev);
+		virtual void closeEvent(QCloseEvent *event) override;
+		virtual void mouseReleaseEvent(QMouseEvent *ev) override;
 	
 		MainSampleWaveDisplay *m_pMainSampleWaveDisplay;
 		TargetWaveDisplay *m_pTargetSampleView;
@@ -115,6 +116,8 @@ class SampleEditor : public QDialog, public Ui_SampleEditor_UI, public H2Core::O
 		bool m_bOnewayLoop;
 		bool m_bOnewayEnd;
 		bool m_bPlayButton;
+		bool m_bAdjusting;
+		bool m_bSampleEditorClean;
 		
 		unsigned long m_nRealtimeFrameEnd;
 		unsigned long m_nRealtimeFrameEndForTarget;

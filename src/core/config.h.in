@@ -21,6 +21,7 @@
 
 #define H2CORE_GIT_REVISION @GIT_REVISION@
 #define H2CORE_VERSION "@DISPLAY_VERSION@"
+#define H2CORE_IS_DEVEL_BUILD @IS_DEVEL_BUILD@
 
 
 #define MAX_INSTRUMENTS @MAX_INSTRUMENTS@
@@ -32,6 +33,7 @@
 #cmakedefine HAVE_SSCANF
 #cmakedefine HAVE_RTCLOCK
 #cmakedefine HAVE_JACK_PORT_RENAME
+#cmakedefine HAVE_EXECINFO_H
 
 #ifndef H2CORE_HAVE_DEBUG
 #cmakedefine H2CORE_HAVE_DEBUG
@@ -56,9 +58,6 @@
 #endif
 #ifndef H2CORE_HAVE_LASH
 #cmakedefine H2CORE_HAVE_LASH
-#endif
-#ifndef H2CORE_HAVE_JACKSESSION
-#cmakedefine H2CORE_HAVE_JACKSESSION
 #endif
 #ifndef H2CORE_HAVE_OSC
 #cmakedefine H2CORE_HAVE_OSC

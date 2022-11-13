@@ -24,9 +24,12 @@
 #define H2C_INSTRUMENT_H
 
 #include <cassert>
+#include <memory>
+
 #include <core/Object.h>
 #include <core/Basics/Adsr.h>
 #include <core/Helpers/Filesystem.h>
+#include <core/License.h>
 
 #define EMPTY_INSTR_ID          -1
 /** Created Instrument will be used as metronome. */
@@ -47,9 +50,10 @@ class InstrumentComponent;
 /**
 Instrument class
 */
-class Instrument : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class Instrument : public H2Core::Object<Instrument>
 {
-		H2_OBJECT
+		H2_OBJECT(Instrument)
 	public:
 		enum SampleSelectionAlgo {
 			VELOCITY,
@@ -63,9 +67,9 @@ class Instrument : public H2Core::Object
 		 * \param name the name of the instrument
 		 * \param adsr attack decay sustain release instance
 		 */
-		Instrument( const int id=EMPTY_INSTR_ID, const QString& name="Empty Instrument", ADSR* adsr=nullptr );
+		Instrument( const int id=EMPTY_INSTR_ID, const QString& name="Empty Instrument", std::shared_ptr<ADSR> adsr=nullptr );
 		/** copy constructor */
-		Instrument( Instrument* other );
+		Instrument( std::shared_ptr<Instrument> other );
 		/** destructor */
 		~Instrument();
 
@@ -73,36 +77,33 @@ class Instrument : public H2Core::Object
 		 * creates a new Instrument, loads samples from a given instrument within a given drumkit
 		 * \param drumkit_name the drumkit to search the instrument in
 		 * \param instrument_name the instrument within the drumkit to load samples from
-		 * \param lookup Where to search (system/user folder or both)
-		 * for the drumkit.
 		 * \return a new Instrument instance
 		 */
-		static Instrument* load_instrument( const QString& drumkit_name, const QString& instrument_name, Filesystem::Lookup lookup = Filesystem::Lookup::stacked );
+		static std::shared_ptr<Instrument> load_instrument( const QString& drumkit_path, const QString& instrument_name );
 
 		/**
 		 * loads instrument from a given instrument within a given drumkit into a `live` Instrument object.
-		 * \param drumkit_name the drumkit to search the instrument in
+		 * \param drumkit_path the drumkit to search the instrument in
 		 * \param instrument_name the instrument within the drumkit to load samples from
-		 * \param is_live is it performed while playing
-		 * \param lookup Where to search (system/user folder or both)
 		 * for the drumkit.
 		 */
-		void load_from( const QString& drumkit_name, const QString& instrument_name, bool is_live = true, Filesystem::Lookup lookup = Filesystem::Lookup::stacked );
+		void load_from( const QString& drumkit_path, const QString& instrument_name );
 
 		/**
 		 * loads instrument from a given instrument into a `live` Instrument object.
 		 * \param drumkit the drumkit the instrument belongs to
 		 * \param instrument to load samples and members from
-		 * \param is_live is it performed while playing
+		 * \param lookup Where to search (system/user folder or both)
+		 * for the drumkit.
 		 */
-		void load_from( Drumkit* drumkit, Instrument* instrument, bool is_live = true );
+		void load_from( std::shared_ptr<Drumkit> drumkit, std::shared_ptr<Instrument> instrument );
 
 		/**
 		 * Calls the InstrumentLayer::load_sample() member
 		 * function of all layers of each component of the
 		 * Instrument.
 		 */
-		void load_samples();
+		void load_samples( float fBpm = 120 );
 		/**
 		 * Calls the InstrumentLayer::unload_sample() member
 		 * function of all layers of each component of the
@@ -115,16 +116,35 @@ class Instrument : public H2Core::Object
 		 * \param node the XMLNode to feed
 		 * \param component_id Identifier of the corresponding
 		 * component.
+		 * \param bRecentVersion Whether the drumkit format should be
+		 * supported by Hydrogen 0.9.7 or higher (whether it should be
+		 * composed of DrumkitComponents).
+		 * \param bFull Whether to write all parameters of the
+		 * contained #Sample as well. This will be done when storing
+		 * an #Instrument as part of a #Song but not when storing
+		 * as part of a #Drumkit.
 		 */
-		void save_to( XMLNode* node, int component_id );
+	void save_to( XMLNode* node, int component_id, bool bRecentVersion = true, bool bFull = false );
 		/**
 		 * load an instrument from an XMLNode
-		 * \param node the XMLDode to read from
-		 * \param dk_path the directory holding the drumkit data
-		 * \param dk_name the name of the drumkit
+		 * \param pNode the XMLDode to read from
+		 * \param sDrumkitPath the directory holding the drumkit
+		 * data. If empty, it will be read from @a pNode.
+		 * \param sDrumkitName Name of the drumkit found in @a
+		 * sDrumkitPath.
+		 * \param license License assigned to all Samples that will be
+		 * loaded. If empty, the license will be read from @a
+		 * sDrumkitPath.
+		 * \param bSilent if set to true, all log messages except of
+		 * errors and warnings are suppressed.
+		 *
 		 * \return a new Instrument instance
 		 */
-		static Instrument* load_from( XMLNode* node, const QString& dk_path, const QString& dk_name );
+		static std::shared_ptr<Instrument> load_from( XMLNode* pNode,
+													  const QString& sDrumkitPath = "",
+													  const QString& sDrumkitName = "",
+													  const License& license = License(),
+													  bool bSilent = false );
 
 		///< set the name of the instrument
 		void set_name( const QString& name );
@@ -137,11 +157,11 @@ class Instrument : public H2Core::Object
 		int get_id() const;
 
 		/** set the ADSR of the instrument */
-		void set_adsr( ADSR* adsr );
+		void set_adsr( std::shared_ptr<ADSR> adsr );
 		/** get the ADSR of the instrument */
-		ADSR* get_adsr() const;
+		std::shared_ptr<ADSR> get_adsr() const;
 		/** get a copy of the ADSR of the instrument */
-		ADSR* copy_adsr() const;
+		std::shared_ptr<ADSR> copy_adsr() const;
 
 		/** set the mute group of the instrument */
 		void set_mute_group( int group );
@@ -163,15 +183,19 @@ class Instrument : public H2Core::Object
 		/** get muted status of the instrument */
 		bool is_muted() const;
 
-		/** set left pan of the instrument */
-		void set_pan_l( float val );
-		/** get left pan of the instrument */
-		float get_pan_l() const;
+		/** set pan of the instrument */
+		void setPan( float val );
+		/** set pan of the instrument, assuming the input range in [0;1] */
+		void setPanWithRangeFrom0To1( float fVal ) {
+			this->setPan( -1.f + 2.f * fVal ); // scale and translate into [-1;1]
+		};
+		/** get pan of the instrument */
+		float getPan() const;
+		/** get pan of the instrument scaling and translating the range from [-1;1] to [0;1] */
+		float getPanWithRangeFrom0To1() const {
+			return 0.5f * ( 1.f + m_fPan );
+		}
 
-		/** set right pan of the instrument */
-		void set_pan_r( float val );
-		/** get right pan of the instrument */
-		float get_pan_r() const;
 
 		/** set gain of the instrument */
 		void set_gain( float gain );
@@ -255,8 +279,12 @@ class Instrument : public H2Core::Object
 		void set_higher_cc( int message );
 		int get_higher_cc() const;
 
+		///< set the path of the related drumkit
+		void set_drumkit_path( const QString& sPath );
+		///< get the path of the related drumkits
+		QString get_drumkit_path() const;
 		///< set the name of the related drumkit
-		void set_drumkit_name( const QString& name );
+		void set_drumkit_name( const QString& sName );
 		///< get the name of the related drumkits
 		const QString& get_drumkit_name() const;
 
@@ -268,8 +296,8 @@ class Instrument : public H2Core::Object
 		void set_is_metronome_instrument(bool isMetronome);
 		bool is_metronome_instrument() const;
 
-		std::vector<InstrumentComponent*>* get_components();
-		InstrumentComponent* get_component( int DrumkitComponentID );
+		std::vector<std::shared_ptr<InstrumentComponent>>* get_components();
+		std::shared_ptr<InstrumentComponent> get_component( int DrumkitComponentID );
 
 		void set_apply_velocity( bool apply_velocity );
 		bool get_apply_velocity() const;
@@ -297,18 +325,38 @@ class Instrument : public H2Core::Object
 	        /** Name of the Instrument. It is set by set_name()
 		    and accessed via get_name().*/
 		QString					__name;
-		QString					__drumkit_name;			///< the name of the drumkit this instrument belongs to
-		float					__gain;					///< gain of the instrument
+	/** Path of the #Drumkit this #Instrument belongs to.
+	 *
+	 * An instrument belonging to a #Drumkit uses relative paths for
+	 * its #Sample. Therefore we have to take care of mapping them to
+	 * absolute paths ourselves in case instruments of several
+	 * drumkits are mixed in one #Song.
+	 */
+	QString					__drumkit_path;
+	/** Name of the #Drumkit found at @a __drumkit_path.
+	 *
+	 * This helper variable should only be used during #Instrument
+	 * loading. It ensures portability of songs as absolute paths only
+	 * serve for unique identifiers locally and also ensures backward
+	 * compatibility.
+	 */
+	QString					__drumkit_name;
+	float					__gain;					///< gain of the instrument
 		float					__volume;				///< volume of the instrument
-		float					__pan_l;				///< left pan of the instrument
-		float					__pan_r;				///< right pan of the instrument
+		float					m_fPan;	///< pan of the instrument, [-1;1] from left to right, as requested by Sampler PanLaws
 		float					__peak_l;				///< left current peak value
 		float					__peak_r;				///< right current peak value
-		ADSR*					__adsr;					///< attack delay sustain release instance
+		std::shared_ptr<ADSR>					__adsr;					///< attack delay sustain release instance
 		bool					__filter_active;		///< is filter active?
 		float					__filter_cutoff;		///< filter cutoff (0..1)
 		float					__filter_resonance;		///< filter resonant frequency (0..1)
-		float					__random_pitch_factor;	///< random pitch factor
+	/**
+	 * Factor to scale the random contribution when humanizing pitch
+	 * between 0 and #AudioEngine::fHumanizePitchSD.
+	 *
+	 * Supported range [0,1].
+	 */
+		float					__random_pitch_factor;
 		float					__pitch_offset;	///< instrument main pitch offset
 		int						__midi_out_note;		///< midi out note
 		int						__midi_out_channel;		///< midi out channel
@@ -325,7 +373,7 @@ class Instrument : public H2Core::Object
 		int						__higher_cc;			///< higher cc level
 		bool					__is_preview_instrument;		///< is the instrument an hydrogen preview instrument?
 		bool					__is_metronome_instrument;		///< is the instrument an metronome instrument?
-		std::vector<InstrumentComponent*>* __components;		///< InstrumentLayer array
+		std::vector<std::shared_ptr<InstrumentComponent>>* __components;		///< InstrumentLayer array
 		bool					__apply_velocity;				///< change the sample gain based on velocity
 		bool					__current_instr_for_export;		///< is the instrument currently being exported?
 		bool 					m_bHasMissingSamples;	///< does the instrument have missing sample files?
@@ -357,14 +405,14 @@ inline int Instrument::get_id() const
 	return __id;
 }
 
-inline ADSR* Instrument::get_adsr() const
+inline std::shared_ptr<ADSR> Instrument::get_adsr() const
 {
 	return __adsr;
 }
 
-inline ADSR* Instrument::copy_adsr() const
+inline std::shared_ptr<ADSR> Instrument::copy_adsr() const
 {
-	return new ADSR( __adsr );
+	return std::make_shared<ADSR>( __adsr );
 }
 
 inline void Instrument::set_mute_group( int group )
@@ -382,12 +430,16 @@ inline int Instrument::get_midi_out_channel() const
 	return __midi_out_channel;
 }
 
-inline void Instrument::set_midi_out_channel( int channel )
+inline void Instrument::set_midi_out_channel( int nChannel )
 {
-	if ( ( channel >= MIDI_OUT_CHANNEL_MIN ) && ( channel <= MIDI_OUT_CHANNEL_MAX ) ) {
-		__midi_out_channel = channel;
+	if ( ( nChannel >= MIDI_OUT_CHANNEL_MIN ) &&
+		 ( nChannel <= MIDI_OUT_CHANNEL_MAX ) ) {
+		__midi_out_channel = nChannel;
 	} else {
-		ERRORLOG( QString( "midi out channel %1 out of bounds" ).arg( channel ) );
+		ERRORLOG( QString( "midi out channel [%1] out of bounds [%2,%3]" )
+				  .arg( nChannel )
+				  .arg( MIDI_OUT_CHANNEL_MIN )
+				  .arg( MIDI_OUT_CHANNEL_MAX ) );
 	}
 }
 
@@ -415,24 +467,20 @@ inline bool Instrument::is_muted() const
 	return __muted;
 }
 
-inline void Instrument::set_pan_l( float val )
+inline void Instrument::setPan( float val ) //TODO check boundary factorize function?
 {
-	__pan_l = val;
+	if ( val > 1.0 ) {
+		m_fPan = 1.0;
+	} else if ( val < -1.0 ) {
+		m_fPan = -1.0;
+	} else {
+		m_fPan = val;
+	}
 }
 
-inline float Instrument::get_pan_l() const
+inline float Instrument::getPan() const
 {
-	return __pan_l;
-}
-
-inline void Instrument::set_pan_r( float val )
-{
-	__pan_r = val;
-}
-
-inline float Instrument::get_pan_r() const
-{
-	return __pan_r;
+	return m_fPan;
 }
 
 inline void Instrument::set_gain( float gain )
@@ -621,9 +669,14 @@ inline int Instrument::get_higher_cc() const
 	return __higher_cc;
 }
 
-inline void Instrument::set_drumkit_name( const QString& name )
+inline void Instrument::set_drumkit_path( const QString& sPath )
 {
-	__drumkit_name = name;
+	__drumkit_path = sPath;
+}
+
+inline void Instrument::set_drumkit_name( const QString& sName )
+{
+	__drumkit_name = sName;
 }
 
 inline const QString& Instrument::get_drumkit_name() const
@@ -651,7 +704,7 @@ inline void Instrument::set_is_metronome_instrument(bool isMetronome)
 	__is_metronome_instrument = isMetronome;
 }
 
-inline std::vector<InstrumentComponent*>* Instrument::get_components()
+inline std::vector<std::shared_ptr<InstrumentComponent>>* Instrument::get_components()
 {
 	return __components;
 }

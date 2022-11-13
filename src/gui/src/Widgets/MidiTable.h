@@ -23,14 +23,18 @@
 #ifndef MIDI_TABLE_H
 #define MIDI_TABLE_H
 
+#include <memory>
+
 #include <core/Object.h>
+#include <core/MidiAction.h>
 
 #include <QtGui>
 #include <QtWidgets>
 
-class MidiTable : public QTableWidget, public H2Core::Object
+/** \ingroup docGUI docWidgets docMIDI*/
+class MidiTable :  public QTableWidget,  public H2Core::Object<MidiTable>
 {
-    H2_OBJECT
+    H2_OBJECT(MidiTable)
 	Q_OBJECT
 	public:
 		explicit MidiTable( QWidget* pParent );
@@ -38,17 +42,32 @@ class MidiTable : public QTableWidget, public H2Core::Object
 
 		void setupMidiTable();
 		void saveMidiTable();
-		void insertNewRow(QString, QString, int, int);
 
-	private slots:
-		void updateTable();
-		void midiSensePressed( int );
+signals:
+	/** Identicates a user action changing the content of the table.*/
+	void changed();
+
+private slots:
+	void updateTable();
+	void midiSensePressed( int );
+	void sendChanged();
 	
-	private:
-		int __row_count;
-		int currentMidiAutosenseRow;
-		QSignalMapper *signalMapper;
+private:
+	void insertNewRow( std::shared_ptr<Action> pAction, QString eventString, int eventParameter );
+	void updateRow( int nRow );
+	virtual void paintEvent( QPaintEvent* ev ) override;
+	
+		int m_nRowCount;
+		int m_nCurrentMidiAutosenseRow;
 		QTimer* m_pUpdateTimer;
+	int m_nRowHeight;
+	int m_nColumn0Width;
+	int m_nColumn1Width;
+	int m_nColumn2Width;
+	int m_nColumn3Width;
+	int m_nColumn4Width;
+	int m_nColumn5Width;
+	int m_nColumn6Width;
 
 };
 

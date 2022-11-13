@@ -28,39 +28,35 @@
 
 namespace H2Core
 {
-
-typedef int  ( *audioProcessCallback )( uint32_t, void * );
-
 /**
  * Fake audio driver. Used only for profiling.
  */
-class FakeDriver : public AudioOutput
+/** \ingroup docCore docAudioDriver */
+/** \ingroup docCore docMIDI */
+class FakeDriver : Object<FakeDriver>, public AudioOutput
 {
-	H2_OBJECT
+	H2_OBJECT(FakeDriver)
 public:
 	FakeDriver( audioProcessCallback processCallback );
 	~FakeDriver();
 
-	int init( unsigned nBufferSize );
-	int connect();
-	void disconnect();
-	unsigned getBufferSize() {
+	virtual int init( unsigned nBufferSize ) override;
+	virtual int connect() override;
+	virtual void disconnect() override;
+	virtual unsigned getBufferSize() override {
 		return m_nBufferSize;
 	}
-	unsigned getSampleRate();
+	virtual unsigned getSampleRate() override;
 
-	float* getOut_L();
-	float* getOut_R();
+	virtual float* getOut_L() override;
+	virtual float* getOut_R() override;
 
-	virtual void play();
-	virtual void stop();
-	virtual void locate( unsigned long nFrame );
-	virtual void updateTransportInfo();
-	virtual void setBpm( float fBPM );
+	void processCallback();
 
 private:
 	audioProcessCallback m_processCallback;
 	unsigned m_nBufferSize;
+	unsigned m_nSampleRate;
 	float* m_pOut_L;
 	float* m_pOut_R;
 

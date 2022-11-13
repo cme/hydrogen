@@ -34,12 +34,15 @@
 #include <cassert>
 #include <memory>
 
+#include <core/Preferences/Preferences.h>
+
 //! SelectionWidget defines the interface used by the Selection manager to communicate with a widget
 //! implementing selection, and provides for event translation, testing for intersection with selectable
 //! objects, keyboard input cursor geometry, and screen refresh. It must be subclassed and
 //! implemented by any widget which uses the Selection class.
 //!
 
+/** \ingroup docGUI*/
 template <class Elem>
 class SelectionWidget {
 public:
@@ -120,6 +123,7 @@ public:
 //!
 //! Scrolling is timer-driven to keep a predictable and uniform scroll rate, which increases the further out
 //! of bounds the user moves the cursor.
+/** \ingroup docGUI*/
 class DragScroller : public QObject {
 	Q_OBJECT
 	QTimer *m_pTimer;
@@ -183,6 +187,7 @@ public slots:
 //! Selections can be shared between multiple widgets providing different views of the same underlying model,
 //! so long as they share the same element type.
 
+/** \ingroup docGUI*/
 template<class Elem>
 class Selection {
 
@@ -475,7 +480,8 @@ public:
 	//! Paint selection-related elements (ie lasso)
 	void paintSelection( QPainter *painter ) {
 		if ( m_selectionState == MouseLasso || m_selectionState == KeyboardLasso ) {
-			QPen pen( Qt::white );
+			QPen pen( H2Core::Preferences::get_instance()->getColorTheme()
+					  ->m_selectionHighlightColor );
 			pen.setStyle( Qt::DotLine );
 			pen.setWidth(2);
 			painter->setPen( pen );
@@ -514,7 +520,7 @@ public:
 				clearSelection();
 				updateWidgetGroup();
 			} else if ( ev->button() == Qt::RightButton && m_pSelectionGroup->m_selectedElements.empty() ) {
-				// Right-clicking with an emply selection will first attempt to select anything at the click
+				// Right-clicking with an empty selection will first attempt to select anything at the click
 				// position before passing the click through to the client.
 				QRect r = QRect( ev->pos(), ev->pos() );
 				std::vector<Elem> elems = m_pWidget->elementsIntersecting( r );

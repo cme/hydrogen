@@ -22,9 +22,8 @@
 #ifndef HYDROGEN_H
 #define HYDROGEN_H
 
-#include <stdint.h> // for uint32_t et al
 #include <core/config.h>
-#include <core/MidiAction.h>
+#include <core/Basics/Drumkit.h>
 #include <core/Basics/Song.h>
 #include <core/Basics/Sample.h>
 #include <core/Object.h>
@@ -33,92 +32,67 @@
 #include <core/IO/MidiInput.h>
 #include <core/IO/MidiOutput.h>
 #include <core/IO/JackAudioDriver.h>
-#include <core/Basics/Drumkit.h>
 #include <core/CoreActionController.h>
-#include <cassert>
 #include <core/Timehelper.h>
-// Engine states  (It's ok to use ==, <, and > when testing)
-/**
- * State of the H2Core::AudioEngine H2Core::m_audioEngineState. Not even the
- * constructors have been called.
- */
-#define STATE_UNINITIALIZED	1
-/**
- * State of the H2Core::AudioEngine H2Core::m_audioEngineState. Not ready,
- * but most pointers are now valid or NULL.
- */
-#define STATE_INITIALIZED	2
-/**
- * State of the H2Core::AudioEngine H2Core::m_audioEngineState. Drivers are
- * set up, but not ready to process audio.
- */
-#define STATE_PREPARED		3
-/**
- * State of the H2Core::AudioEngine H2Core::m_audioEngineState. Ready to
- * process audio.
- */
-#define STATE_READY		4
-/**
- * State of the H2Core::AudioEngine H2Core::m_audioEngineState. Currently
- * playing a sequence.
- */
-#define STATE_PLAYING		5
-inline int randomValue( int max );
+
+#include <stdint.h> // for uint32_t et al
+#include <cassert>
+#include <memory>
 
 namespace H2Core
 {
+	class CoreActionController;
+	class AudioEngine;
+	class SoundLibraryDatabase;
+
 ///
 /// Hydrogen Audio Engine.
 ///
-class Hydrogen : public H2Core::Object
+/** \ingroup docCore*/
+class Hydrogen : public H2Core::Object<Hydrogen>
 {
-	H2_OBJECT
+	H2_OBJECT(Hydrogen)
 public:
+	
+	/** Specifies where the #AudioEngine does get its current tempo
+		updates from.*/
+	enum class Tempo {
+		/** BeatCounter, TapTempo, OSC and MIDI commands as well as
+			the BPM widget in the PlayerControl are used to change the
+			tempo.*/
+		Song = 0,
+		/** Only tempo markers on the Timeline are considered.*/
+		Timeline = 1,
+		/** Hydrogen will disregard all internal tempo settings and
+			uses the ones provided by the JACK server instead. This
+			mode is only used in case the JACK audio driver is used,
+			JACK timebase support is activated in the Preferences, and
+			an external timebase master is registered to the JACK
+			server.*/
+		Jack = 2
+	};
 	/**
 	 * Creates all the instances used within Hydrogen in the right
-	 * order. 
-	 *
-	 * -# H2Core::Logger::create_instance()
-	 * -# MidiMap::create_instance()
-	 * -# Preferences::create_instance()
-	 * -# EventQueue::create_instance()
-	 * -# MidiActionManager::create_instance()
-	 *
-	 * If #H2CORE_HAVE_OSC was set during compilation, the
-	 * following instances will be created as well.
-	 *
-	 * -# NsmClient::create_instance()
-	 * -# OscServer::create_instance() using
-	 *    Preferences::get_instance() as input
-	 *
-	 * If all instances are created and the actual Hydrogen
-	 * instance #__instance is still 0, it will be properly
-	 * constructed via Hydrogen().
-	 *
-	 * The AudioEngine::create_instance(),
-	 * Effects::create_instance(), and Playlist::create_instance()
-	 * functions will be called from within audioEngine_init().
+	 * order.
 	 */
 	static void		create_instance();
 	/**
 	 * Returns the current Hydrogen instance #__instance.
 	 */
-	static Hydrogen*	get_instance(){ assert(__instance); return __instance; };
+	static Hydrogen*	get_instance(){ return __instance; };
 
 	/**
 	 * Destructor taking care of most of the clean up.
-	 *
-	 * -# Shuts down the NsmClient using NsmClient::shutdown() and
-              deletes it.
-	 * -# Deletes the OscServer object.
-	 * -# Stops the AudioEngine if playing via audioEngine_stop().
-	 * -# Calls removeSong(), audioEngine_stopAudioDrivers(),
-              audioEngine_destroy(), __kill_instruments()
-         * -# Deletes the #m_pCoreActionController and #m_pTimeline
-              object
-	 * -# Sets #__instance to NULL.
 	 */
 	~Hydrogen();
+
+	/*
+	 * return central instance of the audio engine
+	 */
+	AudioEngine*		getAudioEngine() const;
+	SoundLibraryDatabase* getSoundLibraryDatabase() const {
+		return m_pSoundLibraryDatabase;
+	}
 
 // ***** SEQUENCER ********
 	/// Start the internal sequencer
@@ -130,199 +104,109 @@ public:
 	void			midi_noteOn( Note *note );
 
 	///Last received midi message
-	QString			lastMidiEvent;
-	int				lastMidiEventParameter;
+	QString			m_LastMidiEvent;
+	int				m_nLastMidiEventParameter;
 
-	// TODO: more descriptive name since it is able to both delete and
-	// add a pattern. Possibly without the sequencer_ prefix for
-	// consistency.
-	/**
-	 * Adding and removing a Pattern from #m_pNextPatterns.
-	 *
-	 * After locking the AudioEngine the function retrieves the
-	 * particular pattern @a pos from the Song::m_pPatternList and
-	 * either deletes it from #m_pNextPatterns if already present or
-	 * add it to the same pattern list if not present yet.
-	 *
-	 * If the Song is not in Song::PATTERN_MODE or @a pos is not
-	 * within the range of Song::m_pPatternList, #m_pNextPatterns will
-	 * be cleared instead.
-	 *
-	 * \param pos Index of a particular pattern in
-	 * Song::m_pPatternList, which should be added to
-	 * #m_pNextPatterns.
-	 */
-	void			sequencer_setNextPattern( int pos );
-	// TODO: Possibly without the sequencer_ prefix for consistency.
-	/**
-	 * Clear #m_pNextPatterns and add one Pattern.
-	 *
-	 * After locking the AudioEngine the function clears
-	 * #m_pNextPatterns, fills it with all currently played one in
-	 * #m_pPlayingPatterns, and appends the particular pattern @a pos
-	 * from the Song::m_pPatternList.
-	 *
-	 * If the Song is not in Song::PATTERN_MODE or @a pos is not
-	 * within the range of Song::m_pPatternList, #m_pNextPatterns will
-	 * be just cleared.
-	 *
-	 * \param pos Index of a particular pattern in
-	 * Song::m_pPatternList, which should be added to
-	 * #m_pNextPatterns.
-	 */
-	void			sequencer_setOnlyNextPattern( int pos );
-	/**
-	 * Switches playback to focused pattern.
-	 *
-	 * If the current Song is in Song::PATTERN_MODE, the AudioEngine
-	 * will be locked and Preferences::m_bPatternModePlaysSelected
-	 * negated. If the latter was true before calling this function,
-	 * #m_pPlayingPatterns will be cleared and replaced by the
-	 * Pattern indexed with #m_nSelectedPatternNumber.
-	 *
-	 * This function will be called either by MainForm::eventFilter()
-	 * when pressing Qt::Key_L or by
-	 * SongEditorPanel::modeActionBtnPressed().
-	 */
-	void			togglePlaysSelected();
+	/** Wrapper around AudioEngine::toggleNextPattern().*/
+	void			toggleNextPattern( int nPatternNumber );
+	/** Wrapper around AudioEngine::flushAndAddNextPattern().*/
+	bool			flushAndAddNextPattern( int nPatternNumber );
 	
 		/**
 		 * Get the current song.
 		 * \return #__song
 		 */ 	
-		Song*			getSong() const{ return __song; }
+		std::shared_ptr<Song>			getSong() const{ return __song; }
 		/**
 		 * Sets the current song #__song to @a newSong.
 		 * \param newSong Pointer to the new Song object.
+		 * \param bRelinking Whether the drumkit last loaded should be
+		 * relinked when under session management. This flag is used
+		 * to distinguish between the regular load of a song file
+		 * within a session and its replacement by another song (which
+		 * requires an update of the linked drumkit).
 		 */
-		void			setSong	( Song *newSong );
+		void			setSong	( std::shared_ptr<Song> newSong, bool bRelinking = true );
 
-		void			removeSong();
+	/**
+	 * Find a PatternList/column corresponding to the supplied tick
+	 * position @a nTick.
+	 *
+	 * Adds up the lengths of all pattern columns until @a nTick lies in
+	 * between the bounds of a Pattern.
+	 *
+	 * \param nTick Position in ticks.
+	 * \param bLoopMode Whether looping is enabled in the Song, see
+	 *   Song::is_loop_enabled(). If true, @a nTick is allowed to be
+	 *   larger than the total length of the Song.
+	 * \param pPatternStartTick Pointer to an integer the beginning of the
+	 *   found pattern list will be stored in (in ticks).
+	 * \return
+	 *   - -1 : pattern list couldn't be found.
+	 *   - >=0 : PatternList index in Song::__pattern_group_sequence.
+	 */
+	int			getColumnForTick( long nTick, bool bLoopMode, long* pPatternStartTick ) const;
+	/**
+	 * Get the total number of ticks passed up to a @a nColumn /
+	 * pattern group.
+	 *
+	 * The AudioEngine should be LOCKED when calling this!
+	 *
+	 * \param nColumn pattern group.
+	 * \return
+	 *  - -1 : if @a nColumn is bigger than the number of patterns in
+	 *   the Song and Song::isLoopEnabled() is set to false or
+	 *   no Patterns could be found at all.
+	 *  - >= 0 : the total number of ticks passed.
+	 */
+	long			getTickForColumn( int nColumn ) const;
+	/**
+	 * Get the length (in ticks) of the @a nPattern th pattern.
+	 *
+	 * \param nPattern Position + 1 of the desired PatternList.
+	 * \return 
+	 * - __-1__ : if not Song was initialized yet.
+	 * - #MAX_NOTES : if @a nPattern was smaller than 1, larger
+	 * than the length of the vector of the PatternList in
+	 * Song::m_pPatternGroupSequence or no Pattern could be found
+	 * in the PatternList at @a nPattern - 1.
+	 * - __else__ : length of first Pattern found at @a nPattern.
+	 */
+	long			getPatternLength( int nPattern ) const;
+
+	Song::Mode getMode() const;
+	/** Wrapper around Song::setMode() which also triggers
+	EVENT_SONG_MODE_ACTIVATION and should be used by all parts of the
+	code except for song reading/setting.*/
+	void setMode( Song::Mode mode );
+	
+	Song::ActionMode getActionMode() const;
+	/** Wrapper around Song::setActionMode() which also triggers
+	EVENT_ACTION_MODE_CHANGE and should be used by all parts of the
+	code except for song reading/setting.*/
+	void setActionMode( Song::ActionMode mode );
+
+	Song::PatternMode getPatternMode() const;
+	/** Wrapper around Song::setPatternMode() which also triggers
+	EVENT_STACKED_MODE_ACTIVATION and should be used by all parts of the
+	code except for song reading/setting.*/
+	void setPatternMode( Song::PatternMode mode );
+
+	/** Wrapper around both Song::setIsTimelineActivated (recent) and
+	Preferences::setUseTimelinebpm() (former place to store the
+	variable but kept to maintain backward compatibility) which also
+	triggers EVENT_TIMELINE_ACTIVATION.*/
+	void setIsTimelineActivated( bool bEnabled );
+
+	void			removeSong();
+
+	void updateSongSize();
 
 		void			addRealtimeNote ( int instrument,
 							  float velocity,
-							  float pan_L=1.0,
-							  float pan_R=1.0,
-							  float pitch=0.0,
+							  float fPan = 0.0f,
 							  bool noteoff=false,
-							  bool forcePlay=false,
 							  int msg1=0 );
-
-		float			getMasterPeak_L();
-		void			setMasterPeak_L( float value );
-
-		float			getMasterPeak_R();
-		void			setMasterPeak_R( float value );
-
-		void			getLadspaFXPeak( int nFX, float *fL, float *fR );
-		void			setLadspaFXPeak( int nFX, float fL, float fR );
-	/** \return #m_nPatternTickPosition */
-	unsigned long		getTickPosition();
-	/** Keep track of the tick position in realtime.
-	 *
-	 * Firstly, it gets the current transport position in frames
-	 * #m_nRealtimeFrames and converts it into ticks using
-	 * TransportInfo::m_fTickSize. Afterwards, it accesses how
-	 * much time passed since the last update of
-	 * #m_currentTickTime, converts the time difference +
-	 * AudioOutput::getBufferSize()/ AudioOutput::getSampleRate()
-	 * in frames, and adds the result to the first value to
-	 * support keyboard and MIDI events as well.
-	 *
-	 * \return Current position in ticks.
-	 */
-	unsigned long		getRealtimeTickPosition();
-	unsigned long		getTotalFrames();
-
-	/** Sets #m_nRealtimeFrames
-	 * \param frames Current transport realtime position*/
-	void			setRealtimeFrames( unsigned long frames );
-	/** Returns the current realtime transport position
-	 * TransportInfo::m_nFrames.
-	 * \return #m_nRealtimeFrames */
-	unsigned long		getRealtimeFrames();
-	/** \return #m_pPlayingPatterns*/
-	PatternList *		getCurrentPatternList();
-	/** 
-	 * Sets #m_pPlayingPatterns.
-	 *
-	 * Before setting the variable it first locks the AudioEngine. In
-	 * addition, it also pushes the Event #EVENT_PATTERN_CHANGED with
-	 * the value -1 to the EventQueue.
-	 *
-	 * \param pPatternList Sets #m_pPlayingPatterns.*/
-	void			setCurrentPatternList( PatternList * pPatternList );
-
-	/** \return #m_pNextPatterns*/
-	PatternList *		getNextPatterns();
-	/** Get the position of the current Pattern in the Song.
-	 * \return #m_nSongPos */
-	int			getPatternPos();
-	/**
-	 * Relocate the position to another Pattern in the Song.
-	 *
-	 * The position of a Pattern in frames (see
-	 * TransportInfo::m_nFrames for details) will be determined by
-	 * retrieving the tick number the Pattern is located at using
-	 * getTickForPosition() and multiplying it with
-	 * TransportInfo::m_fTickSize. The resulting value will be
-	 * used by the AudioOutput::locate() function of your audio
-	 * driver to relocate the playback position.
-	 *
-	 * If #m_audioEngineState is not #STATE_PLAYING, the variables
-	 * #m_nSongPos and #m_nPatternTickPosition will be set to @a
-	 * pos and 0 right away.
-	 *
-	 * \param pos Position of the Pattern to relocate at. All
-	 *   values smaller than -1 will be set to -1, which marks the
-	 *   beginning of the Song.
-	 */
-	void			setPatternPos( int pos );
-	/** Returns the pattern number corresponding to the tick
-	 * position @a TickPos.
-	 *
-	 * Wrapper around function findPatternInTick() (globally defined
-	 * in hydrogen.cpp).
-	 *
-	 * \param TickPos Position in ticks.
-	 * \param nPatternStartTick Pointer to an int the starting
-	 * position (in ticks) of the corresponding pattern will be
-	 * written to.
-	 *
-	 * \return 
-	 * - __0__ : if the Song isn't specified yet.
-	 * - the output of the findPatternInTick() function called
-	 *   with @a TickPos and Song::getIsLoopEnabled() as input
-	 *   arguments.
-	 */
-	int			getPosForTick( unsigned long TickPos, int* nPatternStartTick );
-	/** Move playback in Pattern mode to the beginning of the pattern.
-	 *
-	 * Resetting the global variable #m_nPatternStartTick to -1 if the
-	 * current Song mode is Song::PATTERN_MODE.
-	 */
-	void			resetPatternStartTick();
-	
-		/**
-		 * Get the total number of ticks passed up to a Pattern at
-		 * position @a pos.
-		 *
-		 * The function will loop over all and sums up their
-		 * Pattern::__length. If one of the Pattern is NULL or no
-		 * Pattern is present one of the PatternList, #MAX_NOTES will
-		 * be added instead.
-		 *
-		 * The driver should be LOCKED when calling this!
-		 *
-		 * \param pos Position of the Pattern in the
-		 *   Song::__pattern_group_sequence.
-		 * \return
-		 *  - -1 : if @a pos is bigger than the number of patterns in
-		 *   the Song and Song::getIsLoopEnabled() is set to false or
-		 *   no Patterns could be found at all.
-		 *  - >= 0 : the total number of ticks passed.
-		 */
-		long			getTickForPosition( int pos );
 
 		void			restartDrivers();
 
@@ -330,62 +214,37 @@ public:
 		MidiInput*		getMidiInput() const;
 		MidiOutput*		getMidiOutput() const;
 
-		/** Returns the current state of the audio engine.
-		 * \return #m_audioEngineState*/
-		int			getState() const;
-
-		float			getProcessTime() const;
-		float			getMaxProcessTime() const;
-
-		/** Wrapper around loadDrumkit( Drumkit, bool ) with the
-			conditional argument set to true.
-		 *
-		 * \returns 0 In case something unexpected happens, it will be
-		 *   indicated with #ERRORLOG messages.
-		 */
-		int			loadDrumkit( Drumkit *pDrumkitInfo );
-		/** Loads the H2Core::Drumkit provided in \a pDrumkitInfo into
-		 * the current session.
-		 *
-		 * When under session management (see
-		 * NsmClient::m_bUnderSessionManagement) the function will
-		 * create a symlink to the loaded H2Core::Drumkit using the
-		 * name "drumkit" in the folder
-		 * NsmClient::m_sSessionFolderPath.
-		 *
-		 * \param pDrumkitInfo Full-fledged H2Core::Drumkit to load.
-		 * \param conditional Argument passed on as second input
-		 *   argument to removeInstrument().
-		 *
-		 * \returns 0 In case something unexpected happens, it will be
-		 *   indicated with #ERRORLOG messages.
-		 */
-
-		int			loadDrumkit( Drumkit *pDrumkitInfo, bool conditional );
-
 		/** Test if an Instrument has some Note in the Pattern (used to
 		    test before deleting an Instrument)*/
-		bool 			instrumentHasNotes( Instrument *pInst );
+		bool 			instrumentHasNotes( std::shared_ptr<Instrument> pInst );
 
-		/** Delete an Instrument. If @a conditional is true, and there
-		    are some Pattern that are using this Instrument, it's not
-		    deleted anyway.*/
-		void			removeInstrument( int instrumentnumber, bool conditional );
+		/** Delete an #Instrument.*/
+		void			removeInstrument( int nInstrumentNumber );
 
-		/** \return m_sCurrentDrumkitName */
-		const QString&	getCurrentDrumkitName();
-		/** \param sName sets m_sCurrentDrumkitName */
-		void			setCurrentDrumkitName( const QString& sName );
-		/** \return m_currentDrumkitLookup */
-		Filesystem::Lookup	getCurrentDrumkitLookup();
-		/** \param lookup sets m_currentDrumkitLookup */
-		void			setCurrentDrumkitLookup( Filesystem::Lookup lookup );
+		/** \return m_sLastLoadedDrumkitName */
+		QString	getLastLoadedDrumkitName() const;
+		/** \return m_sLastLoadedDrumkitPath */
+		QString	getLastLoadedDrumkitPath() const;
 
 		void			raiseError( unsigned nErrorCode );
 
 
 void			previewSample( Sample *pSample );
-	void			previewInstrument( Instrument *pInstr );
+	void			previewInstrument( std::shared_ptr<Instrument> pInstr );
+
+	/** Recalculates all Samples using RubberBand for a specific
+		tempo @a fBpm.
+	*
+	* This function requires the calling function to lock the
+	* #AudioEngine first.
+	*/ 
+	void recalculateRubberband( float fBpm );
+	/** Wrapper around Song::setIsModified() that checks whether a
+		song is set.*/
+	void setIsModified( bool bIsModified );
+	/** Wrapper around Song::getIsModified() that checks whether a
+		song is set.*/
+	bool getIsModified() const;
 
 	enum ErrorMessages {
 		/**
@@ -396,7 +255,7 @@ void			previewSample( Sample *pSample );
 		UNKNOWN_DRIVER,
 		/**
 		 * Unable to connect the audio driver stored in
-		 * #m_pAudioDriver in
+		 * #H2Core::AudioEngine::m_pAudioDriver in
 		 * audioEngine_startAudioDrivers(). The NullDriver
 		 * will be used as a fallback instead.
 		 */
@@ -431,54 +290,50 @@ void			previewSample( Sample *pSample );
 		 * Unable to start the OSC server with the given
 		 * port number. 
 		 */
-		OSC_CANNOT_CONNECT_TO_PORT
+		OSC_CANNOT_CONNECT_TO_PORT,
+		PLAYBACK_TRACK_INVALID
 	};
 
 	void			onTapTempoAccelEvent();
 	void			setTapTempo( float fInterval );
-	/** 
-	 * Updates the speed.
-	 *
-	 * It calls AudioOutput::setBpm() and setNewBpmJTM() with @a
-	 * fBPM as input argument and sets Song::m_fBpm to @a fBPM.
-	 *
-	 * This function will be called with the AudioEngine in LOCKED
-	 * state.
-	 * \param fBPM New speed in beats per minute.
-	 */
-	void			setBPM( float fBPM );
 
 	void			restartLadspaFX();
 	/** \return #m_nSelectedPatternNumber*/
-	int				getSelectedPatternNumber();
+	int				getSelectedPatternNumber() const;
 	/**
 	 * Sets #m_nSelectedPatternNumber.
 	 *
-	 * If Preferences::m_pPatternModePlaysSelected is set to true, the
-	 * AudioEngine is locked before @a nPat will be assigned. But in
-	 * any case the function will push the
-	 * #EVENT_SELECTED_PATTERN_CHANGED Event to the EventQueue.
-	 *
-	 * If @a nPat is equal to #m_nSelectedPatternNumber, the function
-	 * will return right away.
-	 *
-	 *\param nPat Sets #m_nSelectedPatternNumber*/
-	void			setSelectedPatternNumber( int nPat );
+	 *\param nPat Sets #m_nSelectedPatternNumber
+	 * \param bNeedsLock Whether the function was called with the
+	 * audio engine locked already or it should do so itself.
+	 */
+	void			setSelectedPatternNumber( int nPat, bool bNeedsLock = true );
 
-	int				getSelectedInstrumentNumber();
-	void			setSelectedInstrumentNumber( int nInstrument );
+	/**
+	 * Updates the selected pattern to the one recorded note will be
+	 * inserted to.
+	 */
+	void updateSelectedPattern( bool bNeedsLock = true );
 
+	int				getSelectedInstrumentNumber() const;
+	/**
+	 * \param nInstrument #Instrument about to be selected
+	 * \param bTriggerEvent Whether #EVENT_SELECTED_INSTRUMENT_CHANGED
+	 * should be queued. When e.g. changing the selected instrument as
+	 * part of loading a different drumkit, it's important to only
+	 * trigger a single event after the loading is done and to not
+	 * fire some premature ones making the GUI act on a core that
+	 * might be in an unclean state.
+	 */
+	void			setSelectedInstrumentNumber( int nInstrument, bool bTriggerEvent = true );
+	std::shared_ptr<Instrument>		getSelectedInstrument() const;
 
-	void			refreshInstrumentParameters( int nInstrument );
-
-#if defined(H2CORE_HAVE_JACK) || _DOXYGEN_
 	/**
 	 * Calls audioEngine_renameJackPorts() if
 	 * Preferences::m_bJackTrackOuts is set to true.
 	 * \param pSong Handed to audioEngine_renameJackPorts().
 	 */
-	void			renameJackPorts(Song* pSong);
-#endif
+	void			renameJackPorts(std::shared_ptr<Song> pSong);
 
 	/** Starts/stops the OSC server
 	 * \param bEnable `true` = start, `false` = stop.*/
@@ -494,7 +349,7 @@ void			previewSample( Sample *pSample );
 	void			setNoteLength( float notelength);
 	float			getNoteLength();
 	int			getBcStatus();
-	void			handleBeatCounter();
+	bool			handleBeatCounter();
 	void			setBcOffsetAdjust();
 
 	/** Calling JackAudioDriver::releaseTimebaseMaster() directly from
@@ -503,74 +358,15 @@ void			previewSample( Sample *pSample );
 	/** Calling JackAudioDriver::initTimebaseMaster() directly from
 	    the GUI*/
 	void			onJackMaster();
-	/**
-	 * Get the length (in ticks) of the @a nPattern th pattern.
-	 *
-	 * Access the length of the first Pattern found in the
-	 * PatternList at @a nPattern - 1.
-	 *
-	 * This function should also work if the loop mode is enabled
-	 * in Song::getIsLoopEnabled().
-	 *
-	 * \param nPattern Position + 1 of the desired PatternList.
-	 * \return 
-	 * - __-1__ : if not Song was initialized yet.
-	 * - #MAX_NOTES : if @a nPattern was smaller than 1, larger
-	 * than the length of the vector of the PatternList in
-	 * Song::m_pPatternGroupSequence or no Pattern could be found
-	 * in the PatternList at @a nPattern - 1.
-	 * - __else__ : length of first Pattern found at @a nPattern.
-	 */
-	long			getPatternLength( int nPattern );
-	/** Returns the fallback speed.
-	 * \return #m_fNewBpmJTM */
-	float			getNewBpmJTM() const;
-	/** Set the fallback speed #m_nNewBpmJTM.
-	 * \param bpmJTM New default tempo. */ 
-	void			setNewBpmJTM( float bpmJTM);
 
 	void			__panic();
-	unsigned int	__getMidiRealtimeNoteTickPosition() const;
-
-	/**
-	 * Updates Song::m_fBpm, TransportInfo::m_fBPM, and #m_fNewBpmJTM
-	 * to the local speed.
-	 *
-	 * The local speed will be obtained by calling getTimelineBpm()
-	 * with getPatternPos() as input argument and set for the current
-	 * song and transport. For setting the
-	 * fallback speed #m_fNewBpmJTM, getRealtimeTickPosition() will be
-	 * used instead.
-	 *
-	 * If Preferences::__useTimelineBpm is set to false or Hydrogen
-	 * uses JACK transport in the presence of an external timebase
-	 * master, the function will return without performing any
-	 * actions.
-	 */
-	void			setTimelineBpm();
-	/**
-	 * Returns the local speed at a specific @a nBar in the
-	 * Timeline.
-	 *
-	 * If Hydrogen is in Song::PATTERN_MODE or
-	 * Preferences::__useTimelineBpm is set to false, the global
-	 * speed of the current Song Song::m_fBpm or, if no Song is
-	 * present yet, the result of getNewBpmJTM() will be
-	 * returned. 
-	 *
-	 * Its counterpart is setTimelineBpm().
-	 *
-	 * \param nBar Position (in whole patterns) along the Timeline to
-	 *   access the tempo at.
-	 *
-	 * \return Speed in beats per minute.
-	 */
-	float			getTimelineBpm( int nBar );
-	Timeline*		getTimeline() const;
+	std::shared_ptr<Timeline>	getTimeline() const;
+	void			setTimeline( std::shared_ptr<Timeline> );
 	
 	//export management
 	bool			getIsExportSessionActive() const;
-	void			startExportSession( int rate, int depth );
+	/** \return true on success.*/
+	bool			startExportSession( int rate, int depth );
 	void			stopExportSession();
 	void			startExportSong( const QString& filename );
 	void			stopExportSong();
@@ -581,33 +377,17 @@ void			previewSample( Sample *pSample );
 	/********************** Playback track **********************/
 	/**
 	 * Wrapper around Song::setPlaybackTrackEnabled().
-	 *
-	 * \param state Whether the playback track is enabled. It will
-	 * be replaced by false, if no Song was selected (getSong()
-	 * return nullptr).
 	 */
-	bool			setPlaybackTrackState( const bool state );
+	void			mutePlaybackTrack( const bool bMuted );
 	/**
-	 * Wrapper around Song::getPlaybackTrackEnabled().
-	 *
-	 * \return Whether the playback track is enabled or false, if
-	 * no Song was selected (getSong() return nullptr).
+	 * Wrapper around Song::getPlaybackTrackState().
 	 */
-	bool			getPlaybackTrackState() const;
+	Song::PlaybackTrack		getPlaybackTrackState() const;
 	/**
 	 * Wrapper function for loading the playback track.
-	 *
-	 * Calls Song::setPlaybackTrackFilename() and
-	 * Sampler::reinitialize_playback_track(). While the former
-	 * one is responsible to store metadata about the playback
-	 * track, the latter one does load it to a new
-	 * InstrumentLayer. The function is called by
-	 * SongEditorPanel::editPlaybackTrackBtnPressed()
-	 *
-	 * \param filename Name of the file to load as the playback
-	 * track
 	 */
-	void			loadPlaybackTrack( const QString filename );
+	void			loadPlaybackTrack( QString sFilename );
+	/************************************************************/
 
 	/** Specifies the state of the Qt GUI*/
 	enum class		GUIState {
@@ -624,91 +404,77 @@ void			previewSample( Sample *pSample );
 	/**\param state Specifies whether the Qt5 GUI is active. Sets
 	   #m_GUIState.*/
 	void			setGUIState( const GUIState state );
-	
-	/**\return #m_pNextSong*/
-	Song*			getNextSong() const;
-	/**\param pNextSong Sets #m_pNextSong. Song which is about to be
-	   loaded by the GUI.*/
-	void			setNextSong( Song* pNextSong );
-	void			setNextSongPath( const QString sSongPath );
-	QString			getNextSongPath();
-	/** Calculates the lookahead for a specific tick size.
-	 *
-	 * During the humanization the onset of a Note will be moved
-	 * Note::__lead_lag times the value calculated by this function.
-	 *
-	 * Since the size of a tick is tempo dependent, @a fTickSize
-	 * allows you to calculate the lead-lag factor for an arbitrary
-	 * position on the Timeline.
-	 *
-	 * \param fTickSize Number of frames that make up one tick.
-	 *
-	 * \return Five times the current size of a tick
-	 * (TransportInfo::m_fTickSize) (in frames)
-	 */
-	int 			calculateLeadLagFactor( float fTickSize );
-	/** Calculates time offset (in frames) used to determine the notes
-	 * process by the audio engine.
-	 *
-	 * Due to the humanization there might be negative offset in the
-	 * position of a particular note. To be able to still render it
-	 * appropriately, we have to look into and handle notes from the
-	 * future.
-	 *
-	 * The Lookahead is the sum of the #m_nMaxTimeHumanize and
-	 * calculateLeadLagFactor() plus one (since it has to be larger
-	 * than that).
-	 *
-	 * \param fTickSize Number of frames that make up one tick. Passed
-	 * to calculateLeadLagFactor().
-	 *
-	 * \return Frame offset*/
-	int 			calculateLookahead( float fTickSize );
 	/**
 	 * \return Whether JackAudioDriver is used as current audio
 	 * driver.
 	 */
-	bool			haveJackAudioDriver() const;
+	bool			hasJackAudioDriver() const;
 	/**
 	 * \return Whether JackAudioDriver is used as current audio driver
 	 * and JACK transport was activated via the GUI
-	 * (#Preferences::m_bJackTransportMode).
+	 * (#H2Core::Preferences::m_bJackTransportMode).
 	 */
-	bool			haveJackTransport() const;
+	bool			hasJackTransport() const;
+        float			getMasterBpm() const;
+
 	/**
-	 * \return Whether we haveJackTransport() and there is an external
+	 * Convenience function checking whether using the Timeline tempo
+	 * is set in the Preferences, Song::SONG_MODE is set, and there is
+	 * a JACK timebase master present.
+	 *
+	 * \return Whether the Timeline is used to determine the current speed.
+	 */
+	bool isTimelineEnabled() const;
+
+	/**
+	 * Convenience function checking whether using the Pattern Editor
+	 * is locked in the song settings and the song is in song mode.
+	 */
+	bool isPatternEditorLocked() const;
+	void setIsPatternEditorLocked( bool bValue );
+
+	Tempo getTempoSource() const;
+	
+	/**
+	 * \return Whether we hasJackTransport() and there is an external
 	 * JACK timebase master broadcasting us tempo information and
 	 * making use disregard Hydrogen's Timeline information (see
-	 * #JackAudioDriver::m_timebaseState).
+	 * #H2Core::JackAudioDriver::m_timebaseState).
 	 */
 	JackAudioDriver::Timebase		getJackTimebaseState() const;
 	/** \return NsmClient::m_bUnderSessionManagement if NSM is
 		supported.*/
 	bool			isUnderSessionManagement() const;
-	/** Sets the first Song to be loaded under session management.
-	 *
-	 * Enables the creation of a JACK client with all per track output
-	 * ports present right from the start. This is necessary to ensure
-	 * their connection can be properly restored by external tools.
-	 *
-	 * The function will only work if no audio driver is present
-	 * (since this is the intended use case and the function will be
-	 * harmful if used otherwise. Use setSong() instead.) and fails if
-	 * there is already a Song present.
-	 *
-	 * \param pSong Song to be loaded.
-	 */
-	void			setInitialSong( Song* pSong );
+
+	void			setSessionDrumkitNeedsRelinking( bool bNeedsRelinking );
+	bool			getSessionDrumkitNeedsRelinking() const;
+	void			setSessionIsExported( bool bIsExported );
+	bool			getSessionIsExported() const;
 
 	///midi lookuptable
 	int 			m_nInstrumentLookupTable[MAX_INSTRUMENTS];
+
 	/**
-	 * Maximum time (in frames) a note's position can be off due to
-	 * the humanization (lead-lag).
+	 * Add @a pInstr to __instrument_death_row and triggers
+	 * __kill_instruments().
 	 *
-	 * Required to calculateLookahead(). Set to 2000.
+	 * Since there might still be some notes of @a pInstr left in one
+	 * of the note queues, the instrument can not be deleted right
+	 * away. Instead, this function will add it to a list of
+	 * instruments marked for deletion and it will be dealt with at a
+	 * later time.
 	 */
-	int 			m_nMaxTimeHumanize;
+	void addInstrumentToDeathRow( std::shared_ptr<Instrument> pInstr );
+	
+	/** Formatted string version for debugging purposes.
+	 * \param sPrefix String prefix which will be added in front of
+	 * every new line
+	 * \param bShort Instead of the whole content of all classes
+	 * stored as members just a single unique identifier will be
+	 * displayed without line breaks.
+	 *
+	 * \return String presentation of current object.*/
+	QString toQString( const QString& sPrefix, bool bShort = true ) const override;
 
 private:
 	/**
@@ -725,7 +491,7 @@ private:
 	 * the Hydrogen() constructor, set via setSong(), and accessed
 	 * via getSong().
 	 */
-	Song*			__song;
+	std::shared_ptr<Song>			__song;
 
 	/**
 	 * Auxiliary function setting a bunch of global variables.
@@ -754,7 +520,7 @@ private:
 
 
 	// used for song export
-	Song::SongMode		m_oldEngineMode;
+	Song::Mode		m_oldEngineMode;
 	bool			m_bOldLoopEnabled;
 	bool			m_bExportSessionIsActive;
 	
@@ -762,7 +528,7 @@ private:
 	 * Specifies whether the Qt5 GUI is active.
 	 *
 	 * When a new Song is set via the core part of Hydrogen, e.g. in
-	 * the context of session management, the Song *must* be set via
+	 * the context of session management, the std::shared_ptr<Song> must* be set via
 	 * the GUI if active. Else the GUI will freeze.
 	 *
 	 * Set by setGUIState() and accessed via getGUIState().
@@ -770,35 +536,65 @@ private:
 	GUIState		m_GUIState;
 	
 	/**
-	 * Stores a new Song which is about of the loaded by the GUI.
-	 *
-	 * If #m_GUIState is true, the core part of must not load a new
-	 * Song itself. Instead, the new Song is prepared and stored in
-	 * this object to be loaded by HydrogenApp::updateSongEvent() if
-	 * H2Core::EVENT_UPDATE_SONG is pushed with a '1'.
-	 *
-	 * Set by setNextSong() and accessed via getNextSong().
-	 */
-	Song*			m_pNextSong;
-	QString			m_sNextSongPath;
-
-	/**
 	 * Local instance of the Timeline object.
 	 */
-	Timeline*		m_pTimeline;
+	std::shared_ptr<Timeline>	m_pTimeline;
 	/**
 	 * Local instance of the CoreActionController object.
 	 */ 
 	CoreActionController* 	m_pCoreActionController;
-
-	/** Name of the currently used Drumkit.*/
-	QString			m_sCurrentDrumkitName;
-	/** Whether the current Drumkit is located at user or system
-		level.*/
-	Filesystem::Lookup	m_currentDrumkitLookup;
 	
 	/// Deleting instruments too soon leads to potential crashes.
-	std::list<Instrument*> 	__instrument_death_row; 
+	std::list<std::shared_ptr<Instrument>> 	__instrument_death_row; 
+	
+	/**
+	 * Instrument currently focused/selected in the GUI. 
+	 *
+	 * Within the core it is relevant for the MIDI input. Using
+	 * Preferences::__playselectedinstrument incoming MIDI signals can be
+	 * used to play back only the selected instrument or the whole
+	 * drumkit.
+	 */
+	int				m_nSelectedInstrumentNumber;
+	/**
+	 * Index of the pattern selected in the GUI or by a MIDI event.
+	 */
+	int				m_nSelectedPatternNumber;
+
+	/**
+	 * When using Hydrogen with session management it tries to keep
+	 * all central files within a session folder instead of using the
+	 * once found at the data folder at either user or system
+	 * level. This allows to zip and transfer a session without
+	 * requiring to move the whole data folder as well.
+	 *
+	 * As sample files can be quite large in both size and number the
+	 * drumkit is only linked into the session folder.
+	 *
+	 * This variable indicates whether a different drumkit was loaded
+	 * into the current song (by either directly loading a drumkit or
+	 * replacing the entire song) and thus a relinking is required
+	 * upon saving the song.
+	 */
+	bool			m_bSessionDrumkitNeedsRelinking;
+	/**
+	 * Indicates whether NSM session is saved or exported when entering
+	 * the CoreActionController::saveSong() function.
+	 */
+	bool			m_bSessionIsExported;
+
+	/**
+	 * Onset of the recorded last in addRealtimeNote(). It is used to
+	 * determine the custom length of the note in case the note on
+	 * event is followed by a note off event.
+	 */
+	int				m_nLastRecordedMIDINoteTick;
+	/**
+	 * Central instance of the audio engine. 
+	 */
+	AudioEngine*	m_pAudioEngine;
+
+	SoundLibraryDatabase* m_pSoundLibraryDatabase;
 
 	/** 
 	 * Constructor, entry point, and initialization of the
@@ -811,22 +607,6 @@ private:
 	 * Only one Hydrogen object is allowed to exist. If the
 	 * #__instance object is present, the constructor will throw
 	 * an error.
-	 *
-	 * - Sets the current #__song to NULL
-	 * - Sets #m_bExportSessionIsActive to false
-	 * - Creates a new Timeline #m_pTimeline 
-	 * - Creates a new CoreActionController
-	 *   #m_pCoreActionController, 
-	 * - Calls initBeatcounter(), audioEngine_init(), and
-	 *   audioEngine_startAudioDrivers() 
-	 * - Sets InstrumentComponent::m_nMaxLayers to
-	 *   Preferences::m_nMaxLayers via
-	 *   InstrumentComponent::setMaxLayers() and
-	 *   Preferences::getMaxLayers() 
-	 * - Starts the OscServer using OscServer::start() if
-	 *   #H2CORE_HAVE_OSC was set during compilation.
-	 * - Fills #m_nInstrumentLookupTable with the corresponding
-	 *   index of each element.
 	 */
 	Hydrogen();
 
@@ -838,9 +618,13 @@ private:
 /*
  * inline methods
  */
-inline Timeline* Hydrogen::getTimeline() const
+inline std::shared_ptr<Timeline> Hydrogen::getTimeline() const
 {
 	return m_pTimeline;
+}
+inline void Hydrogen::setTimeline( std::shared_ptr<Timeline> pTimeline )
+{
+	m_pTimeline = pTimeline;
 }
 
 inline CoreActionController* Hydrogen::getCoreActionController() const
@@ -848,59 +632,42 @@ inline CoreActionController* Hydrogen::getCoreActionController() const
 	return m_pCoreActionController;
 }
 
-
-inline const QString& Hydrogen::getCurrentDrumkitName()
-{
-	return m_sCurrentDrumkitName;
-}
-inline void Hydrogen::setCurrentDrumkitName( const QString& sName )
-{
-	m_sCurrentDrumkitName = sName;
-}
-inline Filesystem::Lookup Hydrogen::getCurrentDrumkitLookup()
-{
-	return m_currentDrumkitLookup;
-}
-inline void Hydrogen::setCurrentDrumkitLookup( Filesystem::Lookup lookup )
-{
-	m_currentDrumkitLookup = lookup;
-}
-
 inline bool Hydrogen::getIsExportSessionActive() const
 {
 	return m_bExportSessionIsActive;
 }
 
-inline bool Hydrogen::getPlaybackTrackState() const
-{
-	Song* pSong = getSong();
-	bool  bState;
-
-	if(!pSong){
-		bState = false;
-	} else {
-		bState = pSong->getPlaybackTrackEnabled();
-	}
-	return 	bState;
+inline AudioEngine* Hydrogen::getAudioEngine() const {
+	return m_pAudioEngine;
 }
 
 inline Hydrogen::GUIState Hydrogen::getGUIState() const {
 	return m_GUIState;
 }
+
 inline void Hydrogen::setGUIState( const Hydrogen::GUIState state ) {
 	m_GUIState = state;
 }
-inline Song* Hydrogen::getNextSong() const {
-	return m_pNextSong;
+inline int Hydrogen::getSelectedPatternNumber() const
+{
+	return m_nSelectedPatternNumber;
 }
-inline void Hydrogen::setNextSong( Song* pNextSong ) {
-	m_pNextSong = pNextSong;
+inline int Hydrogen::getSelectedInstrumentNumber() const
+{
+	return m_nSelectedInstrumentNumber;
 }
-inline QString Hydrogen::getNextSongPath() {
-	return m_sNextSongPath;
+
+inline void Hydrogen::setSessionDrumkitNeedsRelinking( bool bNeedsRelinking ) {
+	m_bSessionDrumkitNeedsRelinking = bNeedsRelinking;
 }
-inline void Hydrogen::setNextSongPath( const QString sSongPath ) {
-	m_sNextSongPath = sSongPath;
+inline bool Hydrogen::getSessionDrumkitNeedsRelinking() const {
+	return m_bSessionDrumkitNeedsRelinking;
+}
+inline void Hydrogen::setSessionIsExported( bool bSessionIsExported ) {
+	m_bSessionIsExported = bSessionIsExported;
+}
+inline bool Hydrogen::getSessionIsExported() const {
+	return m_bSessionIsExported;
 }
 };
 

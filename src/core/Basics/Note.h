@@ -23,8 +23,11 @@
 #ifndef H2C_NOTE_H
 #define H2C_NOTE_H
 
+#include <memory>
+
 #include <core/Object.h>
 #include <core/Basics/Instrument.h>
+#include <core/Basics/Sample.h>
 
 #define KEY_MIN                 0
 #define KEY_MAX                 11
@@ -56,40 +59,51 @@ class Instrument;
 class InstrumentList;
 
 struct SelectedLayerInfo {
-	int SelectedLayer;		///< selected layer during layer selection
+	/** Selected layer during layer selection
+	 * 
+	 * If set to -1 (during creation), Sampler::renderNote() will
+	 * determine which layer to use and overrides this variable with
+	 * the corresponding value.
+	 */
+	int SelectedLayer;
 	float SamplePosition;	///< place marker for overlapping process() cycles
 };
 
 /**
  * A note plays an associated instrument with a velocity left and right pan
  */
-class Note : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class Note : public H2Core::Object<Note>
 {
-		H2_OBJECT
+		H2_OBJECT(Note)
 	public:
 		/** possible keys */
 		enum Key { C=KEY_MIN, Cs, D, Ef, E, F, Fs, G, Af, A, Bf, B };
+	static QString KeyToQString( Key key );
+	
 		/** possible octaves */
 		enum Octave { P8Z=-3, P8Y=-2, P8X=-1, P8=OCTAVE_DEFAULT, P8A=1, P8B=2, P8C=3 };
 
 		/**
 		 * constructor
-		 * \param instrument the instrument played by this note
-		 * \param position the position of the note within the pattern
-		 * \param velocity it's velocity
-		 * \param pan_l left pan
-		 * \param pan_r right pan
-		 * \param length it's length
-		 * \param pitch it's pitch
+		 *
+		 * \param pInstrument the instrument played by this note
+		 * \param nPosition the position of the note within the pattern
+		 * \param fVelocity it's velocity
+		 * \param fFan pan
+		 * \param nLength Length of the note in frames. If set to -1,
+		 * the length of the #H2Core::Sample used during playback will
+		 * be used instead.
+		 * \param fPitch it's pitch
 		 */
-		Note( Instrument* instrument, int position, float velocity, float pan_l, float pan_r, int length, float pitch );
+	Note( std::shared_ptr<Instrument> pInstrument, int nPosition = 0, float fVelocity = 0.8, float fPan = 0.0, int nLength = -1, float fPitch = 0.0 );
 
 		/**
 		 * copy constructor with an optional parameter
-		 * \param other 
-		 * \param instrument if set will be used as note instrument
+		 * \param pOther 
+		 * \param pInstrument if set will be used as note instrument
 		 */
-		Note( Note* other, Instrument* instrument=nullptr );
+		Note( Note* pOther, std::shared_ptr<Instrument> pInstrument = nullptr );
 		/** destructor */
 		~Note();
 
@@ -102,20 +116,19 @@ class Note : public H2Core::Object
 		 * load a note from an XMLNode
 		 * \param node the XMLDode to read from
 		 * \param instruments the current instrument list to search instrument into
+		 * \param bSilent Whether infos, warnings, and errors should
+		 * be logged.
 		 * \return a new Note instance
 		 */
-		static Note* load_from( XMLNode* node, InstrumentList* instruments );
-
-		/** output details through logger with DEBUG severity */
-		void dump();
+	static Note* load_from( XMLNode* node, std::shared_ptr<InstrumentList> instruments, bool bSilent = false );
 
 		/**
 		 * find the corresponding instrument and point to it, or an empty instrument
 		 * \param instruments the list of instrument to look into
 		 */
-		void map_instrument( InstrumentList* instruments );
+		void map_instrument( std::shared_ptr<InstrumentList> instruments );
 		/** #__instrument accessor */
-		Instrument* get_instrument();
+		std::shared_ptr<Instrument> get_instrument();
 		/** return true if #__instrument is set */
 		bool has_instrument() const;
 		/**
@@ -146,20 +159,20 @@ class Note : public H2Core::Object
 		void set_velocity( float value );
 		/** #__velocity accessor */
 		float get_velocity() const;
-		/**
-		 * #__pan_l setter
-		 * \param value the new value
-		 */
-		void set_pan_l( float value );
-		/** #__pan_l accessor */
-		float get_pan_l() const;
-		/**
-		 * #__pan_r setter
-		 * \param value the new value
-		 */
-		void set_pan_r( float value );
-		/** #__pan_r accessor */
-		float get_pan_r() const;
+		
+		/** set pan of the note. assumes the input range in [-1;1]*/
+		void setPan( float val );
+		/** set pan of the note, assuming the input range in [0;1] */
+		void setPanWithRangeFrom0To1( float fVal ) {
+			this->setPan( -1.f + 2.f * fVal ); // scale and translate into [-1;1]
+		};
+		/** get pan of the note. Output pan range: [-1;1] */
+		float getPan() const;
+		/** get pan of the note, scaling and translating the range from [-1;1] to [0;1] */
+		float getPanWithRangeFrom0To1() const {
+			return 0.5f * ( 1.f + m_fPan );
+		}
+
 		/**
 		 * #__lead_lag setter
 		 * \param value the new value
@@ -208,7 +221,7 @@ class Note : public H2Core::Object
 		/*
 		 * selected sample
 		 * */
-		SelectedLayerInfo* get_layer_selected( int CompoID );
+	std::shared_ptr<SelectedLayerInfo> get_layer_selected( int CompoID );
 
 
 		void set_probability( float value );
@@ -233,6 +246,8 @@ class Note : public H2Core::Object
 		float get_lpfb_l() const;
 		/** #__lpfb_r accessor */
 		float get_lpfb_r() const;
+		/** Filter output is sustaining note */
+		bool filter_sustain() const;
 		/** #__key accessor */
 		Key get_key();
 		/** #__octave accessor */
@@ -249,10 +264,12 @@ class Note : public H2Core::Object
 		 * __octave * KEYS_PER_OCTAVE + __key
 		 * \endcode */
 		float get_notekey_pitch() const;
-	        /** returns
-		 * \code{.cpp}
-		 * __octave * 12 + __key + __pitch 
-		 * \endcode*/ 
+	/**
+	 *
+	 * @returns
+	 * \code{.cpp}
+	 * __octave * 12 + __key + __pitch + __instrument->get_pitch_offset()
+	 * \endcode*/ 
 		float get_total_pitch() const;
 
 		/** return a string representation of key-octave */
@@ -277,21 +294,18 @@ class Note : public H2Core::Object
 		void set_midi_info( Key key, Octave octave, int msg );
 
 		/** get the ADSR of the note */
-		ADSR* get_adsr() const;
-		/** call release on adsr */
-		//float release_adsr() const              { return __adsr->release(); }
-		/** call get value on adsr */
-		//float get_adsr_value(float v) const     { return __adsr->get_value( v ); }
+		std::shared_ptr<ADSR> get_adsr() const;
 
 		/** return true if instrument, key and octave matches with internal
 		 * \param instrument the instrument to match with #__instrument
 		 * \param key the key to match with #__key
 		 * \param octave the octave to match with #__octave
 		 */
-		bool match( Instrument* instrument, Key key, Octave octave ) const;
+		bool match( std::shared_ptr<Instrument> instrument, Key key, Octave octave ) const;
 
 		/** Return true if two notes match in instrument, key and octave. */
 		bool match( const Note *pNote ) const;
+		bool match( const std::shared_ptr<Note> pNote ) const;
 
 		/**
 		 * compute left and right output based on filters
@@ -299,6 +313,41 @@ class Note : public H2Core::Object
 		 * \param val_r the right channel value
 		 */
 		void compute_lr_values( float* val_l, float* val_r );
+
+	long long getNoteStart() const;
+	float getUsedTickSize() const;
+
+	/** 
+	 * @return true if the #Sampler already started rendering this
+	 * note.
+	 */
+	bool isPartiallyRendered() const;
+
+	/**
+	 * Calculates the #m_nNoteStart in frames corresponding to the
+	 * #__position in ticks and storing the used tick size in
+	 * #m_fUsedTickSize.
+	 *
+	 * Whenever the tempo changes and the #Timeline is not
+	 * enabled, the #m_nNoteStart gets invalidated and this function
+	 * needs to be rerun.
+	 */
+	void computeNoteStart();
+
+	/**
+	 * Add random contributions to #__pitch, #__humanize_delay, and
+	 * #__velocity.
+	 */
+	void humanize();
+
+	/**
+	 * Add swing contribution to #__humanize_delay.
+	 *
+	 * As the value applied is deterministic, it will not be handled
+	 * in humanice() but separately.
+	 */
+	void swing();
+	
 		/** Formatted string version for debugging purposes.
 		 * \param sPrefix String prefix which will be added in front of
 		 * every new line
@@ -307,26 +356,80 @@ class Note : public H2Core::Object
 		 * displayed without line breaks.
 		 *
 		 * \return String presentation of current object.*/
-		QString toQString( const QString& sPrefix, bool bShort = true ) const override;
+		QString toQString( const QString& sPrefix = "", bool bShort = true ) const override;
+
+		/** Convert a logarithmic pitch-space value in semitones to a frequency-domain value */
+		static inline double pitchToFrequency( double fPitch ) {
+			// Equivalent to, but quicker to compute than, pow( 2.0, ( fPitch/12 ) )
+			return pow( 1.0594630943593, fPitch );
+		}
+
+		static inline Octave pitchToOctave( int nPitch ) {
+			if ( nPitch >= 0 ) {
+				return (Octave)(nPitch / 12);
+			} else {
+				return (Octave)((nPitch-11) / 12);
+			}
+		}
+		static inline Key pitchToKey( int nPitch ) {
+			return (Key)(nPitch - 12 * pitchToOctave( nPitch ));
+		}
+		static inline int octaveKeyToPitch( Octave octave, Key key ) {
+			return 12 * (int)octave + (int)key;
+		}
+
+	/**
+	 * Returns the sample associated with the note for a specific
+	 * InstrumentComponent @a nComponentID.
+	 *
+	 * A sample of the InstrumentComponent is a possible candidate if
+	 * the note velocity falls within the start and end velocity of an
+	 * InstrumentLayer. In case multiple samples are possible the
+	 * function will either pick the provided @a nSelectedLayer or -
+	 * for @a nSelectedLayer == -1 - the selection algorithm stored in
+	 * #__instrument to determined a layer.
+	 *
+	 * The function stores the selected layer in #__layers_selected
+	 * and will reuse this parameter in every following call while
+	 * disregarding the provided @a nSelectedLayer.
+	 */
+	std::shared_ptr<Sample> getSample( int nComponentID, int nSelectedLayer = -1 );
 
 	private:
-		Instrument*		__instrument;   ///< the instrument to be played by this note
+		std::shared_ptr<Instrument>		__instrument;   ///< the instrument to be played by this note
 		int				__instrument_id;        ///< the id of the instrument played by this note
 		int				__specific_compo_id;    ///< play a specific component, -1 if playing all
-		int				__position;             ///< note position inside the pattern
+		int				__position;             ///< note position in
+												///ticks inside the pattern
 		float			__velocity;           ///< velocity (intensity) of the note [0;1]
-		float			__pan_l;              ///< pan of the note (left volume) [0;0.5]
-		float			__pan_r;              ///< pan of the note (right volume) [0;0.5]
+		float			m_fPan;		///< pan of the note, [-1;1] from
+									///left to right, as requested by
+									///Sampler PanLaws
+	/** Length of the note in frames.
+	 *
+	 * If set to -1, the Note will be rendered till the end of all
+	 * contained Samples is reached.
+	 */
 		int				__length;               ///< the length of the note
 		float			__pitch;              ///< the frequency of the note
 		Key				__key;                  ///< the key, [0;11]==[C;B]
 		Octave			 __octave;            ///< the octave [-3;3]
-		ADSR*			__adsr;               ///< attack decay sustain release
+		std::shared_ptr<ADSR>			__adsr;               ///< attack decay sustain release
 		float			__lead_lag;           ///< lead or lag offset of the note
 		float			__cut_off;            ///< filter cutoff [0;1]
-		float			__resonance;          ///< filter resonant frequency [0;1]
-		int				__humanize_delay;       ///< used in "humanize" function
-		std::map< int, SelectedLayerInfo* > __layers_selected;
+		float			__resonance;          ///< filter resonant
+											  ///frequency [0;1]
+		/** Offset of the note start in frames.
+		 * 
+		 * It includes contributions of the onset humanization, the
+		 * lead lag factor, and the swing. For some of these a random
+		 * value will be drawn but once stored in this variable, the
+		 * delay is fixed and will not change anymore.
+		 *
+		 * It is incorporated in the #m_nNoteStart.
+		 */
+		int				__humanize_delay;
+	std::map< int, std::shared_ptr<SelectedLayerInfo>> __layers_selected;
 		float			__bpfb_l;             ///< left band pass filter buffer
 		float			__bpfb_r;             ///< right band pass filter buffer
 		float			__lpfb_l;             ///< left low pass filter buffer
@@ -336,17 +439,39 @@ class Note : public H2Core::Object
 		bool			__note_off;            ///< note type on|off
 		bool			__just_recorded;       ///< used in record+delete
 		float			__probability;        ///< note probability
-		static const char* __key_str[]; ///< used to build QString from #__key an #__octave
+		static const char* __key_str[]; ///< used to build QString
+										///from #__key an #__octave
+	/**
+	 * Onset of the note in frames.
+	 *
+	 * This member is only used by the #AudioEngine and #Sampler
+	 * during processing and not written to disk.
+	*/
+	long long m_nNoteStart;
+	/**
+	 * TransportPosition::m_fTickSize used to calculate #m_nNoteStart.
+	 *
+	 * If #m_nNoteStart was calculated in the presence of an active
+	 * #Timeline, it will be set to -1.
+	 *
+	 * Used to check whether the note start has to be rescaled because
+	 * of a change in speed (which occurs less often and is faster
+	 * than recalculating #m_nNoteStart everywhere it is required.)
+	 *
+	 * This member is only used by the #AudioEngine and #Sampler
+	 * during processing and not written to disk.
+	 */
+	float m_fUsedTickSize;
 };
 
 // DEFINITIONS
 
-inline ADSR* Note::get_adsr() const
+inline std::shared_ptr<ADSR> Note::get_adsr() const
 {
 	return __adsr;
 }
 
-inline Instrument* Note::get_instrument()
+inline std::shared_ptr<Instrument> Note::get_instrument()
 {
 	return __instrument;
 }
@@ -391,14 +516,9 @@ inline float Note::get_velocity() const
 	return __velocity;
 }
 
-inline float Note::get_pan_l() const
+inline float Note::getPan() const
 {
-	return __pan_l;
-}
-
-inline float Note::get_pan_r() const
-{
-	return __pan_r;
+	return m_fPan;
 }
 
 inline float Note::get_lead_lag() const
@@ -471,14 +591,9 @@ inline void Note::set_probability( float value )
 	__probability = value;
 }
 
-inline SelectedLayerInfo* Note::get_layer_selected( int CompoID )
+inline std::shared_ptr<SelectedLayerInfo> Note::get_layer_selected( int CompoID )
 {
 	return __layers_selected[ CompoID ];
-}
-
-inline void Note::set_humanize_delay( int value )
-{
-	__humanize_delay = value;
 }
 
 inline int Note::get_humanize_delay() const
@@ -516,6 +631,13 @@ inline float Note::get_lpfb_r() const
 	return __lpfb_r;
 }
 
+inline bool Note::filter_sustain() const
+{
+	const double fLimit = 0.001;
+	return ( fabs( __lpfb_l ) > fLimit || fabs( __lpfb_r ) > fLimit ||
+			 fabs( __bpfb_l ) > fLimit || fabs( __bpfb_r ) > fLimit );
+}
+
 inline Note::Key Note::get_key()
 {
 	return __key;
@@ -544,11 +666,6 @@ inline float Note::get_notekey_pitch() const
 	return __octave * KEYS_PER_OCTAVE + __key;
 }
 
-inline float Note::get_total_pitch() const
-{
-	return __octave * KEYS_PER_OCTAVE + __key + __pitch;
-}
-
 inline void Note::set_key_octave( Key key, Octave octave )
 {
 	if( key>=KEY_MIN && key<=KEY_MAX ) __key = key;
@@ -562,12 +679,16 @@ inline void Note::set_midi_info( Key key, Octave octave, int msg )
 	__midi_msg = msg;
 }
 
-inline bool Note::match( Instrument* instrument, Key key, Octave octave ) const
+inline bool Note::match( std::shared_ptr<Instrument> instrument, Key key, Octave octave ) const
 {
 	return ( ( __instrument==instrument ) && ( __key==key ) && ( __octave==octave ) );
 }
 
 inline bool Note::match( const Note *pNote ) const
+{
+	return match( pNote->__instrument, pNote->__key, pNote->__octave );
+}
+inline bool Note::match( const std::shared_ptr<Note> pNote ) const
 {
 	return match( pNote->__instrument, pNote->__key, pNote->__octave );
 }
@@ -591,6 +712,12 @@ inline void Note::compute_lr_values( float* val_l, float* val_r )
 	*val_r = __lpfb_r;
 }
 
+inline long long Note::getNoteStart() const {
+	return m_nNoteStart;
+}
+inline float Note::getUsedTickSize() const {
+	return m_fUsedTickSize;
+}
 };
 
 #endif // H2C_NOTE_H

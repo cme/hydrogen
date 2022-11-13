@@ -27,32 +27,31 @@
 #include <QtGui>
 #include <QtWidgets>
 
-#include <vector>
-
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
-namespace H2Core
-{
-	class Song;
-	class Drumkit;
-	class SoundLibrary;
-}
+#include "../Widgets/WidgetWithScalableFont.h"
+#include "../EventListener.h"
 
 class SoundLibraryTree;
 class ToggleButton;
 
-class SoundLibraryPanel : public QWidget, private H2Core::Object
+/** \ingroup docGUI*/
+class SoundLibraryPanel : public QWidget, protected WidgetWithScalableFont<8, 10, 12>, private H2Core::Object<SoundLibraryPanel>, public EventListener
 {
-	H2_OBJECT
+	H2_OBJECT(SoundLibraryPanel)
 Q_OBJECT
 public:
 	SoundLibraryPanel( QWidget* parent, bool bInItsOwnDialog );
 	~SoundLibraryPanel();
 
-	void updateDrumkitList();
-	void test_expandedItems();
-	void update_background_color();
-	const QString& getMessageFailedPreDrumkitLoad() const;
+	QString getDrumkitLabel( const QString& sDrumkitPath ) const;
+	QString getDrumkitPath( const QString& sDrumkitLabel ) const;
+	
+	virtual void drumkitLoadedEvent() override;
+	virtual void updateSongEvent( int nValue ) override;
+	virtual void selectedInstrumentChangedEvent() override;
+	virtual void soundLibraryChangedEvent() override;
 
 public slots:
 	void on_drumkitLoadAction();
@@ -67,21 +66,25 @@ private slots:
 	void on_drumkitDeleteAction();
 	void on_drumkitPropertiesAction();
 	void on_drumkitExportAction();
-	void on_instrumentDeleteAction();
 	void on_songLoadAction();
 	void on_patternLoadAction();
 	void on_patternDeleteAction();
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 signals:
 	void item_changed(bool bDrumkitSelected);
 
 private:
+	void updateTree();
+	void test_expandedItems();
+	void update_background_color();
+	
 	SoundLibraryTree *__sound_library_tree;
 	//FileBrowser *m_pFileBrowser;
 
 	QPoint __start_drag_position;
 	QMenu* __drumkit_menu;
-	QMenu* __instrument_menu;
+	QMenu* __drumkit_menu_system;
 	QMenu* __song_menu;
 	QMenu* __pattern_menu;
 	QMenu* __pattern_menu_list;
@@ -92,23 +95,27 @@ private:
 	QTreeWidgetItem* __pattern_item;
 	QTreeWidgetItem* __pattern_item_list;
 
-	std::vector<H2Core::Drumkit*> __system_drumkit_info_list;
-	std::vector<H2Core::Drumkit*> __user_drumkit_info_list;
 	bool __expand_pattern_list;
 	bool __expand_songs_list;
 	void restore_background_color();
 	void change_background_color();
 
+	/**
+	 * Used to uniquely identify the drumkit corresponding to an item
+	 * in the tree. It maps the name used as label (key) to the
+	 * absolute path of the drumkit (value) also used as unique ID in
+	 * H2Core::Hydrogen::SoundLibraryDatabase::m_drumkitDatabase.
+	 */
+	std::map<QString,QString> m_drumkitRegister;
+	/** List of all labels used for drumkits in the tree.
+	 *
+	 * Used to ensure uniqueness.*/
+	QStringList m_drumkitLabels;
+
 	/** Whether the dialog was constructed via a click in the MainForm
 	 * or as part of the GUI.
 	 */
 	bool m_bInItsOwnDialog;
-
-	QString m_sMessageFailedPreDrumkitLoad;
 };
-
-inline const QString& SoundLibraryPanel::getMessageFailedPreDrumkitLoad() const {
-	return m_sMessageFailedPreDrumkitLoad;
-}
 
 #endif

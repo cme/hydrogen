@@ -30,9 +30,11 @@
 #include <unistd.h>
 
 #include "EventListener.h"
+#include "Widgets/WidgetWithScalableFont.h"
 
 #include <core/config.h>
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
 class HydrogenApp;
 class QUndoView;///debug only
@@ -40,22 +42,23 @@ class QUndoView;///debug only
 ///
 /// Main window
 ///
-class MainForm : public QMainWindow, public EventListener, public H2Core::Object
+/** \ingroup docGUI*/
+class MainForm :  public QMainWindow, protected WidgetWithScalableFont<8, 10, 12>, public EventListener,  public H2Core::Object<MainForm>
 {
-		H2_OBJECT
+		H2_OBJECT(MainForm)
 	Q_OBJECT
 
 	public:
 		QApplication* m_pQApp;
 
-		MainForm( QApplication * pQApplication, const QString& songFilename, const bool bLoadSong );
+	MainForm( QApplication * pQApplication, QString sSongFilename );
 		~MainForm();
-
-		void updateRecentUsedSongList();
 
 		virtual void errorEvent( int nErrorCode ) override;
 		virtual void jacksessionEvent( int nValue) override;
 		virtual void playlistLoadSongEvent(int nIndex) override;
+		virtual void updateSongEvent( int nValue ) override;
+	virtual void quitEvent( int ) override;
 
 		/** Handles the loading and saving of the H2Core::Preferences
 		 * from the core part of H2Core::Hydrogen.
@@ -76,7 +79,6 @@ class MainForm : public QMainWindow, public EventListener, public H2Core::Object
 		virtual void updatePreferencesEvent( int nValue ) override;
 		virtual void undoRedoActionEvent( int nEvent ) override;
 		static void usr1SignalHandler(int unused);
-
 
 public slots:
 		void showPreferencesDialog();
@@ -111,7 +113,15 @@ public slots:
 		 */
 		void action_file_open();
 		void action_file_openDemo();
-		void action_file_save();
+	/**
+	 * Saves the current song to disk.
+	 *
+	 * As Song::m_sFilename is not set by the GUI but by the core,
+	 * this function serves both the "save as" functionality (with
+	 * sNewFilename being non-empty) and the "save" one.
+	 */
+		void action_file_save( const QString& sNewFilename );
+	void action_file_save();
 		
 		/**
 		 * Project > Save As / Export from Session handling function.
@@ -126,7 +136,7 @@ public slots:
 		 */
 		void action_file_save_as();
 		void action_file_openPattern();
-		void action_file_export_pattern_as();
+		void action_file_export_pattern_as( int nPatternRow = -1 );
 		bool action_file_exit();
 
 		void action_file_export();
@@ -146,6 +156,8 @@ public slots:
 		void action_instruments_importLibrary();
 		void action_instruments_onlineImportLibrary();
 		void action_instruments_addComponent();
+
+		void functionDeleteInstrument( int nInstrument );
 
 		void action_banks_properties();
 		void action_banks_open();
@@ -187,9 +199,6 @@ public slots:
 		void onRestartAccelEvent();
 		void onBPMPlusAccelEvent();
 		void onBPMMinusAccelEvent();
-		void onSaveAsAccelEvent();
-		void onSaveAccelEvent();
-		void onOpenAccelEvent();
 
 		void action_file_open_recent( QAction *pAction );
 		void showDevelWarning();
@@ -218,6 +227,8 @@ public slots:
 		void setMainWindowSize( int w, int h ) {
 			setFixedSize( w, h );
 		}
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
+
 
 	private slots:
 		void onAutoSaveTimer();
@@ -230,12 +241,13 @@ public slots:
 		bool handleUnsavedChanges();
 
 	private:
+	void editDrumkitProperties( bool bDrumkitNameLocked );
+		void updateRecentUsedSongList();
+
 		HydrogenApp*	h2app;
 
 		static int sigusr1Fd[2];
 		QSocketNotifier *snUsr1;
-
-		void functionDeleteInstrument(int instrument);
 
 		QMenu *		m_pLogLevelMenu;		
 		QMenu *		m_pInputModeMenu;
@@ -259,6 +271,7 @@ public slots:
 
 		QUndoView *	m_pUndoView;///debug only
 
+	void startAutosaveTimer();
 		QTimer		m_AutosaveTimer;
 
 		/** Create the menubar */
@@ -294,6 +307,23 @@ public slots:
 		 * application.
 		 */
 		void startPlaybackAtCursor( QObject* pObject );
+
+		QMenu* m_pFileMenu;
+		QMenu* m_pUndoMenu;
+		QMenu* m_pDrumkitsMenu;
+		QMenu* m_pInstrumentsMenu;
+		QMenu* m_pViewMenu;
+		QMenu* m_pOptionsMenu;
+		QMenu* m_pDebugMenu;
+		QMenu* m_pInfoMenu;
+
+	void openSongWithDialog( const QString& sWindowTitle, const QString& sPath, bool bIsDemo );
+	bool prepareSongOpening();
+
+	/** Since the filename of the current song does change whenever
+		the users uses "Save As" multiple autosave files would be
+		written unless we take care of them.*/
+	QString m_sPreviousAutoSaveFilename;
 };
 
 #endif

@@ -33,9 +33,10 @@ namespace H2Core
 {
 
 
-class SongEditorPanelBpmWidget : public QDialog, public Ui_SongEditorPanelBpmWidget_UI, public H2Core::Object
+/** \ingroup docGUI*/
+class SongEditorPanelBpmWidget :  public QDialog, public Ui_SongEditorPanelBpmWidget_UI,  public H2Core::Object<SongEditorPanelBpmWidget>
 {
-    H2_OBJECT
+    H2_OBJECT(SongEditorPanelBpmWidget)
 
 //lineEditBEAT
 //lineEditBPM
@@ -43,7 +44,7 @@ class SongEditorPanelBpmWidget : public QDialog, public Ui_SongEditorPanelBpmWid
 
 	Q_OBJECT
 	public:
-		SongEditorPanelBpmWidget( QWidget* pParent, int beat );
+	SongEditorPanelBpmWidget( QWidget* pParent, int nColumn, bool bTempoMarkerPresent );
 		~SongEditorPanelBpmWidget();
 
 	private slots:
@@ -52,8 +53,9 @@ class SongEditorPanelBpmWidget : public QDialog, public Ui_SongEditorPanelBpmWid
 		void on_okBtn_clicked();
 		void on_deleteBtn_clicked();
 
-	private:
-		int m_stimelineposition;
+private:
+	int m_nColumn;
+	bool m_bTempoMarkerPresent;
 };
 
 }

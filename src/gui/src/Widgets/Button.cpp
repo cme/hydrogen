@@ -22,317 +22,469 @@
 
 #include "Button.h"
 
-#include "PixmapWidget.h"
 #include "../Skin.h"
+#include "../HydrogenApp.h"
+#include "../CommonStrings.h"
 #include "MidiSenseWidget.h"
 
 #include <qglobal.h>	// for QT_VERSION
 
 #include <core/Globals.h>
+#include <core/Preferences/Preferences.h>
+#include <core/Preferences/Theme.h>
+#include <core/Hydrogen.h>
 
-const char* Button::__class_name = "Button";
-
-Button::Button( QWidget * pParent, const QString& sOnImage, const QString& sOffImage, const QString& sOverImage, QSize size, bool use_skin_style, bool enable_press_hold )
- : QWidget( pParent )
- , Object( __class_name )
- , m_bPressed( false )
- , m_onPixmap( size )
- , m_offPixmap( size )
- , m_overPixmap( size )
- , m_bMouseOver( false )
- , __use_skin_style(use_skin_style)
- , __enable_press_hold(enable_press_hold)
+Button::Button( QWidget *pParent, QSize size, Type type, const QString& sIcon, const QString& sText, bool bUseRedBackground, QSize iconSize, QString sBaseTooltip, bool bColorful, bool bModifyOnChange, int nBorderRadius )
+	: QPushButton( pParent )
+	, m_size( size )
+	, m_type( type )
+	, m_iconSize( iconSize )
+	, m_sBaseTooltip( sBaseTooltip )
+	, m_sRegisteredMidiEvent( "" )
+	, m_nRegisteredMidiParameter( 0 )
+	, m_bColorful( bColorful )
+	, m_bLastCheckedState( false )
+	, m_sIcon( sIcon )
+	, m_bIsActive( true )
+	, m_bUseRedBackground( bUseRedBackground )
+	, m_nFixedFontSize( -1 )
+	, m_bModifyOnChange( bModifyOnChange )
+	, m_nBorderRadius( nBorderRadius )
 {
-	// draw the background: slower but useful with transparent images!
-	//setAttribute(Qt::WA_OpaquePaintEvent);
-
-	setMinimumSize( size );
-	setMaximumSize( size );
-	resize( size );
-
-	if ( loadImage( sOnImage, m_onPixmap ) == false ) {
-		m_onPixmap.fill( QColor( 0, 255, 0 ) );
-	}
-
-	if ( loadImage( sOffImage, m_offPixmap ) == false ) {
-		m_offPixmap.fill( QColor( 0, 100, 0 ) );
-	}
-
-	if ( loadImage( sOverImage, m_overPixmap ) == false ) {
-		m_overPixmap.fill( QColor( 0, 180, 0 ) );
-	}
-
-	this->setStyleSheet("font-size: 9px; font-weight: bold;");
-
-	m_timerTimeout = 0;
-	m_timer = new QTimer(this);
-	connect(m_timer, SIGNAL(timeout()), this, SLOT(buttonPressed_timer_timeout()));
-}
-
-
-
-Button::~Button()
-{
-}
-
-
-
-bool Button::loadImage( const QString& sFilename, QPixmap& pixmap )
-{
-  /*
-	if ( sFilename.endsWith( ".svg" ) ) {
-		ERRORLOG( "************* LOAD SVG!!" );
-		if ( !QFile::exists( sFilename ) ) {
-			return false;
-		}
-		QSvgRenderer doc( sFilename );
-		if ( doc.isValid() == false ) {
-			ERRORLOG( "error loading SVG image: '" + sFilename.toLocal8Bit().constData() + "'" );
-			return false;
-		}
-
-		QPainter p;
-		p.begin( &pixmap );
-		p.setViewport( 0, 0, width(), height() );
-		p.eraseRect( 0, 0, width(), height() );
-		doc.render( &p );
-		p.end();
-		return true;
-	}
-  */
+	setFocusPolicy( Qt::NoFocus );
 	
-	// load an image
-	if ( pixmap.load( Skin::getImagePath() + sFilename ) == false ) {
-		if ( !sFilename.isEmpty() ) {
-			ERRORLOG( QString( "Error loading image: '%1'" ).arg( sFilename ) );
-		}
-		return false;
+	if ( size.isNull() || size.isEmpty() ) {
+		m_size = sizeHint();
 	}
-	return true;
+	adjustSize();
+	setFixedSize( m_size );
+	resize( m_size );
+
+	if ( ! sIcon.isEmpty() ) {
+		updateIcon();
+	} else {
+		setText( sText );
+	}
+
+	if ( m_nBorderRadius == -1 ) {
+		if ( size.width() <= 12 || size.height() <= 12 ) {
+			m_nBorderRadius = 0;
+		} else if ( size.width() <= 20 || size.height() <= 20 ) {
+			m_nBorderRadius = 3;
+		} else {
+			m_nBorderRadius = 5;
+		}
+	}
+	
+	if ( type == Type::Toggle ) {
+		setCheckable( true );
+	} else {
+		setCheckable( false );
+	}
+
+	if ( type == Type::Icon ) {
+		setFlat( true );
+	}
+
+	updateFont();
+	updateStyleSheet();
+	updateTooltip();
+	
+	connect( HydrogenApp::get_instance(), &HydrogenApp::preferencesChanged, this, &Button::onPreferencesChanged );
+
+	connect( this, SIGNAL(clicked()), this, SLOT(onClick()));
 }
 
+Button::~Button() {
+}
+
+void Button::setIsActive( bool bIsActive ) {
+	m_bIsActive = bIsActive;
+	
+	setEnabled( bIsActive );
+
+	update();
+}
+
+
+void Button::updateIcon() {
+	if ( m_bColorful ) {
+		setIcon( QIcon( Skin::getSvgImagePath() + "/icons/" + m_sIcon ) );
+	} else {
+		if ( H2Core::Preferences::get_instance()->getIconColor() ==
+			 H2Core::InterfaceTheme::IconColor::White ) {
+			setIcon( QIcon( Skin::getSvgImagePath() + "/icons/white/" + m_sIcon ) );
+		} else {
+			setIcon( QIcon( Skin::getSvgImagePath() + "/icons/black/" + m_sIcon ) );
+		}
+	}
+	setIconSize( m_iconSize );
+}
+
+void Button::setUseRedBackground( bool bUseRedBackground ) {
+	m_bUseRedBackground	= bUseRedBackground;
+
+	updateStyleSheet();
+	update();
+}
+
+void Button::updateStyleSheet() {
+
+	if ( m_type == Type::Icon ) {
+		// Make background transparent
+		setStyleSheet( "QPushButton { background-color: none; }" );
+		return;
+	}
+
+	auto pPref = H2Core::Preferences::get_instance();
+	
+	int nFactorGradient = 126;
+	int nFactorGradientShadow = 225;
+	int nHover = 12;
+	float fStop1 = 0.2;
+	float fStop2 = 0.85;
+	float x1 = 0;
+	float x2 = 1;
+	float y1 = 0;
+	float y2 = 1;
+
+	QColor baseColorBackground = pPref->getColorTheme()->m_widgetColor;
+	QColor backgroundLight = baseColorBackground.lighter( nFactorGradient );
+	QColor backgroundDark = baseColorBackground.darker( nFactorGradient );
+	QColor backgroundLightHover = baseColorBackground.lighter( nFactorGradient + nHover );
+	QColor backgroundDarkHover = baseColorBackground.darker( nFactorGradient + nHover );
+	QColor backgroundShadowLight = baseColorBackground.lighter( nFactorGradientShadow );
+	QColor backgroundShadowDark = baseColorBackground.darker( nFactorGradientShadow );
+	QColor backgroundShadowLightHover = baseColorBackground.lighter( nFactorGradientShadow + nHover );
+	QColor backgroundShadowDarkHover = baseColorBackground.darker( nFactorGradientShadow + nHover );
+	QColor border = Qt::black;
+
+	QColor baseColorBackgroundChecked, textChecked;
+	if ( ! m_bUseRedBackground ) {
+		baseColorBackgroundChecked = pPref->getColorTheme()->m_accentColor;
+		textChecked = pPref->getColorTheme()->m_accentTextColor;
+	} else {
+		baseColorBackgroundChecked = pPref->getColorTheme()->m_buttonRedColor;
+		textChecked = pPref->getColorTheme()->m_buttonRedTextColor;
+	}
+	
+	QColor backgroundCheckedLight = baseColorBackgroundChecked.lighter( nFactorGradient );
+	QColor backgroundCheckedDark = baseColorBackgroundChecked.darker( nFactorGradient );
+	QColor backgroundCheckedLightHover = baseColorBackgroundChecked.lighter( nFactorGradient + nHover );
+	QColor backgroundCheckedDarkHover = baseColorBackgroundChecked.darker( nFactorGradient + nHover );
+	QColor backgroundShadowCheckedLight = baseColorBackgroundChecked.lighter( nFactorGradientShadow );
+	QColor backgroundShadowCheckedDark = baseColorBackgroundChecked.darker( nFactorGradientShadow );
+	QColor backgroundShadowCheckedLightHover = baseColorBackgroundChecked.lighter( nFactorGradientShadow + nHover );
+	QColor backgroundShadowCheckedDarkHover = baseColorBackgroundChecked.darker( nFactorGradientShadow + nHover );
+
+	QColor textColor = pPref->getColorTheme()->m_widgetTextColor;
+	
+	QColor backgroundInactiveLight =
+		Skin::makeWidgetColorInactive( backgroundLight );
+	QColor backgroundInactiveLightHover = backgroundInactiveLight;
+	QColor backgroundInactiveCheckedLight =
+		Skin::makeWidgetColorInactive( backgroundCheckedLight );
+	QColor backgroundInactiveCheckedLightHover = backgroundInactiveCheckedLight;
+	QColor backgroundInactiveDark =
+		Skin::makeWidgetColorInactive( backgroundDark );
+	QColor backgroundInactiveDarkHover = backgroundInactiveDark;
+	QColor backgroundInactiveCheckedDark =
+		Skin::makeWidgetColorInactive( backgroundCheckedDark );
+	QColor backgroundInactiveCheckedDarkHover = backgroundInactiveCheckedDark;
+	QColor backgroundShadowInactiveLight =
+		Skin::makeWidgetColorInactive( backgroundShadowLight );
+	QColor backgroundShadowInactiveLightHover = backgroundShadowInactiveLight;
+	QColor backgroundShadowInactiveCheckedLight =
+		Skin::makeWidgetColorInactive( backgroundShadowCheckedLight );
+	QColor backgroundShadowInactiveCheckedLightHover = backgroundShadowInactiveCheckedLight;
+	QColor backgroundShadowInactiveDark =
+		Skin::makeWidgetColorInactive( backgroundShadowDark );
+	QColor backgroundShadowInactiveDarkHover = backgroundShadowInactiveDark;
+	QColor backgroundShadowInactiveCheckedDark =
+		Skin::makeWidgetColorInactive( backgroundShadowCheckedDark );
+	QColor backgroundShadowInactiveCheckedDarkHover = backgroundShadowInactiveCheckedDark;
+	QColor textInactiveColor = Skin::makeTextColorInactive( textColor );
+
+	setStyleSheet( QString( "\
+QPushButton:enabled { \
+    color: %1; \
+    border: 1px solid %12; \
+    border-radius: %2px; \
+    padding: 0px; \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %23, stop: %39 %3, \
+                                      stop: %40 %4, stop: 1 %24); \
+} \
+QPushButton:enabled:hover { \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %25, stop: %39 %5, \
+                                      stop: %40 %6, stop: 1 %26); \
+} \
+QPushButton:enabled:checked { \
+    color: %7; \
+    border: 1px solid %12; \
+    border-radius: %2px; \
+    padding: 0px; \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %27, stop: %39 %8, \
+                                      stop: %40 %9, stop: 1 %28); \
+} \
+QPushButton:enabled:checked:hover { \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %29, stop: %39 %10, \
+                                      stop: %40 %11, stop: 1 %30); \
+} \
+QPushButton:disabled { \
+    color: %13; \
+    border: 1px solid %12; \
+    border-radius: %2px; \
+    padding: 0px; \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %31, stop: %39 %14, \
+                                      stop: %40 %15, stop: 1 %32); \
+} \
+QPushButton:disabled:hover { \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %33, stop: %39 %16, \
+                                      stop: %40 %17, stop: 1 %34); \
+} \
+QPushButton:disabled:checked { \
+    color: %18; \
+    border: 1px solid %12; \
+    border-radius: %2px; \
+    padding: 0px; \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %35, stop: %39 %19, \
+                                      stop: %40 %20, stop: 1 %36); \
+} \
+QPushButton:disabled:checked:hover { \
+    background-color: qlineargradient(x1: %41, y1: %43, x2: %42, y2: %44, \
+                                      stop: 0 %37, stop: %39 %21, \
+                                      stop: %40 %22, stop: 1 %38); \
+}"
+							)
+				   .arg( textColor.name() )
+				   .arg( m_nBorderRadius )
+				   .arg( backgroundLight.name() )
+				   .arg( backgroundDark.name() )
+				   .arg( backgroundLightHover.name() )
+				   .arg( backgroundDarkHover.name() )
+				   .arg( textChecked.name() )
+				   .arg( backgroundCheckedLight.name() )
+				   .arg( backgroundCheckedDark.name() )
+				   .arg( backgroundCheckedLightHover.name() )
+				   .arg( backgroundCheckedDarkHover.name() )
+				   .arg( border.name() )
+				   .arg( textInactiveColor.name() )
+				   .arg( backgroundInactiveLight.name() )
+				   .arg( backgroundInactiveDark.name() )
+				   .arg( backgroundInactiveLightHover.name() )
+				   .arg( backgroundInactiveDarkHover.name() )
+				   .arg( textChecked.name() )
+				   .arg( backgroundInactiveCheckedLight.name() )
+				   .arg( backgroundInactiveCheckedDark.name() )
+				   .arg( backgroundInactiveCheckedLightHover.name() )
+				   .arg( backgroundInactiveCheckedDarkHover.name() )
+				   .arg( backgroundShadowLight.name() )
+				   .arg( backgroundShadowDark.name() )
+				   .arg( backgroundShadowLightHover.name() )
+				   .arg( backgroundShadowDarkHover.name() )
+				   .arg( backgroundShadowCheckedLight.name() )
+				   .arg( backgroundShadowCheckedDark.name() )
+				   .arg( backgroundShadowCheckedLightHover.name() )
+				   .arg( backgroundShadowCheckedDarkHover.name() )
+				   .arg( backgroundShadowInactiveLight.name() )
+				   .arg( backgroundShadowInactiveDark.name() )
+				   .arg( backgroundShadowInactiveLightHover.name() )
+				   .arg( backgroundShadowInactiveDarkHover.name() )
+				   .arg( backgroundShadowInactiveCheckedLight.name() )
+				   .arg( backgroundShadowInactiveCheckedDark.name() )
+				   .arg( backgroundShadowInactiveCheckedLightHover.name() )
+				   .arg( backgroundShadowInactiveCheckedDarkHover.name() )
+				   .arg( fStop1 ).arg( fStop2 ).arg( x1 ).arg( x2 )
+				   .arg( y1 ).arg( y2 ) );
+}
+
+void Button::setBaseToolTip( const QString& sNewTip ) {
+	m_sBaseTooltip = sNewTip;
+	updateTooltip();
+}
+
+void Button::setAction( std::shared_ptr<Action> pAction ) {
+	m_pAction = pAction;
+	updateTooltip();
+}
 
 void Button::mousePressEvent(QMouseEvent*ev) {
-	
+	if ( ev->button() == Qt::RightButton ) {
+		emit rightClicked();
+	}
+
 	/*
 	*  Shift + Left-Click activate the midi learn widget
 	*/
 	
-	if ( ev->button() == Qt::LeftButton && (ev->modifiers() & Qt::ShiftModifier) ){
+	if ( ev->button() == Qt::LeftButton && ( ev->modifiers() & Qt::ShiftModifier ) ){
 		MidiSenseWidget midiSense( this, true, this->getAction() );
 		midiSense.exec();
-		return;
-	}
-	
-	m_bPressed = true;
-	update();
-	emit mousePress(this);
 
-	if ( ev->button() == Qt::LeftButton && __enable_press_hold) {
-		m_timerTimeout = 2000;
-		buttonPressed_timer_timeout();
-	}
-}
-
-
-
-void Button::mouseReleaseEvent(QMouseEvent* ev)
-{
-	setPressed( false );
-
-	if (ev->button() == Qt::LeftButton) {
-		if(__enable_press_hold) {
-			m_timer->stop();
-		} else {
-			emit clicked(this);
-		}
-	}
-	else if (ev->button() == Qt::RightButton) {
-		emit rightClicked(this);
-	}
-
-}
-
-
-void Button::buttonPressed_timer_timeout()
-{
-	emit clicked(this);
-
-	if(m_timerTimeout > 100) {
-		m_timerTimeout = m_timerTimeout / 2;
-	}
-	
-	m_timer->start(m_timerTimeout);
-}
-
-
-void Button::setFontSize(int size)
-{
-	m_textFont.setPointSize(size);
-}
-
-void Button::setPressed(bool pressed)
-{
-	if (pressed != m_bPressed) {
-		m_bPressed = pressed;
-		update();
-	}
-}
-
-void Button::enterEvent(QEvent *ev)
-{
-	UNUSED( ev );
-	m_bMouseOver = true;
-	update();
-}
-
-
-
-void Button::leaveEvent(QEvent *ev)
-{
-	UNUSED( ev );
-	m_bMouseOver = false;
-	update();
-}
-
-
-
-void Button::paintEvent( QPaintEvent* ev)
-{
-	QPainter painter(this);
-
-	// background
-	if (m_bPressed) {
-		if (__use_skin_style) {
-			static int w = 5;
-			static int h = m_onPixmap.height();
-
-			// central section, scaled
-			painter.drawPixmap( QRect(w, 0, width() - w * 2, h), m_onPixmap, QRect(10, 0, w, h) );
-
-			// left side
-			painter.drawPixmap( QRect(0, 0, w, h), m_onPixmap, QRect(0, 0, w, h) );
-
-			// right side
-			painter.drawPixmap( QRect(width() - w, 0, w, h), m_onPixmap, QRect(m_onPixmap.width() - w, 0, w, h) );
-		}
-		else {
-			painter.drawPixmap( ev->rect(), m_onPixmap, ev->rect() );
-		}
-	}
-	else {
-		if (m_bMouseOver) {
-			if (__use_skin_style) {
-				static int w = 5;
-				static int h = m_overPixmap.height();
-
-				// central section, scaled
-				painter.drawPixmap( QRect(w, 0, width() - w * 2, h), m_overPixmap, QRect(10, 0, w, h) );
-
-				// left side
-				painter.drawPixmap( QRect(0, 0, w, h), m_overPixmap, QRect(0, 0, w, h) );
-
-				// right side
-				painter.drawPixmap( QRect(width() - w, 0, w, h), m_overPixmap, QRect(m_overPixmap.width() - w, 0, w, h) );
-			}
-			else {
-				painter.drawPixmap( ev->rect(), m_overPixmap, ev->rect() );
-			}
-		}
-		else {
-			if (__use_skin_style) {
-				static int w = 5;
-				static int h = m_offPixmap.height();
-
-				// central section, scaled
-				painter.drawPixmap( QRect(w, 0, width() - w * 2, h), m_offPixmap, QRect(10, 0, w, h) );
-
-				// left side
-				painter.drawPixmap( QRect(0, 0, w, h), m_offPixmap, QRect(0, 0, w, h) );
-
-				// right side
-				painter.drawPixmap( QRect(width() - w, 0, w, h), m_offPixmap, QRect(m_offPixmap.width() - w, 0, w, h) );
-			}
-			else {
-				painter.drawPixmap( ev->rect(), m_offPixmap, ev->rect() );
-			}
-		}
-	}
-
-
-	if ( !m_sText.isEmpty() ) {
-		painter.setFont( m_textFont );
-
-		QColor shadow(150, 150, 150, 100);
-		QColor text(10, 10, 10);
-
-		if (m_bMouseOver) {
-			shadow = QColor(220, 220, 220, 100);
-		}
-
-		// shadow
-		painter.setPen( shadow );
-		painter.drawText( 1, 1, width(), height(), Qt::AlignHCenter | Qt::AlignVCenter,  m_sText );
-
-		// text
-		painter.setPen( text );
-		painter.drawText( 0, 0, width(), height(), Qt::AlignHCenter | Qt::AlignVCenter,  m_sText );
-
-	}
-
-}
-
-
-
-void Button::setText( const QString& sText )
-{
-	m_sText = sText;
-	update();
-}
-
-
-
-// :::::::::::::::::::::::::
-
-
-
-ToggleButton::ToggleButton( QWidget *pParent, const QString& sOnImg, const QString& sOffImg, const QString& sOverImg, QSize size, bool use_skin_style )
- : Button( pParent, sOnImg, sOffImg, sOverImg, size, use_skin_style, false )
-{
-}
-
-
-
-ToggleButton::~ToggleButton() {
-}
-
-
-
-void ToggleButton::mousePressEvent(QMouseEvent *ev) {
-	
-	if ( ev->button() == Qt::LeftButton && ev->modifiers() == Qt::ShiftModifier ){
-		MidiSenseWidget midiSense( this, true, this->getAction() );
-		midiSense.exec();
-		return;
-	}
-	
-	if (ev->button() == Qt::RightButton) {
-		emit rightClicked(this);
-	}
-	else {
-		if (m_bPressed) {
-			m_bPressed = false;
-		} else {
-			m_bPressed = true;
-		}
-		update();
+		// Store the registered MIDI event and parameter in order to
+		// show them in the tooltip. Looking them up in the MidiMap
+		// using the Action associated to the Widget might not yield a
+		// unique result since the Action can be registered from the
+		// PreferencesDialog as well.
+		m_sRegisteredMidiEvent = H2Core::Hydrogen::get_instance()->m_LastMidiEvent;
+		m_nRegisteredMidiParameter = H2Core::Hydrogen::get_instance()->m_nLastMidiEventParameter;
 		
-		emit clicked(this);
+		updateTooltip();
+		return;
+	}
+
+	QPushButton::mousePressEvent( ev );
+}
+
+void Button::updateTooltip() {
+
+	auto pCommonStrings = HydrogenApp::get_instance()->getCommonStrings();
+
+	QString sTip = QString("%1" ).arg( m_sBaseTooltip );
+
+	// Add the associated MIDI action.
+	if ( m_pAction != nullptr ) {
+		sTip.append( QString( "\n%1: %2 " ).arg( pCommonStrings->getMidiTooltipHeading() )
+					 .arg( m_pAction->getType() ) );
+		if ( ! m_sRegisteredMidiEvent.isEmpty() ) {
+			sTip.append( QString( "%1 [%2 : %3]" ).arg( pCommonStrings->getMidiTooltipBound() )
+						 .arg( m_sRegisteredMidiEvent ).arg( m_nRegisteredMidiParameter ) );
+		} else {
+			sTip.append( QString( "%1" ).arg( pCommonStrings->getMidiTooltipUnbound() ) );
+		}
+	}
+			
+	setToolTip( sTip );
+}
+
+void Button::setSize( QSize size ) {
+	m_size = size;
+	
+	adjustSize();
+	if ( ! size.isNull() ) {
+		setFixedSize( size );
+		resize( size );
+	}
+
+	updateFont();
+}
+
+void Button::setType( Type type ) {
+
+	if ( type == Type::Toggle ) {
+		setCheckable( true );
+	} else {
+		setCheckable( false );
+	}
+
+	if ( type == Type::Icon ) {
+		setFlat( true );
+	} else {
+		setFlat( false );
+	}
+	
+	m_type = type;
+
+	updateStyleSheet();
+	update();
+}
+
+void Button::updateFont() {
+
+	auto pPref = H2Core::Preferences::get_instance();
+	
+	float fScalingFactor = 1.0;
+    switch ( pPref->getFontSize() ) {
+    case H2Core::FontTheme::FontSize::Small:
+		fScalingFactor = 1.2;
+		break;
+    case H2Core::FontTheme::FontSize::Medium:
+		fScalingFactor = 1.0;
+		break;
+    case H2Core::FontTheme::FontSize::Large:
+		fScalingFactor = 0.75;
+		break;
+	}
+
+	int nPixelSize;
+	if ( m_nFixedFontSize < 0 ) {
+
+		int nMargin;
+		if ( m_size.width() <= 12 || m_size.height() <= 12 ) {
+			nMargin = 1;
+		} else if ( m_size.width() <= 19 || m_size.height() <= 19 ) {
+			nMargin = 5;
+		} else if ( m_size.width() <= 22 || m_size.height() <= 22 ) {
+			nMargin = 7;
+		} else {
+			nMargin = 9;
+		}
+	
+		if ( m_size.width() >= m_size.height() ) {
+			nPixelSize = m_size.height() - std::round( fScalingFactor * nMargin );
+		} else {
+			nPixelSize = m_size.width() - std::round( fScalingFactor * nMargin );
+		}
+	} else {
+		nPixelSize = m_nFixedFontSize;
+	}
+
+	QFont font( pPref->getLevel3FontFamily() );
+	font.setPixelSize( nPixelSize );
+	setFont( font );
+
+	if ( m_size.width() > m_size.height() ) {
+		// Check whether the width of the text fits the available frame
+		// width of the button.
+		while ( fontMetrics().size( Qt::TextSingleLine, text() ).width() > width()
+				&& nPixelSize > 1 ) {
+			nPixelSize--;
+			font.setPixelSize( nPixelSize );
+			setFont( font );
+		}
+	}
+}
+	
+void Button::paintEvent( QPaintEvent* ev )
+{
+	QPushButton::paintEvent( ev );
+
+	updateFont();
+
+	// Grey-out the widget some more if it is not enabled
+	if ( ! isEnabled() ) {
+		QPainter( this ).fillRect( ev->rect(), QColor( 128, 128, 128, 48 ) );
+	}
+
+}
+
+void Button::onPreferencesChanged( H2Core::Preferences::Changes changes ) {
+	if ( changes & ( H2Core::Preferences::Changes::Colors |
+					 H2Core::Preferences::Changes::Font ) ) {
+
+		updateFont();
+		updateStyleSheet();
+	}
+
+	if ( changes & H2Core::Preferences::Changes::AppearanceTab ) {
+		updateIcon();
 	}
 }
 
+void Button::onClick() {
+	if ( m_bModifyOnChange ) {
+		H2Core::Hydrogen::get_instance()->setIsModified( true );
+	}
+}
 
-
-void ToggleButton::mouseReleaseEvent(QMouseEvent*) {
-	// do nothing, this method MUST override Button's one
+void Button::setBorderRadius( int nBorderRadius ) {
+	m_nBorderRadius = nBorderRadius;
+	updateStyleSheet();
 }

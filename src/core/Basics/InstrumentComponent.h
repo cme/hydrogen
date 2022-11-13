@@ -25,7 +25,10 @@
 
 #include <cassert>
 #include <vector>
+#include <memory>
+
 #include <core/Object.h>
+#include <core/License.h>
 
 namespace H2Core
 {
@@ -36,20 +39,24 @@ class Drumkit;
 class InstrumentLayer;
 class DrumkitComponent;
 
-class InstrumentComponent : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class InstrumentComponent : public H2Core::Object<InstrumentComponent>
 {
-		H2_OBJECT
+		H2_OBJECT(InstrumentComponent)
 	public:
 		InstrumentComponent( int related_drumkit_componentID );
-		InstrumentComponent( InstrumentComponent* other );
+		InstrumentComponent( std::shared_ptr<InstrumentComponent> other );
 		~InstrumentComponent();
 
-		void				save_to( XMLNode* node, int component_id );
-		static InstrumentComponent* 	load_from( XMLNode* node, const QString& dk_path );
+	void				save_to( XMLNode* node, int component_id, bool bRecentVersion = true, bool bFull = false );
+		static std::shared_ptr<InstrumentComponent> load_from( XMLNode* pNode,
+															   const QString& sDrumkitPath,
+															   const License& drumkitLicense = License(),
+															   bool bSilent = false );
 
-		InstrumentLayer*	operator[]( int ix );
-		InstrumentLayer*	get_layer( int idx );
-		void				set_layer( InstrumentLayer* layer, int idx );
+		std::shared_ptr<InstrumentLayer>	operator[]( int ix );
+		std::shared_ptr<InstrumentLayer>	get_layer( int idx );
+		void				set_layer( std::shared_ptr<InstrumentLayer> layer, int idx );
 
 		void				set_drumkit_componentID( int related_drumkit_componentID );
 		int					get_drumkit_componentID();
@@ -61,6 +68,11 @@ class InstrumentComponent : public H2Core::Object
 		static int			getMaxLayers();
 		/** @param layers Sets #m_nMaxLayers.*/
 		static void			setMaxLayers( int layers );
+	
+		/** Iteration */
+	std::vector<std::shared_ptr<InstrumentLayer>>::iterator begin();
+	std::vector<std::shared_ptr<InstrumentLayer>>::iterator end();
+
 		/** Formatted string version for debugging purposes.
 		 * \param sPrefix String prefix which will be added in front of
 		 * every new line
@@ -86,7 +98,7 @@ class InstrumentComponent : public H2Core::Object
 		 * Preferences::m_nMaxLayers. Default value assigned in
 		 * Preferences::Preferences(): 16. */
 		static int			m_nMaxLayers;
-		std::vector<InstrumentLayer*>	__layers;
+		std::vector<std::shared_ptr<InstrumentLayer>>	__layers;
 };
 
 // DEFINITIONS
@@ -113,13 +125,13 @@ inline float InstrumentComponent::get_gain() const
 	return __gain;
 }
 
-inline InstrumentLayer* InstrumentComponent::operator[]( int idx )
+inline std::shared_ptr<InstrumentLayer> InstrumentComponent::operator[]( int idx )
 {
 	assert( idx >= 0 && idx < m_nMaxLayers );
 	return __layers[ idx ];
 }
 
-inline InstrumentLayer* InstrumentComponent::get_layer( int idx )
+inline std::shared_ptr<InstrumentLayer> InstrumentComponent::get_layer( int idx )
 {
 	assert( idx >= 0 && idx < m_nMaxLayers );
 	return __layers[ idx ];

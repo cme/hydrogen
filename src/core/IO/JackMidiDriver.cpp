@@ -28,7 +28,7 @@
 
 #if defined(H2CORE_HAVE_JACK) || _DOXYGEN_
 
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Hydrogen.h>
 #include <core/Globals.h>
 #include <core/EventQueue.h>
@@ -42,8 +42,6 @@
 
 namespace H2Core
 {
-
-const char* JackMidiDriver::__class_name = "JackMidiDriver";
 
 void
 JackMidiDriver::lock(void)
@@ -338,7 +336,7 @@ JackMidiShutdown(void *arg)
 }
 
 JackMidiDriver::JackMidiDriver()
-	: MidiInput( __class_name ), MidiOutput( __class_name ), Object( __class_name )
+	: MidiInput(), MidiOutput(), Object<JackMidiDriver>()
 {
 	pthread_mutex_init(&mtx, nullptr);
 
@@ -521,8 +519,8 @@ JackMidiDriver::handleQueueNoteOff(int channel, int key, int vel)
 
 void JackMidiDriver::handleQueueAllNoteOff()
 {
-	InstrumentList *	pInstrList = Hydrogen::get_instance()->getSong()->getInstrumentList();
-	Instrument *		pCurInstr;
+	auto pInstrList = Hydrogen::get_instance()->getSong()->getInstrumentList();
+	std::shared_ptr<Instrument>		pCurInstr;
 	unsigned int numInstruments = pInstrList->size();
 	unsigned int i = 0;
 	int channel = 0;

@@ -27,33 +27,43 @@
 #include <QtWidgets>
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
+#include "../Widgets/WidgetWithScalableFont.h"
 
 namespace H2Core
 {
 	class InstrumentLayer;
 }
 
-class WaveDisplay : public QWidget, public H2Core::Object
+/** \ingroup docGUI*/
+class WaveDisplay :  public QWidget, protected WidgetWithScalableFont<8, 10, 12>,  public H2Core::Object<WaveDisplay>
 {
-    H2_OBJECT
+    H2_OBJECT(WaveDisplay)
 	Q_OBJECT
 
 	public:
 		explicit WaveDisplay(QWidget* pParent);
 		~WaveDisplay();
 
-		virtual void	updateDisplay( H2Core::InstrumentLayer *pLayer );
+	
+		virtual void	updateDisplay( std::shared_ptr<H2Core::InstrumentLayer> pLayer );
 
-		void			paintEvent( QPaintEvent *ev );
-		void			resizeEvent( QResizeEvent * event );
-		void			mouseDoubleClickEvent(QMouseEvent *ev);
+		virtual void	paintEvent( QPaintEvent *ev ) override;
+		virtual void	resizeEvent( QResizeEvent * event ) override;
+		virtual void	mouseDoubleClickEvent(QMouseEvent *ev) override;
 		
 		void			setSampleNameAlignment(Qt::AlignmentFlag flag);
 
+public slots:
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
+	
 	signals:
 		void doubleClicked(QWidget *pWidget);
 
 	protected:
+
+	void createBackground( QPainter* painter );
+	
 		Qt::AlignmentFlag			m_SampleNameAlignment;
 		QPixmap						m_Background;
 		QString						m_sSampleName;
@@ -65,7 +75,7 @@ class WaveDisplay : public QWidget, public H2Core::Object
 		
 		int							m_nCurrentWidth;
 		
-		H2Core::InstrumentLayer *	m_pLayer;
+		std::shared_ptr<H2Core::InstrumentLayer>	m_pLayer;
 };
 
 inline void WaveDisplay::setSampleNameAlignment(Qt::AlignmentFlag flag)

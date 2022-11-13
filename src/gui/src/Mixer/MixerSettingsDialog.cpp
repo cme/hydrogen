@@ -22,7 +22,6 @@
 
 #include <cstring>
 
-#include "Skin.h"
 #include "MixerSettingsDialog.h"
 #include "HydrogenApp.h"
 #include "MainForm.h"
@@ -35,9 +34,9 @@
 
 #include <core/MidiMap.h>
 #include <core/Hydrogen.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Lash/LashClient.h>
-#include <core/AudioEngine.h>
+#include <core/AudioEngine/AudioEngine.h>
 #include <core/Helpers/Translations.h>
 #include "SongEditor/SongEditor.h"
 #include "SongEditor/SongEditorPanel.h"
@@ -45,19 +44,16 @@
 
 using namespace H2Core;
 
-const char* MixerSettingsDialog::__class_name = "MixerSettingsDialog";
-
 MixerSettingsDialog::MixerSettingsDialog(QWidget* parent)
  : QDialog( parent )
- , Object( __class_name )
-{
+ {
 	setupUi( this );
 
 	setWindowTitle( tr( "Mixer Settings" ) );
 
 	setMinimumSize( width(), height() );
 
-	Song* pSong = Hydrogen::get_instance()->getSong();
+	std::shared_ptr<Song> pSong = Hydrogen::get_instance()->getSong();
 	
 	/* insert the items here so they work consistently no matter of their order in the menu (except the headings)
 	 */
@@ -136,7 +132,7 @@ void MixerSettingsDialog::on_cancelBtn_clicked()
 
 
 void MixerSettingsDialog::on_okBtn_clicked() {
-	Song* pSong = Hydrogen::get_instance()->getSong();
+	std::shared_ptr<Song> pSong = Hydrogen::get_instance()->getSong();
 	bool bOk;
 	
 	// Pan Law settings
@@ -158,6 +154,8 @@ void MixerSettingsDialog::on_okBtn_clicked() {
 	* For example -6.0206 dB <=> k = 1 <=> L + R = 1 (i.e. constant sum)
 	*/
 	pSong->setPanLawKNorm( - 6.0206 / fdBCenterCompensation );
+
+	Hydrogen::get_instance()->setIsModified( true );
 
 	accept();
 }

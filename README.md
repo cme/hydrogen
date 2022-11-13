@@ -1,7 +1,7 @@
 # Hydrogen drum machine
 
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)
-[![Packaging status](https://repology.org/badge/tiny-repos/hydrogen.svg)](https://repology.org/project/hydrogen/versions)
+[![Packaging status](https://repology.org/badge/tiny-repos/hydrogen-drum-machine.svg)](https://repology.org/project/hydrogen-drum-machine/versions)
 
 Hydrogen is an advanced drum machine for GNU/Linux, Mac and Windows.
 Its main goal is to bring professional yet simple and intuitive pattern-based drum programming.
@@ -74,7 +74,7 @@ More details in the [INSTALL.md](INSTALL.md) file.
 <details>
   <summary>Expand to see the status of Hydrogen in the package ecosystem</summary>
   
-  [![Packaging status](https://repology.org/badge/vertical-allrepos/hydrogen.svg?header=Hydrogen)](https://repology.org/project/hydrogen/versions)
+  [![Packaging status](https://repology.org/badge/vertical-allrepos/hydrogen-drum-machine.svg?header=Hydrogen)](https://repology.org/project/hydrogen-drum-machine/versions)
 
 </details>
 

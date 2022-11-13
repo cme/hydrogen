@@ -30,21 +30,18 @@
 
 #include <core/Basics/Pattern.h>
 #include <core/Basics/PatternList.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Hydrogen.h>
 #include <core/IO/MidiInput.h>
 #include <core/IO/AudioOutput.h>
 #include <core/Sampler/Sampler.h>
-#include <core/AudioEngine.h>
+#include <core/AudioEngine/AudioEngine.h>
+#include <core/AudioEngine/TransportPosition.h>
 using namespace H2Core;
-
-#include "Skin.h"
-
-const char* AudioEngineInfoForm::__class_name = "AudioEngineInfoForm";
 
 AudioEngineInfoForm::AudioEngineInfoForm(QWidget* parent)
  : QWidget( parent )
- , Object( __class_name )
+ , Object()
 {
 	setupUi( this );
 	adjustSize();
@@ -92,15 +89,16 @@ void AudioEngineInfoForm::hideEvent ( QHideEvent* )
 
 void AudioEngineInfoForm::updateInfo()
 {
-	Hydrogen *pEngine = Hydrogen::get_instance();
-	Song *pSong = pEngine->getSong();
+	Hydrogen *pHydrogen = Hydrogen::get_instance();
+	AudioEngine* pAudioEngine = pHydrogen->getAudioEngine();;
+	std::shared_ptr<Song> pSong = pHydrogen->getSong();
 
 	// Song position
-	QString sSongPos = "N/A";
-	if ( pEngine->getPatternPos() != -1 ) {
-		sSongPos = QString::number( pEngine->getPatternPos() );
+	QString sColumn = "N/A";
+	if ( pAudioEngine->getTransportPosition()->getColumn() != -1 ) {
+		sColumn = QString::number( pAudioEngine->getTransportPosition()->getColumn() );
 	}
-	m_pSongPositionLbl->setText( sSongPos );
+	m_pSongPositionLbl->setText( sColumn );
 
 
 	// Audio engine Playing notes
@@ -108,10 +106,10 @@ void AudioEngineInfoForm::updateInfo()
 
 	// Process time
 	int perc = 0;
-	if ( pEngine->getMaxProcessTime() != 0.0 ) {
-		perc= (int)( pEngine->getProcessTime() / ( pEngine->getMaxProcessTime() / 100.0 ) );
+	if ( pAudioEngine->getMaxProcessTime() != 0.0 ) {
+		perc= (int)( pAudioEngine->getProcessTime() / ( pAudioEngine->getMaxProcessTime() / 100.0 ) );
 	}
-	sprintf(tmp, "%#.2f / %#.2f  (%d%%)", pEngine->getProcessTime(), pEngine->getMaxProcessTime(), perc );
+	sprintf(tmp, "%#.2f / %#.2f  (%d%%)", pAudioEngine->getProcessTime(), pAudioEngine->getMaxProcessTime(), perc );
 	processTimeLbl->setText(tmp);
 
 	// Song state
@@ -128,13 +126,13 @@ void AudioEngineInfoForm::updateInfo()
 	}
 
 	// tick number
-	sprintf(tmp, "%03d", (int)pEngine->getTickPosition() );
+	sprintf(tmp, "%03d", (int)pAudioEngine->getTransportPosition()->getPatternTickPosition() );
 	nTicksLbl->setText(tmp);
 
 
 
 	// Audio driver info
-	AudioOutput *driver = pEngine->getAudioOutput();
+	AudioOutput *driver = pHydrogen->getAudioOutput();
 	if (driver) {
 		QString audioDriverName = driver->class_name();
 		driverLbl->setText(audioDriverName);
@@ -143,25 +141,29 @@ void AudioEngineInfoForm::updateInfo()
 		sprintf(tmp, "%d", driver->getBufferSize());
 		bufferSizeLbl->setText(QString(tmp));
 
+		// Audio latency estimate
+		latencyLbl->setText( QString( "%1 frames" ).arg( driver->getLatency() ) );
+
 		// Audio driver sampleRate
 		sprintf(tmp, "%d", driver->getSampleRate());
 		sampleRateLbl->setText(QString(tmp));
 
 		// Number of frames
-		sprintf(tmp, "%d", (int)driver->m_transport.m_nFrames );
+		sprintf(tmp, "%d", static_cast<int>( pAudioEngine->getTransportPosition()->getFrame() ) );
 		nFramesLbl->setText(tmp);
 	}
 	else {
 		driverLbl->setText( "NULL driver" );
 		bufferSizeLbl->setText( "N/A" );
+		latencyLbl->setText( "N/A" );
 		sampleRateLbl->setText( "N/A" );
 		nFramesLbl->setText( "N/A" );
 	}
-	nRealtimeFramesLbl->setText( QString( "%1" ).arg( pEngine->getRealtimeFrames() ) );
+	nRealtimeFramesLbl->setText( QString( "%1" ).arg( pAudioEngine->getRealtimeFrame() ) );
 
 
 	// Midi driver info
-	MidiInput *pMidiDriver = pEngine->getMidiInput();
+	MidiInput *pMidiDriver = pHydrogen->getMidiInput();
 	if (pMidiDriver) {
 		midiDriverName->setText( pMidiDriver->class_name() );
 	}
@@ -172,7 +174,7 @@ void AudioEngineInfoForm::updateInfo()
 	m_pMidiDeviceName->setText( Preferences::get_instance()->m_sMidiPortName );
 
 
-	int nSelectedPatternNumber = pEngine->getSelectedPatternNumber();
+	int nSelectedPatternNumber = pHydrogen->getSelectedPatternNumber();
 	if (nSelectedPatternNumber == -1) {
 		selectedPatLbl->setText( "N/A");
 	}
@@ -180,7 +182,7 @@ void AudioEngineInfoForm::updateInfo()
 		selectedPatLbl->setText( QString("%1").arg(nSelectedPatternNumber) );
 	}
 
-	int nSelectedInstrumentNumber = pEngine->getSelectedInstrumentNumber();
+	int nSelectedInstrumentNumber = pHydrogen->getSelectedInstrumentNumber();
 	if (nSelectedInstrumentNumber == -1) {
 		m_pSelectedInstrLbl->setText( "N/A" );
 	}
@@ -188,20 +190,19 @@ void AudioEngineInfoForm::updateInfo()
 		m_pSelectedInstrLbl->setText( QString("%1").arg(nSelectedInstrumentNumber) );
 	}
 
-	PatternList *pPatternList = Hydrogen::get_instance()->getCurrentPatternList();
-	if (pPatternList) {
-		currentPatternLbl->setText( QString::number(pPatternList->size()) );
-	}
-	else {
+	auto pPatternList = pAudioEngine->getPlayingPatterns();
+	if ( pPatternList != nullptr ) {
+		currentPatternLbl->setText( QString::number( pPatternList->size() ) );
+	} else {
 		currentPatternLbl->setText( "N/A" );
 	}
 
 	// SAMPLER
-	Sampler *pSampler = AudioEngine::get_instance()->get_sampler();
+	Sampler *pSampler = pAudioEngine->getSampler();
 	sampler_playingNotesLbl->setText(QString( "%1 / %2" ).arg(pSampler->getPlayingNotesNumber()).arg(Preferences::get_instance()->m_nMaxNotes));
 
 	// Synth
-	Synth *pSynth = AudioEngine::get_instance()->get_synth();
+	Synth *pSynth = pAudioEngine->getSynth();
 	synth_playingNotesLbl->setText( QString( "%1" ).arg( pSynth->getPlayingNotesNumber() ) );
 }
 
@@ -216,25 +217,24 @@ void AudioEngineInfoForm::updateInfo()
 void AudioEngineInfoForm::updateAudioEngineState() {
 	// Audio Engine state
 	QString stateTxt;
-	int state = Hydrogen::get_instance()->getState();
-	switch (state) {
-	case STATE_UNINITIALIZED:
+	switch ( H2Core::Hydrogen::get_instance()->getAudioEngine()->getState() ) {
+	case H2Core::AudioEngine::State::Uninitialized:
 		stateTxt = "Uninitialized";
 		break;
 
-	case STATE_INITIALIZED:
+	case H2Core::AudioEngine::State::Initialized:
 		stateTxt = "Initialized";
 		break;
 
-	case STATE_PREPARED:
+	case H2Core::AudioEngine::State::Prepared:
 		stateTxt = "Prepared";
 		break;
 
-	case STATE_READY:
+	case H2Core::AudioEngine::State::Ready:
 		stateTxt = "Ready";
 		break;
 
-	case STATE_PLAYING:
+	case H2Core::AudioEngine::State::Playing:
 		stateTxt = "Playing";
 		break;
 
@@ -246,15 +246,24 @@ void AudioEngineInfoForm::updateAudioEngineState() {
 }
 
 
-void AudioEngineInfoForm::stateChangedEvent( int )
+void AudioEngineInfoForm::stateChangedEvent( H2Core::AudioEngine::State state )
 {
+	UNUSED( state );
 	updateAudioEngineState();
 }
 
 
-void AudioEngineInfoForm::patternChangedEvent()
+void AudioEngineInfoForm::playingPatternsChangedEvent()
 {
 	updateAudioEngineState();
+}
+
+void AudioEngineInfoForm::updateSongEvent( int nValue )
+{
+	// A new song got loaded
+	if ( nValue == 0 ) {
+		updateAudioEngineState();
+	}
 }
 
 

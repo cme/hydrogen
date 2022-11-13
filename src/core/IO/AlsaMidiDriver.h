@@ -39,25 +39,26 @@ namespace H2Core
 /// Alsa Midi Driver
 /// Based on Matthias Nagorni alsa sequencer example
 ///
-class AlsaMidiDriver : public virtual MidiInput, public virtual MidiOutput
+/** \ingroup docCore docMIDI */
+class AlsaMidiDriver : public Object<AlsaMidiDriver>, public virtual MidiInput, public virtual MidiOutput
 {
-	H2_OBJECT
+	H2_OBJECT(AlsaMidiDriver)
 public:
 	AlsaMidiDriver();
 	virtual ~AlsaMidiDriver();
 
-	virtual void open();
-	virtual void close();
-	virtual std::vector<QString> getInputPortList();
-	virtual std::vector<QString> getOutputPortList();
+	virtual void open() override;
+	virtual void close() override;
+	virtual std::vector<QString> getInputPortList() override;
+	virtual std::vector<QString> getOutputPortList() override;
 
 	void midi_action( snd_seq_t *seq_handle );
 	void getPortInfo( const QString& sPortName, int& nClient, int& nPort );
-	virtual void handleQueueNote(Note* pNote);
+	virtual void handleQueueNote(Note* pNote) override;
 	
-	virtual void handleQueueNoteOff( int channel, int key, int velocity );
-	virtual void handleQueueAllNoteOff();
-	virtual void handleOutgoingControlChange( int param, int value, int channel );
+	virtual void handleQueueNoteOff( int channel, int key, int velocity ) override;
+	virtual void handleQueueAllNoteOff() override;
+	virtual void handleOutgoingControlChange( int param, int value, int channel ) override;
 
 private:
 };

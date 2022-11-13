@@ -25,6 +25,7 @@
 #define AUDIO_ENGINE_INFO_FORM_H
 
 #include <core/Object.h>
+#include <core/AudioEngine/AudioEngine.h>
 
 #include "EventListener.h"
 #include "ui_AudioEngineInfoForm_UI.h"
@@ -35,16 +36,18 @@
 /**
  * Audio Engine information form
  */
-class AudioEngineInfoForm : public QWidget, public Ui_AudioEngineInfoForm_UI, public EventListener, public H2Core::Object
+/** \ingroup docGUI docAudioEngine docDebugging*/
+class AudioEngineInfoForm :  public QWidget, public Ui_AudioEngineInfoForm_UI, public EventListener,  public H2Core::Object<AudioEngineInfoForm>
 {
-    H2_OBJECT
+    H2_OBJECT(AudioEngineInfoForm)
 	Q_OBJECT
 	private:
 		QTimer* m_pTimer;
 
 		// EventListener implementation
-		virtual void stateChangedEvent(int nState) override;
-		virtual void patternChangedEvent() override;
+	virtual void stateChangedEvent( H2Core::AudioEngine::State state) override;
+	virtual void playingPatternsChangedEvent() override;
+	virtual void updateSongEvent(int) override;
 		//~ EventListener implementation
 
 	public:

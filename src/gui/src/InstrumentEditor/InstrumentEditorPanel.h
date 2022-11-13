@@ -33,9 +33,10 @@
 ///
 /// Container for the Instrument Editor (Singleton).
 ///
-class InstrumentEditorPanel : public QWidget, private H2Core::Object, public EventListener
+/** \ingroup docGUI*/
+class InstrumentEditorPanel : public QWidget, private H2Core::Object<InstrumentEditorPanel>, public EventListener
 {
-    H2_OBJECT
+    H2_OBJECT(InstrumentEditorPanel)
 	Q_OBJECT
 	public:
 		static InstrumentEditorPanel* get_instance();
@@ -44,7 +45,10 @@ class InstrumentEditorPanel : public QWidget, private H2Core::Object, public Eve
 		explicit InstrumentEditorPanel(const InstrumentEditorPanel&) = delete;
 		InstrumentEditorPanel& operator=( const InstrumentEditorPanel& rhs ) = delete;
 
-		virtual void parametersInstrumentChangedEvent() override;
+	virtual void drumkitLoadedEvent() override;
+	virtual void updateSongEvent( int ) override;
+		
+		InstrumentEditor* getInstrumentEditor() const;
 
 		void selectLayer( int nLayer );
 		
@@ -52,8 +56,7 @@ class InstrumentEditorPanel : public QWidget, private H2Core::Object, public Eve
 			return m_nLayer;
 		}
 
-	public slots:
-		void notifyOfDrumkitChange();
+		void updateWaveDisplay();
 
 	private:
 		static InstrumentEditorPanel*	m_pInstance;
@@ -64,5 +67,8 @@ class InstrumentEditorPanel : public QWidget, private H2Core::Object, public Eve
 
 };
 
+inline 	InstrumentEditor* InstrumentEditorPanel::getInstrumentEditor() const {
+	return m_pInstrumentEditor;
+}
 #endif
 

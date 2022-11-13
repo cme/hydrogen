@@ -28,7 +28,7 @@
 
 #include <QDialog>
 #include <core/Object.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 
 
 class Button;
@@ -37,18 +37,22 @@ class SampleWaveDisplay;
 ///
 /// This dialog is used to preview audiofiles
 ///
-class AudioFileBrowser : public QDialog, public Ui_AudioFileBrowser_UI, public H2Core::Object
+/** \ingroup docGUI*/
+class AudioFileBrowser :  public QDialog, public Ui_AudioFileBrowser_UI,  public H2Core::Object<AudioFileBrowser>
 
 {
-	H2_OBJECT
+	H2_OBJECT(AudioFileBrowser)
 	Q_OBJECT
 	public:
 		
-		AudioFileBrowser( QWidget* pParent, bool bAllowMultiSelect, bool bShowInstrumentManipulationControls);
-		~AudioFileBrowser();
+	AudioFileBrowser( QWidget* pParent, bool bAllowMultiSelect,
+					  bool bShowInstrumentManipulationControls,
+					  QString sDefaultPath = "",
+					  const QString& sFilename = "" );
+	~AudioFileBrowser();
 	
-		QStringList getSelectedFiles();
-		QString		setDir( QString dir );
+	QStringList getSelectedFiles();
+	QString getSelectedDirectory();
 
 	private slots:
 		void on_cancelBTN_clicked();
@@ -63,8 +67,8 @@ class AudioFileBrowser : public QDialog, public Ui_AudioFileBrowser_UI, public H
 		void on_playSamplescheckBox_clicked();
 		void on_hiddenCB_clicked();
 
-		virtual void keyPressEvent (QKeyEvent *ev);
-		virtual void keyReleaseEvent (QKeyEvent *ev);
+		virtual void keyPressEvent (QKeyEvent *ev) override;
+		virtual void keyReleaseEvent (QKeyEvent *ev) override;
 
 
 	private:
@@ -73,11 +77,11 @@ class AudioFileBrowser : public QDialog, public Ui_AudioFileBrowser_UI, public H
 		void getEnvironment();
 		bool isFileSupported( QString filename );
 		
-		InstrumentEditor*	m_pInstrumentEditor;
 		SampleWaveDisplay *	m_pSampleWaveDisplay;
 		
 		QString				m_pSampleFilename;
 		QStringList			m_pSelectedFile;
+		QString				m_sSelectedDirectory;
 
 		bool				m_SingleClick;
 		QFileSystemModel *	m_pDirModel;
@@ -90,7 +94,8 @@ class AudioFileBrowser : public QDialog, public Ui_AudioFileBrowser_UI, public H
 		
 		bool				m_bAllowMultiSelect;
 		bool				m_bShowInstrumentManipulationControls;
-
+	
+	QString m_sFilename;
 
 };
 

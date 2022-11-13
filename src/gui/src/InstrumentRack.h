@@ -25,16 +25,19 @@
 #define INSTRUMENT_RACK_H
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
 #include <QtGui>
 #include <QtWidgets>
+#include "Widgets/WidgetWithScalableFont.h"
 
-class ToggleButton;
+class Button;
 class SoundLibraryPanel;
 
-class InstrumentRack : public QWidget, private H2Core::Object
+/** \ingroup docGUI*/
+class InstrumentRack : public QWidget, protected WidgetWithScalableFont<5, 6, 7>, private H2Core::Object<InstrumentRack>
 {
-    H2_OBJECT
+    H2_OBJECT(InstrumentRack)
 	Q_OBJECT
 	public:
 		explicit InstrumentRack( QWidget *pParent );
@@ -42,17 +45,17 @@ class InstrumentRack : public QWidget, private H2Core::Object
 
 		SoundLibraryPanel* getSoundLibraryPanel() {	return m_pSoundLibraryPanel;	}
 
-	public slots:
-		void on_showSoundLibraryBtnClicked();
-		void on_showInstrumentEditorBtnClicked();
-
+public slots:
+	/** Used by the #Shotlist*/
+	void showSoundLibrary( bool bShow );
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private:
 		/// button for showing the Sound Library
-		ToggleButton *m_pShowSoundLibraryBtn;
+		Button *m_pShowSoundLibraryBtn;
 
 		/// button for showing the Instrument Editor
-		ToggleButton *m_pShowInstrumentEditorBtn;
+		Button *m_pShowInstrumentEditorBtn;
 
 		SoundLibraryPanel* m_pSoundLibraryPanel;
 

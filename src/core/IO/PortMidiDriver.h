@@ -32,9 +32,10 @@
 namespace H2Core
 {
 
-class PortMidiDriver : public virtual MidiInput, public virtual MidiOutput
+/** \ingroup docCore docMIDI */
+class PortMidiDriver : public Object<PortMidiDriver>, public virtual MidiInput, public virtual MidiOutput
 {
-	H2_OBJECT
+	H2_OBJECT(PortMidiDriver)
 public:
 	PmStream *m_pMidiIn;
 	PmStream *m_pMidiOut;
@@ -43,15 +44,15 @@ public:
 	PortMidiDriver();
 	virtual ~PortMidiDriver();
 
-	virtual void open();
-	virtual void close();
-	virtual std::vector<QString> getInputPortList();	
-	virtual std::vector<QString> getOutputPortList();
+	virtual void open() override;
+	virtual void close() override;
+	virtual std::vector<QString> getInputPortList() override;
+	virtual std::vector<QString> getOutputPortList() override;
 
-	virtual void handleQueueNote(Note* pNote);
-	virtual void handleQueueNoteOff( int channel, int key, int velocity );
-	virtual void handleQueueAllNoteOff();
-	virtual void handleOutgoingControlChange( int param, int value, int channel );
+	virtual void handleQueueNote(Note* pNote) override;
+	virtual void handleQueueNoteOff( int channel, int key, int velocity ) override;
+	virtual void handleQueueAllNoteOff() override;
+	virtual void handleOutgoingControlChange( int param, int value, int channel ) override;
 
 private:
 

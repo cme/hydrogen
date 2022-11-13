@@ -27,9 +27,10 @@
 #include "../Widgets/Button.h"
 #include "../Skin.h"
 
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/Basics/Sample.h>
-#include <core/AudioEngine.h>
+#include <core/Hydrogen.h>
+#include <core/AudioEngine/AudioEngine.h>
 
 #include <QFileSystemModel>
 #include <QModelIndex>
@@ -38,17 +39,24 @@
 
 using namespace H2Core;
 
-const char* AudioFileBrowser::__class_name = "AudioFileBrowser";
-
-AudioFileBrowser::AudioFileBrowser ( QWidget* pParent, bool bAllowMultiSelect, bool bShowInstrumentManipulationControls)
+AudioFileBrowser::AudioFileBrowser ( QWidget* pParent, bool bAllowMultiSelect,
+									 bool bShowInstrumentManipulationControls,
+									 QString sDefaultPath,
+									 const QString& sFilename )
 		: QDialog ( pParent )
-		, Object ( __class_name )
+		, Object ()
+		, m_sFilename( sFilename )
 {
 	setupUi ( this );
-	INFOLOG ( "INIT" );
+	
 	setWindowTitle ( tr ( "Audio File Browser" ) );
 	adjustSize();
 	setFixedSize ( width(), height() );
+
+	if ( sDefaultPath.isEmpty() ) {
+		sDefaultPath = QDir::homePath();
+	}
+	m_sSelectedDirectory = sDefaultPath;
 	
 	m_bAllowMultiSelect = bAllowMultiSelect;
 	m_bShowInstrumentManipulationControls = bShowInstrumentManipulationControls;
@@ -70,22 +78,22 @@ AudioFileBrowser::AudioFileBrowser ( QWidget* pParent, bool bAllowMultiSelect, b
 	m_pTree->resize( 799, 310 );
 	m_pTree->header()->resizeSection( 0, 405 );
 	m_pTree->setAlternatingRowColors( true );
-	m_pTree->setRootIndex( m_pDirModel->index( Preferences::get_instance()->__lastsampleDirectory ) );
+	m_pTree->setRootIndex( m_pDirModel->index( sDefaultPath ) );
 	
-	pathLineEdit->setText( Preferences::get_instance()->__lastsampleDirectory );
+	pathLineEdit->setText( sDefaultPath );
 	m_pSampleFilename = "";
 	m_pSelectedFile << "false" << "false";
 
 	m_sEmptySampleFilename = Filesystem::empty_sample_path();
 
-	m_pPathUptoolButton->setIcon( QIcon( Skin::getImagePath() + "/audiFileBrowser/go-up.png"));
+	m_pPathUptoolButton->setIcon( QIcon( Skin::getSvgImagePath() + "/icons/white/go-up.svg"));
 	m_pPathUptoolButton->setToolTip( QString( tr( "Parent Folder" )));
-	m_pPathHometoolButton->setIcon( QIcon( Skin::getImagePath() + "/audiFileBrowser/go-home.png"));
+	m_pPathHometoolButton->setIcon( QIcon( Skin::getSvgImagePath() + "/icons/white/home.svg"));
 	m_pPathHometoolButton->setToolTip( QString( tr( "Home" )));
 
-	m_pPlayBtn->setIcon( QIcon( Skin::getImagePath() + "/audiFileBrowser/player_play.png"));
+	m_pPlayBtn->setIcon( QIcon( Skin::getSvgImagePath() + "/icons/white/play.svg"));
 	m_pPlayBtn->setToolTip( QString( tr( "Play selected" ) ));
-	m_pStopBtn->setIcon( QIcon( Skin::getImagePath() + "/audiFileBrowser/player_stop.png"));
+	m_pStopBtn->setIcon( QIcon( Skin::getSvgImagePath() + "/icons/white/stop.svg"));
 	m_pStopBtn->setToolTip( QString( tr( "Stop" )));
 
 	m_pSampleWaveDisplay = new SampleWaveDisplay( waveformview );
@@ -101,6 +109,23 @@ AudioFileBrowser::AudioFileBrowser ( QWidget* pParent, bool bAllowMultiSelect, b
 		useNameCheckBox->hide();
 		autoVelCheckBox->hide();
 	}
+	
+	if ( ! sFilename.isEmpty() ) {
+		m_pTree->setCurrentIndex( m_pDirModel->index( sFilename ) );
+		browseTree( m_pDirModel->index( sFilename ) );
+
+		// Right now in the constructor of AudioFileBrowser m_pTree is
+		// still busy doing something different or maybe some update
+		// is triggered afterwards. Either way, calling scrollTo()
+		// directly won't cut it. We have to wait a short amount of
+		// time till the dust has settled.
+		//
+		// The 50 is a heuristic that worked on my machine. This might
+		// need a little more tweaking.
+		QTimer::singleShot( 50, [this]{
+			m_pTree->scrollTo( m_pDirModel->index( m_sFilename ),
+							   QAbstractItemView::PositionAtCenter);} );
+	}
 
 	connect( m_pTree, SIGNAL( clicked( const QModelIndex&) ), SLOT( clicked( const QModelIndex& ) ) );
 	connect( m_pTree, SIGNAL( doubleClicked( const QModelIndex&) ), SLOT( doubleClicked( const QModelIndex& ) ) );
@@ -112,7 +137,7 @@ AudioFileBrowser::AudioFileBrowser ( QWidget* pParent, bool bAllowMultiSelect, b
 AudioFileBrowser::~AudioFileBrowser()
 {
 	auto pNewSample = Sample::load( m_sEmptySampleFilename );
-	AudioEngine::get_instance()->get_sampler()->preview_sample( pNewSample, 100 );
+	H2Core::Hydrogen::get_instance()->getAudioEngine()->getSampler()->preview_sample( pNewSample, 100 );
 	INFOLOG ( "DESTROY" );
 }
 
@@ -166,8 +191,10 @@ void AudioFileBrowser::getEnvironment()
 
 void AudioFileBrowser::keyPressEvent (QKeyEvent *ev)
 {
-	if( ev->modifiers()==Qt::ControlModifier && m_bAllowMultiSelect) {
-		m_pTree->setSelectionMode( QAbstractItemView::MultiSelection );
+	if( ( ev->modifiers()==Qt::ControlModifier ||
+		  ev->modifiers()==Qt::ShiftModifier )
+		&& m_bAllowMultiSelect) {
+		m_pTree->setSelectionMode( QAbstractItemView::ExtendedSelection );
 		openBTN->setEnabled( true );
 	}	
 }
@@ -321,7 +348,7 @@ void AudioFileBrowser::on_m_pPlayBtn_clicked()
 		assert(pNewSample->get_sample_rate() != 0);
 		
 		int length = ( ( pNewSample->get_frames() / pNewSample->get_sample_rate() + 1) * 100 );
-		AudioEngine::get_instance()->get_sampler()->preview_sample( pNewSample, length );
+		H2Core::Hydrogen::get_instance()->getAudioEngine()->getSampler()->preview_sample( pNewSample, length );
 	}
 }
 
@@ -330,7 +357,7 @@ void AudioFileBrowser::on_m_pPlayBtn_clicked()
 void AudioFileBrowser::on_m_pStopBtn_clicked()
 {
 	auto pNewSample = Sample::load( m_sEmptySampleFilename );
-	AudioEngine::get_instance()->get_sampler()->preview_sample( pNewSample, 100 );
+	H2Core::Hydrogen::get_instance()->getAudioEngine()->getSampler()->preview_sample( pNewSample, 100 );
 	m_pStopBtn->setEnabled( false );
 }
 
@@ -338,7 +365,7 @@ void AudioFileBrowser::on_m_pStopBtn_clicked()
 
 void AudioFileBrowser::on_cancelBTN_clicked()
 {
-	Preferences::get_instance()->__lastsampleDirectory = pathLineEdit->text();
+	m_sSelectedDirectory = pathLineEdit->text();
 	m_pSelectedFile << "false" << "false" << "";
 	reject();
 }
@@ -366,7 +393,7 @@ void AudioFileBrowser::on_openBTN_clicked()
 		}
 	}
 
-	Preferences::get_instance()->__lastsampleDirectory = pathLineEdit->text();
+	m_sSelectedDirectory = pathLineEdit->text();
 	accept();
 }
 
@@ -390,7 +417,9 @@ QStringList AudioFileBrowser::getSelectedFiles()
 	return m_pSelectedFile;
 }
 
-
+QString AudioFileBrowser::getSelectedDirectory() {
+	return m_sSelectedDirectory;
+}
 
 void AudioFileBrowser::on_m_pPathHometoolButton_clicked()
 {

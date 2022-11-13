@@ -24,8 +24,11 @@
 #define H2C_PATTERN_H
 
 #include <set>
+#include <memory>
+#include <core/License.h>
 #include <core/Object.h>
 #include <core/Basics/Note.h>
+#include <core/Helpers/Xml.h>
 
 namespace H2Core
 {
@@ -38,9 +41,10 @@ class PatternList;
 /**
 Pattern class is a Note container
 */
-class Pattern : public H2Core::Object
+/** \ingroup docCore docDataStructure */
+class Pattern : public H2Core::Object<Pattern>
 {
-		H2_OBJECT
+		H2_OBJECT(Pattern)
 	public:
 		///< multimap note type
 		typedef std::multimap <int, Note*> notes_t;
@@ -73,7 +77,17 @@ class Pattern : public H2Core::Object
 		 * \param pattern_path the path to the file to load the pattern from
 		 * \param instruments the current instrument list to search instrument into
 		 */
-		static Pattern* load_file( const QString& pattern_path, InstrumentList* instruments );
+		static Pattern* load_file( const QString& pattern_path, std::shared_ptr<InstrumentList> instruments );
+		/**
+		 * load a pattern from an XMLNode
+		 * \param node the XMLDode to read from
+		 * \param instruments the current instrument list to search
+		 * instrument into
+		 * \param bSilent Whether infos, warnings, and errors should
+		 * be logged.
+		 * \return a new Pattern instance
+		 */
+	static Pattern* load_from( XMLNode* node, std::shared_ptr<InstrumentList> instruments, bool bSilent = false );
 		/**
 		 * save a pattern into an xml file
 		 * \param drumkit_name the name of the drumkit it is supposed to play with
@@ -83,7 +97,13 @@ class Pattern : public H2Core::Object
 		 * \param overwrite allows to write over existing pattern file
 		 * \return true on success
 		 */
-		bool save_file( const QString& drumkit_name, const QString& author, const QString& license, const QString& pattern_path, bool overwrite=false ) const; 
+		bool save_file( const QString& drumkit_name, const QString& author, const License& license, const QString& pattern_path, bool overwrite=false ) const;
+
+	/**
+	 * Retrieves the name of the associated drumkit contained in the
+	 * pattern XML file residing at @a sPatternPath.
+	 */
+	static QString loadDrumkitNameFrom( const QString& sPatternPath );
 
 		///< set the name of the pattern
 		void set_name( const QString& name );
@@ -125,7 +145,7 @@ class Pattern : public H2Core::Object
 		 * \param strict if set to false, will search for a note around the given idx
 		 * \return the note if found, 0 otherwise
 		 */
-		Note* find_note( int idx_a, int idx_b, Instrument* instrument, bool strict=true ) const;
+		Note* find_note( int idx_a, int idx_b, std::shared_ptr<Instrument> instrument, bool strict=true ) const;
 		/**
 		 * search for a note at a given index within __notes which correspond to the given arguments
 		 * \param idx_a the first __notes index to search in
@@ -136,7 +156,7 @@ class Pattern : public H2Core::Object
 		 * \param strict if set to false, will search for a note around the given idx
 		 * \return the note if found, 0 otherwise
 		 */
-		Note* find_note( int idx_a, int idx_b, Instrument* instrument, Note::Key key, Note::Octave octave, bool strict=true) const;
+		Note* find_note( int idx_a, int idx_b, std::shared_ptr<Instrument> instrument, Note::Key key, Note::Octave octave, bool strict=true) const;
 		/**
 		 * removes a given note from __notes, it's not deleted
 		 * \param note the note to be removed
@@ -147,13 +167,13 @@ class Pattern : public H2Core::Object
 		 * check if this pattern contains a note referencing the given instrument
 		 * \param instr the instrument
 		*/
-		bool references( Instrument* instr );
+		bool references( std::shared_ptr<Instrument> instr );
 		/**
 		 * delete the notes referencing the given instrument
 		 * The function is thread safe (it locks the audio data while deleting notes)
 		 * \param instr the instrument
 		*/
-		void purge_instrument( Instrument* instr );
+	void purge_instrument( std::shared_ptr<Instrument> instr, bool bRequiredLock = true );
 		/**
 		 * mark all notes as old
 		 */
@@ -180,18 +200,27 @@ class Pattern : public H2Core::Object
 		 * from PatternList::compute_flattened_virtual_patterns
 		 */
 		void flattened_virtual_patterns_compute();
-		/**
-		 * add content of __flatteened_virtual_patterns into patterns
-		 * \param patterns the pattern list to feed
-		 */
-		void extand_with_flattened_virtual_patterns( PatternList* patterns );
+	/**
+	 * Add content of __flattened_virtual_patterns into @a
+	 * pPatternList.
+	 *
+	 * Companion function of removeFlattenedVirtualPatterns();
+	 */
+	void addFlattenedVirtualPatterns( PatternList* pPatternList );
+	/**
+	 * Add content of __flattened_virtual_patterns into @a
+	 * pPatternList.
+	 *
+	 * Companion function of addFlattenedVirtualPatterns();
+	 */
+	void removeFlattenedVirtualPatterns( PatternList* pPatternList );
 
 		/**
 		 * save the pattern within the given XMLNode
 		 * \param node the XMLNode to feed
 		 * \param instrumentOnly export only the notes of that instrument if given
 		 */
-		void save_to( XMLNode* node, const Instrument* instrumentOnly = nullptr ) const;
+		void save_to( XMLNode* node, const std::shared_ptr<Instrument> instrumentOnly = nullptr ) const;
 		/** Formatted string version for debugging purposes.
 		 * \param sPrefix String prefix which will be added in front of
 		 * every new line
@@ -211,13 +240,13 @@ class Pattern : public H2Core::Object
 		notes_t __notes;                                        ///< a multimap (hash with possible multiple values for one key) of note
 		virtual_patterns_t __virtual_patterns;                  ///< a list of patterns directly referenced by this one
 		virtual_patterns_t __flattened_virtual_patterns;        ///< the complete list of virtual patterns
-		/**
-		 * load a pattern from an XMLNode
-		 * \param node the XMLDode to read from
-		 * \param instruments the current instrument list to search instrument into
-		 * \return a new Pattern instance
-		 */
-		static Pattern* load_from( XMLNode* node, InstrumentList* instruments );
+	/**
+	 * Loads the pattern stored in @a sPatternPath into @a pDoc and
+	 * takes care of all the error handling.
+	 *
+	 * \return true on success.
+	 */
+	static bool loadDoc( const QString& sPatternPath, std::shared_ptr<InstrumentList> pInstrumentList, XMLDoc* pDoc, bool bSilent = false );
 };
 
 #define FOREACH_NOTE_CST_IT_BEGIN_END(_notes,_it) \

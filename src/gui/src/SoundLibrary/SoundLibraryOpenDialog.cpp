@@ -28,13 +28,10 @@
 
 using namespace H2Core;
 
-const char* SoundLibraryOpenDialog::__class_name = "SoundLibraryOpenDialog";
-
 SoundLibraryOpenDialog::SoundLibraryOpenDialog( QWidget* pParent )
 	: QDialog( pParent )
-	, Object( __class_name )
 {
-	INFOLOG( "INIT" );
+	
 	setWindowTitle( tr( "Open Sound Library" ) );
 	setFixedSize( 280, 380 );
 
@@ -87,7 +84,6 @@ void SoundLibraryOpenDialog::on_soundLib_item_changed( bool bDrumkitSelected)
 void SoundLibraryOpenDialog::on_open_btn_clicked()
 {
 	m_pSoundLibraryPanel->on_drumkitLoadAction();
-	HydrogenApp::get_instance()->getInstrumentRack()->getSoundLibraryPanel()->update_background_color();
 	accept();
 }
 

@@ -22,116 +22,157 @@
 
 #include "LCDCombo.h"
 
+#include "../HydrogenApp.h"
 #include "../Skin.h"
-#include "LCD.h"
-#include "Button.h"
 
 #include <core/Globals.h>
 
-const char* LCDCombo::__class_name = "LCDCombo";
 
-LCDCombo::LCDCombo( QWidget *pParent, int digits, bool bAllowMenuOverflow )
-	: QWidget(pParent)
-	, Object( __class_name )
-	, m_bAllowMenuOverflow( bAllowMenuOverflow )
+LCDCombo::LCDCombo( QWidget *pParent, QSize size, bool bModifyOnChange )
+	: QComboBox( pParent )
+	, m_size( size )
+	, m_bEntered( false )
+	, m_bModifyOnChange( bModifyOnChange )
+	, m_nMaxWidth( 0 )
+	, m_bIsActive( true )
 {
-	INFOLOG( "INIT" );
+	setFocusPolicy( Qt::ClickFocus );
 
-	display = new LCDDisplay( this, LCDDigit::SMALL_BLUE, digits, false );
-	button = new Button( this,
-	                     "/patternEditor/btn_dropdown_on.png",
-	                     "/patternEditor/btn_dropdown_off.png",
-	                     "/patternEditor/btn_dropdown_over.png",
-	                     QSize(13, 13)
-	                   );
-	pop = new QMenu( this );
-
-	size = digits;
-	active = -1;
-
-	button->move( ( digits * 8 ) + 5, 1 );
-	setFixedSize( ( digits * 8 ) + 17, display->height() );
-
-	connect( button, SIGNAL( clicked( Button* ) ), this, SLOT( onClick( Button* ) ) );
-	connect( pop, SIGNAL( triggered(QAction*) ), this, SLOT( changeText(QAction*) ) );
-}
-
-LCDCombo::~LCDCombo()
-{
-}
-
-void LCDCombo::changeText( QAction* pAction )
-{
-	select( actions.indexOf(pAction) );
-}
-
-void LCDCombo::onClick( Button* )
-{
-	pop->popup( display->mapToGlobal( QPoint( 1, display->height() + 2 ) ) );
-}
-
-bool LCDCombo::addItem( const QString &text )
-{
-	//INFOLOG( "add item" );
-	if ( text.size() <= size || m_bAllowMenuOverflow ) {
-		actions.append( pop->addAction( text ) );
-		return true;
-	} else {
-		WARNINGLOG(QString( "'%1' is > %2").arg( text ).arg( size ) );
-		return false;
+	if ( ! size.isNull() ) {
+		adjustSize();
+		setFixedSize( size );
 	}
+
+	updateStyleSheet();
+
+	connect( HydrogenApp::get_instance(), &HydrogenApp::preferencesChanged, this, &LCDCombo::onPreferencesChanged );
+	// Mark the current song modified if there was an user interaction
+	// with the widget.
+	connect( this, QOverload<int>::of(&QComboBox::activated),
+			 [=](int){
+				 if ( m_bModifyOnChange ) {
+					 H2Core::Hydrogen::get_instance()->setIsModified( true );
+				 }
+			 });
 }
 
-void LCDCombo::addSeparator()
-{
-	actions.append( pop->addSeparator() );
+LCDCombo::~LCDCombo() {
 }
 
-void LCDCombo::mousePressEvent( QMouseEvent *ev )
-{
-	UNUSED( ev );
-	pop->popup( display->mapToGlobal( QPoint( 1, display->height() + 2 ) ) );
+void LCDCombo::addItem( const QString& sText, const QVariant& userData ) {
+	int nWidth =
+		fontMetrics().size( Qt::TextSingleLine, sText ).width() *
+		1.1 + // custom factor to ensure the text does fit
+		view()->autoScrollMargin(); // width of the scrollbar
+
+	if ( nWidth > m_nMaxWidth ) {
+		m_nMaxWidth = nWidth;
+	}
+
+	QComboBox::addItem( sText, userData );
 }
 
-void LCDCombo::wheelEvent( QWheelEvent * ev )
-{
-	ev->ignore();
-	const int n = actions.size();
-	const int d = ( ev->angleDelta().y() > 0 ) ? -1: 1;
-	int next = ( n + active + d ) % n;
-	if ( actions.at( next )->isSeparator() ) {
-		next = ( n + next + d ) % n;
+void LCDCombo::setIsActive( bool bIsActive ) {
+	m_bIsActive = bIsActive;
+	
+	update();
+	
+	setEnabled( bIsActive );
+}
+
+void LCDCombo::showPopup() {
+	if ( m_nMaxWidth > view()->sizeHint().width() ) {
+		view()->setMinimumWidth( m_nMaxWidth );
 	}
 	
-	select( next );
+	QComboBox::showPopup();
 }
 
-int LCDCombo::selected()
-{
-	return active;
-}
+void LCDCombo::updateStyleSheet() {
 
-bool LCDCombo::select( int idx )
-{
-	return select(idx, true);
-}
+	auto pPref = H2Core::Preferences::get_instance();
 
-bool LCDCombo::select( int idx, bool emitValueChanged )
-{
-	if (active == idx) {
-		return false;
-	}
 
-	if (idx < 0 || idx >= actions.size()) {
-		WARNINGLOG(QString("out of index %1 >= %2").arg(idx).arg(actions.size()));
-		return false;
-	}
-
-	active = idx;
-	display->setText( actions.at( idx )->text() );
-	if ( emitValueChanged ) {
-		emit valueChanged( idx );
-	}
+	QColor widgetColor = pPref->getColorTheme()->m_widgetColor;
+	QColor widgetTextColor = pPref->getColorTheme()->m_widgetTextColor;
+	QColor widgetInactiveColor = 
+		Skin::makeWidgetColorInactive( widgetColor );
+	QColor widgetTextInactiveColor =
+		Skin::makeTextColorInactive( widgetTextColor );
 	
-	return true;
+	setStyleSheet( QString( "\
+QComboBox:enabled { \
+    color: %1; \
+    background-color: %2; \
+    font-family: %3; \
+    font-size: %4; \
+} \
+QComboBox:disabled { \
+    color: %5; \
+    background-color: %6; \
+    font-family: %3; \
+    font-size: %4; \
+} \
+QComboBox QAbstractItemView { \
+    color: %1; \
+    background-color: #babfcf; \
+}")
+				   .arg( widgetTextColor.name() )
+				   .arg( widgetColor.name() )
+				   .arg( pPref->getLevel3FontFamily() )
+				   .arg( getPointSize( pPref->getFontSize() ) )
+				   .arg( widgetTextInactiveColor.name() )
+				   .arg( widgetInactiveColor.name() ) );
+}
+
+void LCDCombo::onPreferencesChanged( H2Core::Preferences::Changes changes ) {
+	
+	if ( changes & ( H2Core::Preferences::Changes::Colors |
+					 H2Core::Preferences::Changes::Font ) ) {
+		updateStyleSheet();
+	}
+}
+
+void LCDCombo::paintEvent( QPaintEvent *ev ) {
+
+	auto pPref = H2Core::Preferences::get_instance();
+	
+	QComboBox::paintEvent( ev );
+
+	if ( m_bEntered || hasFocus() ) {
+		QPainter painter(this);
+	
+		QColor colorHighlightActive;
+		if ( m_bIsActive ) {
+			colorHighlightActive = pPref->getColorTheme()->m_highlightColor;
+		} else {
+			colorHighlightActive = pPref->getColorTheme()->m_lightColor;
+		}
+
+		// If the mouse is placed on the widget but the user hasn't
+		// clicked it yet, the highlight will be done more transparent to
+		// indicate that keyboard inputs are not accepted yet.
+		if ( ! hasFocus() ) {
+			colorHighlightActive.setAlpha( 150 );
+		}
+	
+		painter.fillRect( 0, m_size.height() - 2, m_size.width(), 2, colorHighlightActive );
+	}
+}
+
+void LCDCombo::enterEvent( QEvent* ev ) {
+	QComboBox::enterEvent( ev );
+	m_bEntered = true;
+}
+
+void LCDCombo::leaveEvent( QEvent* ev ) {
+	QComboBox::leaveEvent( ev );
+	m_bEntered = false;
+}
+
+void LCDCombo::setSize( QSize size ) {
+	m_size = size;
+	
+	setFixedSize( size );
+	adjustSize();
 }

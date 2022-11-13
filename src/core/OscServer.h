@@ -85,9 +85,10 @@ namespace H2Core
 * @author Sebastian Moors
 *
 */
-class OscServer : public H2Core::Object
+/** \ingroup docCore docDebugging*/
+class OscServer : public H2Core::Object<OscServer>
 {
-	H2_OBJECT
+	H2_OBJECT(OscServer)
 	public:
 		/**
 		 * Object holding the current OscServer singleton. It is
@@ -163,6 +164,7 @@ class OscServer : public H2Core::Object
 		 * - MASTER_VOLUME_RELATIVE_Handler()
 		 * - STRIP_VOLUME_RELATIVE_Handler()
 		 * - SELECT_NEXT_PATTERN_Handler()
+		 * - SELECT_ONLY_NEXT_PATTERN_Handler()
 		 * - SELECT_AND_PLAY_PATTERN_Handler() 
 		 * - PLAYLIST_SONG_Handler()
 		 * - SELECT_INSTRUMENT_Handler()
@@ -236,6 +238,8 @@ class OscServer : public H2Core::Object
 		 * - \e /Hydrogen/STRIP_VOLUME_ABSOLUTE/[x]
 		 * - \e /Hydrogen/STRIP_VOLUME_RELATIVE/[x]
 		 * - \e /Hydrogen/PAN_ABSOLUTE/[x]
+		 * - \e /Hydrogen/PAN_ABSOLUTE_SYM/[x]
+		 * - \e /Hydrogen/PAN_RELATIVE/[x]
 		 * - \e /Hydrogen/STRIP_MUTE_TOGGLE/[x]
 		 * - \e /Hydrogen/STRIP_SOLO_TOGGLE/[x]
 		 *
@@ -248,7 +252,7 @@ class OscServer : public H2Core::Object
 		 * \param pAction Action to be sent to all registered
 		 * clients. 
 		 */
-		void handleAction(Action* pAction);
+		void handleAction(std::shared_ptr<Action> pAction);
 
 		/**
 		 * Creates an Action of type @b PLAY and passes its
@@ -377,6 +381,15 @@ class OscServer : public H2Core::Object
 		 * message.*/
 		static void PREVIOUS_BAR_Handler(lo_arg **argv, int i);
 		/**
+		 * Creates sets the current tempo of Hydrogen to the provided
+		 * value (first argument in @a argv).
+		 *
+		 * \param argv Pointer to a vector of arguments passed
+		 * by the OSC message.
+		 * \param i Unused number of arguments passed by the OSC
+		 * message.*/
+		static void BPM_Handler(lo_arg **argv, int i);
+		/**
 		 * Creates an Action of type @b BPM_INCR and passes its
 		 * references to MidiActionManager::handleAction().
 		 *
@@ -452,6 +465,18 @@ class OscServer : public H2Core::Object
 		 * message.*/
 		static void SELECT_NEXT_PATTERN_Handler(lo_arg **argv, int i);
 		/**
+		 * Creates an Action of type @b SELECT_ONLY_NEXT_PATTERN and
+		 * passes its references to MidiActionManager::handleAction().
+		 *
+		 * The first argument in @a argv will be used to set
+		 * Action::parameter1.
+		 *
+		 * \param argv Pointer to a vector of arguments passed
+		 * by the OSC message.
+		 * \param i Unused number of arguments passed by the OSC
+		 * message.*/
+		static void SELECT_ONLY_NEXT_PATTERN_Handler(lo_arg **argv, int i);
+		/**
 		 * Creates an Action of type @b SELECT_AND_PLAY_PATTERN and
 		 * passes its references to MidiActionManager::handleAction().
 		 *
@@ -463,24 +488,6 @@ class OscServer : public H2Core::Object
 		 * \param i Unused number of arguments passed by the OSC
 		 * message.*/
 		static void SELECT_AND_PLAY_PATTERN_Handler(lo_arg **argv, int i);
-		/**
-		 * Creates an Action of type @b PAN_RELATIVE and
-		 * passes its references to MidiActionManager::handleAction().
-		 *
-		 * \param param1 Sets Action::parameter1 of the newly created
-		 * Action.
-		 * \param param2 Sets Action::parameter2 of the newly created
-		 * Action.*/
-		static void PAN_RELATIVE_Handler(QString param1, QString param2);
-		/**
-		 * Creates an Action of type @b PAN_ABSOLTUE and
-		 * passes its references to MidiActionManager::handleAction().
-		 *
-		 * \param param1 Sets Action::parameter1 of the newly created
-		 * Action.
-		 * \param param2 Sets Action::parameter2 of the newly created
-		 * Action.*/
-		static void PAN_ABSOLUTE_Handler(QString param1, QString param2);
 		/**
 		 * Creates an Action of type @b FILTER_CUTOFF_LEVEL_ABSOLUTE
 		 * and passes its references to
@@ -585,19 +592,17 @@ class OscServer : public H2Core::Object
 		 * a .h2song file. If another file already exists with the
 		 * same name, it will be overwritten.
 		 *
-		 * \param argv Unused pointer to a vector of arguments passed
-		 * by the OSC message.
+		 * \param argv The "s" field does contain the absolute path.
 		 * \param argc Number of arguments passed by the OSC message.
 		 */
 		static void NEW_SONG_Handler(lo_arg **argv, int argc);
 		/**
 		 * Triggers CoreActionController::openSong().
 		 *
-		 * The handler expects the user to provide an absolute path to
+		 * The handler expects the user to provide an absolute path for
 		 * a .h2song file.
 		 *
-		 * \param argv Unused pointer to a vector of arguments passed
-		 * by the OSC message.
+		 * \param argv The "s" field does contain the absolute path.
 		 * \param argc Number of arguments passed by the OSC message.
 		 */
 		static void OPEN_SONG_Handler(lo_arg **argv, int argc);
@@ -616,8 +621,7 @@ class OscServer : public H2Core::Object
 		 * a .h2song file. If another file already exists with the
 		 * same name, it will be overwritten.
 		 *
-		 * \param argv Unused pointer to a vector of arguments passed
-		 * by the OSC message.
+		 * \param argv The "s" field does contain the absolute path.
 		 * \param argc Number of arguments passed by the OSC
 		 * message.*/
 		static void SAVE_SONG_AS_Handler(lo_arg **argv, int argc);
@@ -640,7 +644,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::activateTimeline().
 		 *
-		 * \param argv The "i" field does contain the value supplied
+		 * \param argv The "f" field does contain the value supplied
 		 * by the user. If it is 0, the Timeline will be
 		 * deactivated. Else, it will be activated instead.
 		 * \param argc Unused number of arguments passed by the OSC
@@ -649,7 +653,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::addTempoMarker().
 		 *
-		 * \param argv The first field "i" does contain the bar at
+		 * \param argv The first field "f" does contain the bar at
 		 * which to place the new Timeline::TempoMarker while the
 		 * second one "f" specifies its tempo in bpm.
 		 * \param argc Unused number of arguments passed by the OSC
@@ -658,7 +662,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::deleteTempoMarker().
 		 *
-		 * \param argv The first field "i" does contain the bar at
+		 * \param argv The first field "f" does contain the bar at
 		 * which to delete a Timeline::TempoMarker.
 		 * \param argc Unused number of arguments passed by the OSC
 		 * message.*/
@@ -666,7 +670,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::activatedJackTransport().
 		 *
-		 * \param argv The "i" field does contain the value supplied
+		 * \param argv The "f" field does contain the value supplied
 		 * by the user. If it is 0, the Jack transport will be
 		 * deactivated. Else, it will be activated instead.
 		 * \param argc Unused number of arguments passed by the OSC
@@ -675,7 +679,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::activateJackTimebaseMaster().
 		 *
-		 * \param argv The "i" field does contain the value supplied
+		 * \param argv The "f" field does contain the value supplied
 		 * by the user. If it is 0, the Jack timebase master will be
 		 * deactivated. Else, it will be activated instead.
 		 * \param argc Unused number of arguments passed by the OSC
@@ -684,7 +688,7 @@ class OscServer : public H2Core::Object
 		/**
 		 * Triggers CoreActionController::activateSongMode().
 		 *
-		 * \param argv The "i" field does contain the value supplied
+		 * \param argv The "f" field does contain the value supplied
 		 * by the user. If it is 0, Pattern mode of the playback will
 		 * be activated. Else, Song mode will be activated instead.
 		 * \param argc Unused number of arguments passed by the OSC
@@ -693,21 +697,111 @@ class OscServer : public H2Core::Object
 	/**
 		 * Triggers CoreActionController::activateLoopMode().
 		 *
-		 * \param argv The "i" field does contain the value supplied
+		 * \param argv The "f" field does contain the value supplied
 		 * by the user. If it is 0, loop mode will
 		 * be deactivated. Else, it will be activated instead.
 		 * \param argc Unused number of arguments passed by the OSC
 		 * message.*/
 		static void LOOP_MODE_ACTIVATION_Handler(lo_arg **argv, int argc);
 		/**
-		 * Triggers CoreActionController::relocateToPattern().
-		 *
-		 * \param argv The "i" field does contain the desired
+		 * \param argv The "f" field does contain the desired
 		 * position / number of the pattern group (starting with
 		 * 0).
 		 * \param argc Unused number of arguments passed by the OSC
 		 * message.*/
 		static void RELOCATE_Handler(lo_arg **argv, int argc);
+		/**
+		 * Triggers CoreActionController::newSong().
+		 *
+		 * The handler expects the user to provide an absolute path for
+		 * a .h2pattern file. If another file already exists with the
+		 * same name, it will be overwritten.
+		 *
+		 * \param argv The "s" field does contain the name for the new
+		 * pattern.
+		 * \param argc Number of arguments passed by the OSC message.
+		 */
+		static void NEW_PATTERN_Handler(lo_arg **argv, int argc);
+		/**
+		 * Triggers CoreActionController::openPattern().
+		 *
+		 * The handler expects the user to provide an absolute path to
+		 * a .h2pattern file.
+		 *
+		 * \param argv The "s" field does contain the absolute path.
+		 * \param argc Number of arguments passed by the OSC message.
+		 */
+		static void OPEN_PATTERN_Handler(lo_arg **argv, int argc);
+		/**
+		 * Triggers CoreActionController::removePattern().
+		 *
+		 * The handler expects the user to provide the pattern number
+		 * (row the pattern resides in within the SongEditor).
+		 *
+		 * \param argv The "f" field does contain the pattern number
+		 * (caution: it starts at 0).
+		 * \param argc Number of arguments passed by the OSC message.
+		 */
+		static void REMOVE_PATTERN_Handler(lo_arg **argv, int argc);
+		/**
+		 * Triggers CoreActionController::songEditorToggleGridCell().
+		 *
+		 * The handler expects the user to provide the pattern number
+		 * (row the pattern resides in within the SongEditor).
+		 *
+		 * \param argv The first two "f" fields do contain the column
+		 * and row number of the particular grid cell.
+		 * \param argc Number of arguments passed by the OSC message.
+		 */
+		static void SONG_EDITOR_TOGGLE_GRID_CELL_Handler(lo_arg **argv, int argc);
+		/**
+		 * Triggers CoreActionController::setDrumkit().
+		 *
+		 * The handler expects the user to provide the drumkit name. 
+		 * (row the pattern resides in within the SongEditor). The
+		 * second argument, whether or not superfluous instrument
+		 * should be removed even if there is a pattern in which they
+		 * contain notes, is optional. The default choice will be true.
+		 */
+	static void LOAD_DRUMKIT_Handler( lo_arg **argv, int argc );
+		/**
+		 * Triggers CoreActionController::upgradeDrumkit().
+		 *
+		 * The handler expects the user to provide as first argument
+		 * the absolute path to a folder containing a drumkit, the
+		 * absolute path to a drumkit file (drumkit.xml) itself, or an
+		 * absolute path to a compressed drumkit ( *.h2drumkit). The
+		 * second argument is optional and contains the absolute path
+		 * to a directory where the upgraded kit will be stored. If
+		 * the second path is missing, the drumkit will be upgraded in
+		 * place and a backup file will be created in order to not
+		 * overwrite the existing state. If a compressed drumkit is
+		 * provided as first argument, the upgraded drumkit will be
+		 * compressed as well.
+		 */
+	static void UPGRADE_DRUMKIT_Handler( lo_arg **argv, int argc );
+		/**
+		 * Triggers CoreActionController::validateDrumkit().
+		 *
+		 * The handler expects the user to provide the absolute path
+		 * to a folder containing a drumkit, the absolute path to a
+		 * drumkit file (drumkit.xml) itself, or an absolute path to a
+		 * compressed drumkit ( *.h2drumkit). The second argument is
+		 * optional and contains the absolute path to a directory
+		 * where the upgraded kit will be stored.
+		 */
+	static void VALIDATE_DRUMKIT_Handler( lo_arg **argv, int argc );
+		/**
+		 * Triggers CoreActionController::extractDrumkit().
+		 *
+		 * The handler expects the user to provide as first argument
+		 * the absolute path to a compressed drumkit ( *.h2drumkit). The
+		 * second argument is optional and contains the absolute path
+		 * to a directory where the kit will be extracted to. If
+		 * the second path is missing, the drumkit will be installed
+		 * in the user's drumkit data folder.
+		 */
+	static void EXTRACT_DRUMKIT_Handler( lo_arg **argv, int argc );
 		/** 
 		 * Catches any incoming messages and display them. 
 		 *
@@ -716,6 +810,7 @@ class OscServer : public H2Core::Object
 		 * (if only a single argument is present.)
 		 * - \e /Hydrogen/STRIP_VOLUME_ABSOLUTE/[x]
 		 * - \e /Hydrogen/PAN_ABSOLUTE/[x]
+		 * - \e /Hydrogen/PAN_ABSOLUTE_SYM/[x]
 		 * - \e /Hydrogen/PAN_RELATIVE/[x]
 		 * - \e /Hydrogen/FILTER_CUTOFF_LEVEL_ABSOLUTE/[x]
 		 * - \e /Hydrogen/STRIP_MUTE_TOGGLE/[x]
@@ -736,7 +831,9 @@ class OscServer : public H2Core::Object
 		 * \return 1 - means that the message has not been fully
 		 * handled and the server should try other methods */
 		static int  generic_handler(const char *path, const char *types, lo_arg ** argv,
-								int argc, void *data, void *user_data);
+								int argc, lo_message data, void *user_data);
+	static int incomingMessageLogging(const char *path, const char *types, lo_arg ** argv,
+								int argc, lo_message data, void *user_data);
 
 	private:
 		/**

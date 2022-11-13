@@ -23,21 +23,21 @@
 #include <algorithm>
 #include <core/Basics/PatternList.h>
 
-//#include <core/Helpers/Xml.h>
+#include <core/Helpers/Xml.h>
+#include <core/Basics/InstrumentList.h>
 #include <core/Basics/Pattern.h>
 
-#include <core/AudioEngine.h>
+#include <core/AudioEngine/AudioEngine.h>
 
 namespace H2Core
 {
 
-const char* PatternList::__class_name = "PatternList";
 
-PatternList::PatternList() : Object( __class_name )
+PatternList::PatternList()
 {
 }
 
-PatternList::PatternList( PatternList* other ) : Object( __class_name )
+PatternList::PatternList( PatternList* other ) : Object( *other )
 {
 	assert( __patterns.size() == 0 );
 	for ( int i=0; i<other->size(); i++ ) {
@@ -53,24 +53,98 @@ PatternList::~PatternList()
 	}
 }
 
-void PatternList::add( Pattern* pattern )
-{
-	assertAudioEngineLocked();
-	// do nothing if already in __patterns
-	if ( index( pattern) != -1 ) {
-		return;
+PatternList* PatternList::load_from( XMLNode* pNode, std::shared_ptr<InstrumentList> pInstrumentList, bool bSilent ) {
+	XMLNode patternsNode = pNode->firstChildElement( "patternList" );
+	if ( patternsNode.isNull() ) {
+		ERRORLOG( "'patternList' node not found. Unable to load pattern list." );
+		return nullptr;
 	}
-	__patterns.push_back( pattern );
+
+	PatternList* pPatternList = new PatternList();
+	int nPatternCount = 0;
+
+	XMLNode patternNode =  patternsNode.firstChildElement( "pattern" );
+	while ( !patternNode.isNull()  ) {
+		nPatternCount++;
+		Pattern* pPattern = Pattern::load_from( &patternNode, pInstrumentList, bSilent );
+		if ( pPattern != nullptr ) {
+			pPatternList->add( pPattern );
+		}
+		else {
+			ERRORLOG( "Error loading pattern" );
+			delete pPatternList;
+			return nullptr;
+		}
+		patternNode = patternNode.nextSiblingElement( "pattern" );
+	}
+	if ( nPatternCount == 0 && ! bSilent ) {
+		WARNINGLOG( "0 patterns?" );
+	}
+
+	return pPatternList;
 }
 
-void PatternList::insert( int idx, Pattern* pattern )
+void PatternList::save_to( XMLNode* pNode, const std::shared_ptr<Instrument> pInstrumentOnly ) const {
+	XMLNode patternListNode = pNode->createNode( "patternList" );
+	
+	for ( const auto& pPattern : __patterns ) {
+		if ( pPattern != nullptr ) {
+			pPattern->save_to( &patternListNode, pInstrumentOnly );
+		}
+	}
+}
+	
+void PatternList::add( Pattern* pPattern )
+{
+	assertAudioEngineLocked();
+	if ( pPattern == nullptr ) {
+		ERRORLOG( "Provided pattern is invalid" );
+		return;
+	}
+	
+	// do nothing if already in __patterns
+	if ( index( pPattern ) != -1 ) {
+		INFOLOG( "Provided pattern is already contained" );
+		return;
+	}
+	else {
+		// Check whether the pattern is contained as a virtual
+		// pattern.
+		for ( const auto& ppPattern : __patterns ) {
+			auto pVirtualPatterns = ppPattern->get_virtual_patterns();
+			if ( pVirtualPatterns->find( pPattern ) != pVirtualPatterns->end() ) {
+				INFOLOG( "Provided pattern is already contained as virtual pattern" );
+				return;
+			}
+		}
+	}
+
+	// In case the added pattern is a virtual one, deactivate the
+	// individual patterns it encompasses in case one of them was
+	// already activated. (They will be only activated as virtual
+	// patterns from here on).
+	auto pVirtualPatterns = pPattern->get_virtual_patterns();
+	for ( int ii = __patterns.size() - 1; ii >= 0 && ii < __patterns.size(); --ii ) {
+		auto ppPattern = __patterns[ ii ];
+		if ( pVirtualPatterns->find( ppPattern ) != pVirtualPatterns->end() ) {
+			del( ii );
+		}
+	}
+	
+	__patterns.push_back( pPattern );
+}
+
+void PatternList::insert( int nIdx, Pattern* pPattern )
 {
 	assertAudioEngineLocked();
 	// do nothing if already in __patterns
-	if ( index( pattern) != -1 ) {
+	if ( index( pPattern ) != -1 ) {
 		return;
 	}
-	__patterns.insert( __patterns.begin() + idx, pattern );
+	if ( nIdx > __patterns.size() ) {
+		__patterns.resize( nIdx );
+	}
+	__patterns.insert( __patterns.begin() + nIdx, pPattern );
 }
 
 Pattern* PatternList::get( int idx )
@@ -84,7 +158,7 @@ Pattern* PatternList::get( int idx )
 	return __patterns[idx];
 }
 
-const Pattern* PatternList::get( int idx ) const
+Pattern* PatternList::get( int idx ) const
 {
 	assertAudioEngineLocked();
 	if ( idx < 0 || idx >= __patterns.size() ) {
@@ -95,10 +169,12 @@ const Pattern* PatternList::get( int idx ) const
 	return __patterns[idx];
 }
 
-int PatternList::index( const Pattern* pattern )
+int PatternList::index( const Pattern* pattern ) const
 {
 	for( int i=0; i<__patterns.size(); i++ ) {
-		if ( __patterns[i]==pattern ) return i;
+		if ( __patterns[i]==pattern ) {
+			return i;
+		}
 	}
 	return -1;
 }
@@ -106,10 +182,12 @@ int PatternList::index( const Pattern* pattern )
 Pattern* PatternList::del( int idx )
 {
 	assertAudioEngineLocked();
-	assert( idx >= 0 && idx < __patterns.size() );
-	Pattern* pattern = __patterns[idx];
-	__patterns.erase( __patterns.begin() + idx );
-	return pattern;
+	if ( idx >= 0 && idx < __patterns.size() ) {
+		Pattern* pattern = __patterns[idx];
+		__patterns.erase( __patterns.begin() + idx );
+		return pattern;
+	}
+	return nullptr;
 }
 
 Pattern* PatternList::del( Pattern* pattern )
@@ -243,7 +321,7 @@ QString PatternList::find_unused_pattern_name( QString sourceName, Pattern* igno
 	return unusedPatternNameCandidate;
 }
 
-int PatternList::longest_pattern_length() {
+int PatternList::longest_pattern_length() const {
 	int nMax = -1;
 	for ( int i = 0; i < __patterns.size(); i++ ) {
 		nMax = std::max( nMax, __patterns[i]->get_length() );
@@ -252,7 +330,7 @@ int PatternList::longest_pattern_length() {
 }
 
 QString PatternList::toQString( const QString& sPrefix, bool bShort ) const {
-	QString s = Object::sPrintIndention;
+	QString s = Base::sPrintIndention;
 	QString sOutput;
 	if ( ! bShort ) {
 		sOutput = QString( "%1[PatternList]\n" ).arg( sPrefix );
@@ -265,13 +343,22 @@ QString PatternList::toQString( const QString& sPrefix, bool bShort ) const {
 		sOutput = QString( "[PatternList] " );
 		for ( auto pp : __patterns ) {
 			if ( pp != nullptr ) {
-				sOutput.append( QString( "[%1] " ).arg( pp->toQString( sPrefix + s, bShort ) ) );
+				sOutput.append( QString( "[%1] " ).arg( pp->get_name() ) );
 			}
 		}
-		sOutput.append( "]" );
 	}
 	
 	return sOutput;
+}
+
+
+std::vector<Pattern*>::iterator PatternList::begin() {
+	assertAudioEngineLocked();
+	return __patterns.begin();
+}
+
+std::vector<Pattern*>::iterator PatternList::end() {
+	return __patterns.end();
 }
  
 }

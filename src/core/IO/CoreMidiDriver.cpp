@@ -31,7 +31,7 @@
 #include <core/Basics/Note.h>
 #include <core/Basics/Instrument.h>
 #include <core/Basics/InstrumentList.h>
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 #include <core/IO/CoreMidiDriver.h>
 
 #if defined(H2CORE_HAVE_COREMIDI) || _DOXYGEN_
@@ -98,13 +98,11 @@ static void midiProc ( const MIDIPacketList * pktlist,
 }
 
 
-const char* CoreMidiDriver::__class_name = "CoreMidiDriver";
-
 CoreMidiDriver::CoreMidiDriver()
-		: MidiInput( __class_name ) ,MidiOutput( __class_name ), Object( __class_name )
+		: MidiInput() ,MidiOutput(), Object<CoreMidiDriver>()
 		, m_bRunning( false )
 {
-	INFOLOG( "INIT" );
+	
 	OSStatus err = noErr;
 
 	QString sMidiPortName = Preferences::get_instance()->m_sMidiPortName;
@@ -332,11 +330,11 @@ void CoreMidiDriver::handleQueueAllNoteOff()
 		return;
 	}
 
-	InstrumentList *instList = Hydrogen::get_instance()->getSong()->getInstrumentList();
+	auto instList = Hydrogen::get_instance()->getSong()->getInstrumentList();
 
 	unsigned int numInstruments = instList->size();
 	for (int index = 0; index < numInstruments; ++index) {
-		Instrument *curInst = instList->get(index);
+		auto curInst = instList->get(index);
 
 		int channel = curInst->get_midi_out_channel();
 		if (channel < 0) {

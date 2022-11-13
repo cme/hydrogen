@@ -25,53 +25,53 @@
 
 
 #include <QtGui>
-#include <QtWidgets>
+#include <QComboBox>
+#include "WidgetWithScalableFont.h"
 
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
-class Button;
-class LCDDisplay;
-
-class LCDCombo : public QWidget, public H2Core::Object
+/** \ingroup docGUI docWidgets*/
+class LCDCombo : public QComboBox, protected WidgetWithScalableFont<6, 8, 9>, public H2Core::Object<LCDCombo>
 {
-		H2_OBJECT
-		Q_OBJECT
-	public:
-		explicit LCDCombo( QWidget *pParent, int digits = 5, bool bAllowMenuOverflow = false );
-		~LCDCombo();
+	H2_OBJECT(LCDCombo)
+	Q_OBJECT
 
-		bool addItem( const QString &text );
-		void addSeparator();
-		int selected();
-	public slots:
-		bool select(int idx );
-		bool select(int idx, bool emitValueChanged );
+public:
+	explicit LCDCombo( QWidget *pParent, QSize size = QSize( 0, 0 ), bool bModifyOnChange = true );
+	~LCDCombo();
 
+	void setSize( QSize size );
+	virtual void showPopup() override;
+	void addItem(const QString &text, const QVariant &userData = QVariant());
+	
+	bool getIsActive() const;
+	void setIsActive( bool bIsActive );
 
-	private slots:
-		void changeText( QAction* );
-		void onClick( Button* );
+public slots:
+	void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
-	signals:
-		void valueChanged( int idx );
+private:
+	void updateStyleSheet();
+	QSize m_size;
 
-	private:
-		QList<QAction*> actions;
-		LCDDisplay *display;
-		Button *button;
-		QMenu *pop;
-		int size;
-		int active;
-		/** Allows for the entries in #pop to be larger than the
-			display itself. Only the first #size characters will be 
-			displayed.*/
-		bool m_bAllowMenuOverflow;
+	bool m_bEntered;
+	bool m_bIsActive;
+
+	/** Whether Hydrogen::setIsModified() is invoked with `true` as
+		soon as the value of the widget does change.*/
+	bool m_bModifyOnChange;
+
+	/** Keep track of the text width of the items added. It is used to
+		determine the size of the popup in order to ensure all content
+		fits inside.*/
+	int m_nMaxWidth;
 		
-		static const QString SEPARATOR;
-
-		virtual void mousePressEvent( QMouseEvent *ev );
-		virtual void wheelEvent( QWheelEvent * ev );
+	virtual void paintEvent( QPaintEvent *ev ) override;
+	virtual void enterEvent( QEvent *ev ) override;
+	virtual void leaveEvent( QEvent *ev ) override;
 };
-
-
+inline bool LCDCombo::getIsActive() const {
+	return m_bIsActive;
+}
 #endif

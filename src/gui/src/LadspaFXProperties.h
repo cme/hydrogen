@@ -33,9 +33,11 @@
 class Fader;
 class LCDDisplay;
 class InstrumentNameWidget;
+class WidgetWithInput;
 
-class LadspaFXProperties : public QWidget, public H2Core::Object {
-    H2_OBJECT
+/** \ingroup docGUI*/
+class LadspaFXProperties :  public QWidget,  public H2Core::Object<LadspaFXProperties> {
+    H2_OBJECT(LadspaFXProperties)
 	Q_OBJECT
 
 	public:
@@ -44,11 +46,11 @@ class LadspaFXProperties : public QWidget, public H2Core::Object {
 
 		void updateControls();
 
-		void showEvent ( QShowEvent *ev );
-		void closeEvent( QCloseEvent *ev );
+		virtual void showEvent ( QShowEvent *ev ) override;
+		virtual void closeEvent( QCloseEvent *ev ) override;
 
 	public slots:
-		void faderChanged( Fader* ref );
+		void faderChanged( WidgetWithInput* ref );
 		void selectFXBtnClicked();
 		void removeFXBtnClicked();
 		void activateBtnClicked();

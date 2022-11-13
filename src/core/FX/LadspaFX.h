@@ -35,9 +35,10 @@
 namespace H2Core
 {
 
-class LadspaFXInfo : public H2Core::Object
+/** \ingroup docCore docAudioEngine */
+class LadspaFXInfo : public H2Core::Object<LadspaFXInfo>
 {
-	H2_OBJECT
+	H2_OBJECT(LadspaFXInfo)
 public:
 	LadspaFXInfo( const QString& sName );
 	~LadspaFXInfo();
@@ -57,31 +58,29 @@ public:
 
 
 
-class LadspaFXGroup : public H2Core::Object
+/** \ingroup docCore docAudioEngine */
+class LadspaFXGroup : public H2Core::Object<LadspaFXGroup>
 {
-	H2_OBJECT
+	H2_OBJECT(LadspaFXGroup)
 public:
 	LadspaFXGroup( const QString& sName );
 	~LadspaFXGroup();
 
-	const QString& getName() {
+	const QString& getName() const {
 		return m_sName;
 	}
 
 	void addLadspaInfo( LadspaFXInfo *pInfo );
-	std::vector<LadspaFXInfo*> getLadspaInfo() {
+	std::vector<LadspaFXInfo*> getLadspaInfo() const {
 		return m_ladspaList;
 	}
 
 	void addChild( LadspaFXGroup *pChild );
-	std::vector<LadspaFXGroup*> getChildList() {
+	std::vector<LadspaFXGroup*> getChildList() const {
 		return m_childGroups;
 	}
 
-	void clear() {
-		m_childGroups.clear();
-		m_ladspaList.clear();
-	}
+	void clear();
 
 	static bool alphabeticOrder( LadspaFXGroup*, LadspaFXGroup* );
 	void sort();
@@ -95,26 +94,28 @@ private:
 
 
 
-class LadspaControlPort : public H2Core::Object
+/** \ingroup docCore docAudioEngine */
+class LadspaControlPort : public H2Core::Object<LadspaControlPort>
 {
-	H2_OBJECT
+	H2_OBJECT(LadspaControlPort)
 public:
 	QString sName;
-	bool isToggle;
-	bool m_bIsInteger;
-	LADSPA_Data fDefaultValue;
-	LADSPA_Data fControlValue;
-	LADSPA_Data fLowerBound;
-	LADSPA_Data fUpperBound;
+	bool isToggle = false;
+	bool m_bIsInteger = false;
+	LADSPA_Data fDefaultValue = 0.0;
+	LADSPA_Data fControlValue = 0.0;
+	LADSPA_Data fLowerBound = 0.0;
+	LADSPA_Data fUpperBound = 0.0;
 
-	LadspaControlPort() : Object( "LadspaControlPort" ) { }
+	LadspaControlPort() : Object( ) { }
 };
 
 
 
-class LadspaFX : public H2Core::Object
+/** \ingroup docCore docAudioEngine */
+class LadspaFX : public H2Core::Object<LadspaFX>
 {
-	H2_OBJECT
+	H2_OBJECT(LadspaFX)
 public:
 	enum {
 		MONO_FX,
@@ -138,38 +139,34 @@ public:
 	void processFX( unsigned nFrames );
 
 
-	const QString& getPluginLabel() {
+	const QString& getPluginLabel() const {
 		return m_sLabel;
 	}
 
-	const QString& getPluginName() {
+	const QString& getPluginName() const {
 		return m_sName;
 	}
-	void setPluginName( const QString& sName ) {
-		m_sName = sName;
-	}
+	void setPluginName( const QString& sName );
 
-	const QString& getLibraryPath() {
+	const QString& getLibraryPath() const {
 		return m_sLibraryPath;
 	}
 
-	bool isEnabled() {
+	bool isEnabled() const {
 		return m_bEnabled;
 	}
-	void setEnabled( bool value ) {
-		m_bEnabled = value;
-	}
+	void setEnabled( bool bEnabled );
 
 	static LadspaFX* load( const QString& sLibraryPath, const QString& sPluginLabel, long nSampleRate );
 
-	int getPluginType() {
+	int getPluginType() const {
 		return m_pluginType;
 	}
 
-	void setVolume( float fValue );
-	float getVolume() {
+	float getVolume() const {
 		return m_fVolume;
 	}
+	void setVolume( float fVolume );
 
 
 private:

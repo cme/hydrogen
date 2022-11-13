@@ -33,38 +33,34 @@
 namespace H2Core
 {
 
-typedef int  ( *audioProcessCallback )( uint32_t, void * );
-
-class AlsaAudioDriver : public AudioOutput
+/** \ingroup docCore docAudioDriver */
+class AlsaAudioDriver : public Object<AlsaAudioDriver>, public AudioOutput
 {
-	H2_OBJECT
+	H2_OBJECT(AlsaAudioDriver)
 public:
 	snd_pcm_t *m_pPlayback_handle;
 	bool m_bIsRunning;
 	unsigned long m_nBufferSize;
 	float* m_pOut_L;
 	float* m_pOut_R;
-	int m_nXRuns;
 	QString m_sAlsaAudioDevice;
 	audioProcessCallback m_processCallback;
+	int m_nXRuns;
 
 	AlsaAudioDriver( audioProcessCallback processCallback );
 	~AlsaAudioDriver();
 
-	virtual int init( unsigned nBufferSize );
-	virtual int connect();
-	virtual void disconnect();
-	virtual unsigned getBufferSize();
-	virtual unsigned getSampleRate();
-	virtual float* getOut_L();
-	virtual float* getOut_R();
+	virtual int init( unsigned nBufferSize ) override;
+	virtual int connect() override;
+	virtual void disconnect() override;
+	virtual unsigned getBufferSize() override;
+	virtual unsigned getSampleRate() override;
+	virtual float* getOut_L() override;
+	virtual float* getOut_R() override;
+	static QStringList getDevices();
 
-	virtual void updateTransportInfo();
-	virtual void play();
-	virtual void stop();
-	virtual void locate( unsigned long nFrame );
-	virtual void setBpm( float fBPM );
-
+	virtual int getXRuns() const override { return m_nXRuns; }
+	
 private:
 
 	unsigned int m_nSampleRate;
@@ -74,9 +70,10 @@ private:
 
 namespace H2Core {
 
+/** \ingroup docCore docAudioDriver */
 class AlsaAudioDriver : public NullDriver
 {
-	H2_OBJECT
+	H2_OBJECT(AlsaAudioDriver)
 public:
 	AlsaAudioDriver( audioProcessCallback processCallback ) : NullDriver( processCallback ) {}
 

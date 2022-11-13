@@ -1,4 +1,7 @@
-/*! \file config.h.in
+/** \addtogroup docConfiguration
+ * @{
+ */
+ /*! \file config.h.in
  * Documentation for the macros defined in the config.h.in file (which
    is not properly read by Doxygen).
 */
@@ -119,9 +122,6 @@
 /** Specifies whether the lash/lash.h header could be found in the
     lash library. */
 #define H2CORE_HAVE_LASH
-/** Specifies whether the jack/session.h header could be found in
-    the jack library. */
-#define H2CORE_HAVE_JACKSESSION
 /** Specifies whether the lo/lo.h header could be found in the lo
     library. */
 #define H2CORE_HAVE_OSC
@@ -150,5 +150,6 @@
     could be found in the rubberband library. */
 #define H2CORE_HAVE_RUBBERBAND
 
-
-
+/**
+*@}
+*/

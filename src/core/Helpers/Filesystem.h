@@ -32,9 +32,10 @@ namespace H2Core
 	/**
 	 * Filesystem is a thin layer over QDir, QFile and QFileInfo
 	 */
-	class Filesystem : public H2Core::Object
+	/** \ingroup docCore*/
+	class Filesystem : public H2Core::Object<Filesystem>
 	{
-		H2_OBJECT
+		H2_OBJECT(Filesystem)
 		public:
 		/** flags available for check_permissions() */
 		enum file_perms {
@@ -69,7 +70,9 @@ namespace H2Core
 		static const QString patterns_ext;
 		static const QString playlist_ext;
 		static const QString drumkit_ext;
+		static const QString themes_ext;
 		static const QString songs_filter_name;
+		static const QString themes_filter_name;
 		static const QString scripts_filter_name;
 		static const QString patterns_filter_name;
 		static const QString playlists_filter_name;
@@ -95,10 +98,36 @@ namespace H2Core
 		static QString usr_config_path();
 		/** returns system empty sample file path */
 		static QString empty_sample_path();
-		/** returns system empty song file path */
+		/**
+		 * Provides the full path to the current empty song.
+		 *
+		 * The basename consists of a fixed expression and an optional
+		 * suffix ensuring the path does not point to an existing
+		 * file.
+		 *
+		 * Empty songs are handled in Hydrogen as follows: Upon
+		 * creation, the empty song will be assigned a
+		 * Song::m_sFilename identical to the return value of this
+		 * function. This triggers autosave files to be generated
+		 * corresponding to empty song path. If the user attempts to
+		 * save the song from within the GUI, she will be prompted a
+		 * "Save As" dialog and is asked to provide a new name. This
+		 * way a file using the empty song path does normally not
+		 * exists. But since the return value of this function is
+		 * reproducible, Hydrogen is able to recover unsaved
+		 * modifications applied to an empty song. If the user - by
+		 * design or coincidence - picks the empty song path to save a
+		 * file or if the OSC API is used to save the empty song,
+		 * empty_song_path() will use a suffix to return yet again a
+		 * path to a non-existing file and allow for the behavior
+		 * described above.
+		 */
 		static QString empty_song_path();
-		/** returns untitled song file name */
-		static QString untitled_song_file_name();
+		/** Default option to offer the user when saving an empty song
+			to disk.*/
+		static QString default_song_name();
+		/** returns untitled song name */
+		static QString untitled_song_name();
 		/** Returns a string containing the path to the
 		    _click.wav_ file used in the metronome. 
 			*
@@ -157,6 +186,8 @@ namespace H2Core
 		static QString xsd_dir();
 		/** returns temp path */
 		static QString tmp_dir();
+		static QString usr_theme_dir();
+		static QString sys_theme_dir();
 		/**
 		 * touch a temporary file under tmp_dir() and return it's path.
 		 * if base has a suffix it will be preserved, spaces will be replaced by underscores.
@@ -185,6 +216,7 @@ namespace H2Core
 		 * \param dk_name the drumkit name
 		 */
 		static QString drumkit_usr_path( const QString& dk_name );
+		static QString drumkit_default_kit();
 		/** Returns the path to a H2Core::Drumkit folder.
 		 *
 		 * The search will first be performed within user-level
@@ -236,6 +268,18 @@ namespace H2Core
 		 */
 		static QString drumkit_file( const QString& dk_path );
 
+		/**
+		 * Returns filename and extension of the expected drumkit file.
+		 */
+		static QString drumkit_xml();
+
+		/**
+		 * Create a backup path from a drumkit path. It will contain
+		 * the current datetime to both make individual backup names
+		 * unique and to make it more easy to handle them.
+		 */
+		static QString drumkit_backup_path( const QString& dk_path );
+
 		/* PATTERNS */
 		/**
 		 * returns a list of existing drumkit sub dir into the patterns directory
@@ -261,6 +305,34 @@ namespace H2Core
 		 * \param sg_name the song name
 		 */
 		static bool song_exists( const QString& sg_name );
+		
+		/**
+		 * Checks the path pointing to a .h2song.
+		 *
+		 * It will be checked whether @a songPath
+		 * - is absolute
+		 * - exists (if @a bCheckExistance is set to true)
+		 * - has the '.h2song' suffix
+		 * - is writable (read-only songs are considered valid as well
+		 * and the function returns true. But it also triggers an
+		 * event informing the GUI to show a read-only warning.)
+		 *
+		 * \param sSongPath Absolute path to an .h2song file.
+		 * \param bCheckExistance Whether the existence of the file is
+		 * checked (should be true for opening and false for creating
+		 * a new song)
+		 * \return true - if valid.
+		 */
+		static bool isSongPathValid( const QString& sSongPath, bool bCheckExistance = false );
+
+		/**
+		 * Takes an arbitrary path, replaces white spaces by
+		 * underscores and removes all characters apart from latin
+		 * characters, arabic numbers, underscores and dashes.
+		 */
+		static QString validateFilePath( const QString& sPath );
+
+		static QStringList theme_list();
 
 		/** send current settings information to logger with INFO severity */
 		static void info();
@@ -294,6 +366,12 @@ namespace H2Core
 		 */
 		static bool file_executable( const QString& path, bool silent=false );
 		/**
+		 * returns true if the given path is a regular directory
+		 * \param path the path to the file to check
+		 * \param silent output not messages if set to true
+		 */
+		static bool dir_exists( const QString& path, bool silent=false );
+		/**
 		 * returns true if the given path is a readable regular directory
 		 * \param path the path to the file to check
 		 * \param silent output not messages if set to true
@@ -312,6 +390,17 @@ namespace H2Core
 		 * \param silent output not messages if set to true
 		 */
 		static bool path_usable( const QString& path, bool create=true, bool silent=false );
+
+		/**
+		 * Convert a direct to an absolute path.
+		 */
+		static QString absolute_path( const QString& sFilename, bool bSilent = false );
+		/** 
+		 * If Hydrogen is under session management, we support for paths
+		 * relative to the session folder. This is required to allow for
+		 * sessions being renamed or duplicated.
+		 */
+		static QString ensure_session_compatibility( const QString& sPath );
 		/**
 		 * writes to a file
 		 * \param dst the destination path
@@ -323,14 +412,18 @@ namespace H2Core
 		 * \param src source file path
 		 * \param dst destination file path
 		 * \param overwrite allow to overwrite an existing file if set to true
+		 * \param bSilent Whether debug and info messages should be
+		 * logged.
 		 */
-		static bool file_copy( const QString& src, const QString& dst, bool overwrite=false );
+		static bool file_copy( const QString& src, const QString& dst, bool overwrite=false, bool bSilent = false );
 		/**
 		 * remove a path
 		 * \param path the path to be removed
 		 * \param recursive perform recursive removal if set to true
+		 * \param bSilent Whether debug and info messages should be
+		 * logged.
 		 */
-		static bool rm( const QString& path, bool recursive=false );
+		static bool rm( const QString& path, bool recursive=false, bool bSilent = false );
 		/**
 		 * create a path
 		 * \param path the path to the directory to be created
@@ -346,7 +439,7 @@ namespace H2Core
 		static Logger* __logger;                    ///< a pointer to the logger
 		static bool check_sys_paths();              ///< returns true if the system path is consistent
 		static bool check_usr_paths();              ///< returns true if the user path is consistent
-		static bool rm_fr( const QString& path );   ///< recursively remove a path
+		static bool rm_fr( const QString& path, bool bSilent = false );   ///< recursively remove a path
 
 		/**
 		 * If this variable is non-empty, its content will be used as

@@ -38,6 +38,7 @@ namespace H2Core {
 /**
  * Class for writing logs to the console
  */
+/** \ingroup docCore docDebugging*/
 class Logger {
 	public:
 		/** possible logging bits */
@@ -48,10 +49,7 @@ class Logger {
 			Info            = 0x04,
 			Debug           = 0x08,
 			Constructors    = 0x10,
-			/** Intended to be used log the locking of the
-			    AudioEngine. But this feature isn't
-			    implemented yet. */
-			AELockTracing   = 0x20
+			Locks   = 0x20
 		};
 
 		/** message queue type */
@@ -98,6 +96,15 @@ class Logger {
 		/** return __use_file */
 		bool use_file() const                       { return __use_file; }
 
+	/**
+	 * Waits till the logger thread poped all remaining messages from
+	 * #__msg_queue.
+	 *
+	 * Note that this function will neither lock #__msg_queue nor
+	 * prevent routines from adding new messages to the queue.
+	 */
+	void flush() const;
+
 		/**
 		 * parse a log level string and return the corresponding bit mask
 		 * \param lvl the log level string
@@ -118,6 +125,27 @@ class Logger {
 		 */
 		friend void* loggerThread_func( void* param );
 
+		/** @name Crash context management
+		 * Access the crash context string that can be used to report what caused a crash.  The crash-context
+		 * string is a thread-local property, and may be read by a fatal exception handler (which will execute
+		 * in the same thread that caused the crash). This avoids potential contention for locking and
+		 * unlocking of a shared crash context structure.
+		 * @{
+		 */
+		static void setCrashContext( QString *pContext ) { Logger::pCrashContext = pContext; }
+		static QString *getCrashContext() { return Logger::pCrashContext; }
+		/** @} */
+
+		/** Helper class to preserve and restore recursive crash context strings using an RAAI pattern */
+		class CrashContext {
+			QString *pSavedContext;
+			QString *pThisContext;
+		public:
+			CrashContext( QString *pContext );
+			CrashContext( QString sContext );
+			~CrashContext();
+		};
+
 	private:
 		/**
 		 * Object holding the current H2Core::Logger
@@ -133,6 +161,8 @@ class Logger {
 		static unsigned __bit_msk;      ///< the bitmask of log_level_t
 		static const char* __levels[];  ///< levels strings
 		pthread_cond_t __messages_available;
+
+		thread_local static QString *pCrashContext;
 
 		/** constructor */
 		Logger();

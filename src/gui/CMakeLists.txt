@@ -20,7 +20,8 @@ INCLUDE_DIRECTORIES(
     ${LIBARCHIVE_INCLUDE_DIRS}
     ${LIBSNDFILE_INCLUDE_DIRS}
     ${JACK_INCLUDE_DIRS}
-
+    ${PORTAUDIO_INCLUDE_DIRS}
+    ${PULSEAUDIO_INCLUDE_DIRS}
 )
 
 IF(APPLE)
@@ -70,14 +71,21 @@ if(APPLE)
                          \"` cat ${CMAKE_SOURCE_DIR}/macos/CFBundleDocumentTypes.json `\"
                        hydrogen.app/Contents/Info.plist )
 
-    ADD_DEPENDENCIES(hydrogen ${CMAKE_SOURCE_DIR}/macos/CFBundleDocumentTypes.json)
+    ADD_FILE_DEPENDENCIES(hydrogen ${CMAKE_SOURCE_DIR}/macos/CFBundleDocumentTypes.json)
 
 endif()
 
 TARGET_LINK_LIBRARIES(hydrogen
 	hydrogen-core-${VERSION}
 	Qt5::Widgets
+	Qt5::Svg
 )
+
+IF(Backtrace_FOUND)
+	TARGET_LINK_LIBRARIES(hydrogen
+		${Backtrace_LIBRARIES}
+	)
+ENDIF()
 
 # Precompiled headers for Qt and std::vector. These dramatically reduce GUI build times
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.16)

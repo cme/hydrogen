@@ -22,20 +22,17 @@
 
 #include "SoundLibraryRepositoryDialog.h"
 
-#include <core/Preferences.h>
+#include <core/Preferences/Preferences.h>
 
 #include <QList>
 #include <QInputDialog>
 #include <QListWidgetItem>
 
-const char* SoundLibraryRepositoryDialog::__class_name = "SoundLibraryRepositoryDialog";
-
 SoundLibraryRepositoryDialog::SoundLibraryRepositoryDialog( QWidget* pParent )
  : QDialog( pParent )
- , Object( __class_name )
-{
+ {
 	setupUi( this );
-	INFOLOG( "INIT" );
+	
 	setWindowTitle( tr( "Edit repository settings" ) );
 	adjustSize();
 	setMinimumSize( width(), height() );

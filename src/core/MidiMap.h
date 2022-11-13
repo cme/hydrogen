@@ -22,7 +22,8 @@
 #ifndef MIDIMAP_H
 #define MIDIMAP_H
 
-
+#include <memory>
+#include <vector>
 #include <map>
 #include <cassert>
 #include <core/Object.h>
@@ -31,63 +32,86 @@
 
 class Action;
 
-class MidiMap : public H2Core::Object
+/** \ingroup docCore docMIDI */
+class MidiMap : public H2Core::Object<MidiMap>
 {
-	H2_OBJECT
-	public:
-		typedef std::map< QString, Action* > map_t;
-		/**
-		 * Object holding the current MidiMap singleton. It is
-		 * initialized with NULL, set with create_instance(),
-		 * and accessed with get_instance().
-		 */
-		static MidiMap* __instance;
-		~MidiMap();
+	H2_OBJECT(MidiMap)
+public:
+	/**
+	 * Object holding the current MidiMap singleton. It is
+	 * initialized with NULL, set with create_instance(),
+	 * and accessed with get_instance().
+	 */
+	static MidiMap* __instance;
+	~MidiMap();
 		
-		/**
-		 * If #__instance equals 0, a new MidiMap singleton will
-		 * be created and stored in it.
-		 *
-		 * It is called in Hydrogen::create_instance().
-		 */
-		static void create_instance();
-		/**
-		 * Convenience function calling reset() on the current
-		 * MidiMap #__instance.
-		 */
-		static void reset_instance();
-		/**
-		 * Returns a pointer to the current MidiMap singleton
-		 * stored in #__instance.
-		 */
-		static MidiMap* get_instance() { assert(__instance); return __instance; }
+	/**
+	 * If #__instance equals 0, a new MidiMap singleton will
+	 * be created and stored in it.
+	 *
+	 * It is called in Hydrogen::create_instance().
+	 */
+	static void create_instance();
+	/**
+	 * Convenience function calling reset() on the current
+	 * MidiMap #__instance.
+	 */
+	static void reset_instance();
+	/**
+	 * Returns a pointer to the current MidiMap singleton
+	 * stored in #__instance.
+	 */
+	static MidiMap* get_instance() { assert(__instance); return __instance; }
 
-		void reset();  ///< Reinitializes the object.
+	void reset();  ///< Reinitializes the object.
 
-		void registerMMCEvent( QString, Action* );
-		void registerNoteEvent( int , Action* );
-		void registerCCEvent( int , Action* );
-		void registerPCEvent( Action* );
+	/** Sets up the relation between a mmc event and an action */
+	void registerMMCEvent( QString, std::shared_ptr<Action> );
+	/** Sets up the relation between a note event and an action */
+	void registerNoteEvent( int , std::shared_ptr<Action> );
+	/** Sets up the relation between a cc event and an action */
+	void registerCCEvent( int , std::shared_ptr<Action> );
+	/** Sets up the relation between a program change and an action */
+	void registerPCEvent( std::shared_ptr<Action> );
 
-		map_t getMMCMap();
-
-		Action* getMMCAction( QString );
-		Action* getNoteAction( int note );
-		Action* getCCAction( int parameter );
-		Action* getPCAction();
+	std::multimap<QString, std::shared_ptr<Action>> getMMCActionMap() const;
+	std::multimap<int, std::shared_ptr<Action>> getNoteActionMap() const;
+	std::multimap<int, std::shared_ptr<Action>> getCCActionMap() const;
+	
+	/** Returns all MMC actions which are linked to the given event. */
+	std::vector<std::shared_ptr<Action>> getMMCActions( QString sEventString );
+	/** Returns all note actions which are linked to the given event. */
+	std::vector<std::shared_ptr<Action>> getNoteActions( int nNote );
+	/** Returns the cc action which was linked to the given event. */
+	std::vector<std::shared_ptr<Action>> getCCActions( int nParameter );
+	/** Returns the pc action which was linked to the given event. */
+	std::vector<std::shared_ptr<Action>> getPCActions() const;
 		
-		int findCCValueByActionParam1( QString actionType, QString param1 ) const;
-		int findCCValueByActionType( QString actionType ) const;
+	std::vector<int> findCCValuesByActionParam1( QString sActionType, QString sParam1 );
+	std::vector<int> findCCValuesByActionType( QString sActionType );
+private:
+	MidiMap();
 
-		void setupNoteArray();
-	private:
-		MidiMap();
+	std::multimap<int, std::shared_ptr<Action>> m_noteActionMap;
+	std::multimap<int, std::shared_ptr<Action>> m_ccActionMap;
+	std::multimap<QString, std::shared_ptr<Action>> m_mmcActionMap;
+	std::vector<std::shared_ptr<Action>> m_pcActionVector;
 
-		Action* __note_array[ 128 ];
-		Action* __cc_array[ 128 ];
-		Action* __pc_action;
 
-		map_t mmcMap;
-		QMutex __mutex;
+	QMutex __mutex;
 };
+
+inline std::multimap<QString, std::shared_ptr<Action>> MidiMap::getMMCActionMap() const {
+	return m_mmcActionMap;
+}
+inline std::multimap<int, std::shared_ptr<Action>> MidiMap::getNoteActionMap() const {
+	return m_noteActionMap;
+}
+inline std::multimap<int, std::shared_ptr<Action>> MidiMap::getCCActionMap() const {
+	return m_ccActionMap;
+}
+inline std::vector<std::shared_ptr<Action>> MidiMap::getPCActions() const {
+	return m_pcActionVector;
+}
+
 #endif

@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <core/Object.h>
+#include <core/License.h>
 
 namespace H2Core
 {
@@ -40,9 +41,10 @@ namespace H2Core
 	 * <br><b>start velocity</b> and <b>end velocity</b> which allows you to chose between a layer or another within an instrument
 	 * by changing the velocity of the played note. so the only layer of an instrument should start at 0.0 and end at 1.0.
 	 */
-	class InstrumentLayer : public H2Core::Object
+	/** \ingroup docCore docDataStructure */
+	class InstrumentLayer : public H2Core::Object<InstrumentLayer>
 	{
-		H2_OBJECT
+		H2_OBJECT(InstrumentLayer)
 		public:
 		/** constructor
 		 * \param sample the sample to use
@@ -51,12 +53,12 @@ namespace H2Core
 		/** copy constructor, will be initialized with an empty sample
 		 * \param other the instrument layer to copy from
 		 */
-		InstrumentLayer( InstrumentLayer* other );
+		InstrumentLayer( std::shared_ptr<InstrumentLayer> other );
 		/** copy constructor
 		 * \param other the instrument layer to copy from
 		 * \param sample the sample to use
 		 */
-		InstrumentLayer( InstrumentLayer* other, std::shared_ptr<Sample> sample );
+		InstrumentLayer( std::shared_ptr<InstrumentLayer> other, std::shared_ptr<Sample> sample );
 		/** destructor */
 		~InstrumentLayer();
 
@@ -86,7 +88,7 @@ namespace H2Core
 		 * Calls the #H2Core::Sample::load()
 		 * member function of #__sample.
 		 */
-		void load_sample();
+		void load_sample( float fBpm = 120 );
 		/*
 		 * unload sample and replace it with an empty one
 		 */
@@ -95,15 +97,27 @@ namespace H2Core
 		/**
 		 * save the instrument layer within the given XMLNode
 		 * \param node the XMLNode to feed
+		 * \param bFull Whether to write all parameters of the
+		 * contained #Sample as well. This will be done when storing
+		 * an #Instrument as part of a #Song but not when storing
+		 * as part of a #Drumkit.
 		 */
-		void save_to( XMLNode* node );
+		void save_to( XMLNode* node, bool bFull = false );
 		/**
 		 * load an instrument layer from an XMLNode
-		 * \param node the XMLDode to read from
-		 * \param dk_path the directory holding the drumkit data
+		 * \param pNode the XMLDode to read from
+		 * \param sDrumkitPath the directory holding the drumkit data
+		 * \param drumkitLicense License assigned to all #Sample
+		 * contain in the loaded #InstrumentLayer.
+		 * \param bSilent if set to true, all log messages except of
+		 * errors and warnings are suppressed.
+		 *
 		 * \return a new InstrumentLayer instance
 		 */
-		static InstrumentLayer* load_from( XMLNode* node, const QString& dk_path );
+		static std::shared_ptr<InstrumentLayer> load_from( XMLNode* pNode,
+														   const QString& sDrumkitPath,
+														   const License& drumkitLicense = License(),
+														   bool bSilent = false );
 		/** Formatted string version for debugging purposes.
 		 * \param sPrefix String prefix which will be added in front of
 		 * every new line

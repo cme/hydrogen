@@ -25,30 +25,34 @@
 
 #include <QtGui>
 #include <QtWidgets>
+#include <memory>
 
 #include <core/Basics/Instrument.h>
 #include <core/Object.h>
+#include <core/Preferences/Preferences.h>
 
 #include "../EventListener.h"
 #include "../Widgets/PixmapWidget.h"
+#include "../Widgets/WidgetWithScalableFont.h"
 
 class Fader;
 class LCDDisplay;
+class LCDSpinBox;
 class Button;
-class ToggleButton;
 class ClickableLabel;
 class Rotary;
 class LCDCombo;
 class WaveDisplay;
 class LayerPreview;
-
+class WidgetWithInput;
 
 ///
 /// Instrument Editor
 ///
-class InstrumentEditor : public QWidget, public H2Core::Object, public EventListener
+/** \ingroup docGUI*/
+class InstrumentEditor :  public QWidget, protected WidgetWithScalableFont<10, 12, 14>,  public H2Core::Object<InstrumentEditor>, public EventListener
 {
-	H2_OBJECT
+	H2_OBJECT(InstrumentEditor)
 	Q_OBJECT
 
 	public:
@@ -62,48 +66,51 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 
 		// implements EventListener interface
 		virtual void selectedInstrumentChangedEvent() override;
-		virtual void rubberbandbpmchangeEvent() override;
+	virtual void drumkitLoadedEvent() override;
+	virtual void updateSongEvent( int ) override;
+	virtual void instrumentParametersChangedEvent( int ) override;
 		//~ implements EventListener interface
 		void update();
-
 		static int findFreeDrumkitComponentId( int startingPoint = 0 );
 
 
 	public slots:
-		void showLayers();
-		void showInstrument();
+	/** Used by #Shotlist */
+	void showLayers( bool bShow );
 		void showSampleEditor();
+		void onPreferencesChanged( H2Core::Preferences::Changes changes );
 
 	private slots:
-		void rotaryChanged(Rotary *ref);
-		void filterActiveBtnClicked(Button *ref);
-		void buttonClicked(Button*);
+		void rotaryChanged(WidgetWithInput *ref);
+		void loadLayerBtnClicked();
+		void filterActiveBtnClicked();
+		void removeLayerButtonClicked();
 		void labelClicked( ClickableLabel* pRef );
 		void labelCompoClicked( ClickableLabel* pRef );
 		void compoChangeAddDelete(QAction*);
-		void onClick(Button*);
+		void onDropDownCompoClicked();
 
-		void muteGroupBtnClicked(Button *pRef);
+		void muteGroupChanged( double fValue );
 		void onIsStopNoteCheckBoxClicked( bool on );
 		void onIsApplyVelocityCheckBoxClicked( bool on);
-		void midiOutChannelBtnClicked(Button *pRef);
-		void midiOutNoteBtnClicked(Button *pRef);
+		void midiOutChannelChanged( double fValue );
+		void midiOutNoteChanged( double fValue );
 
-		void hihatGroupClicked(Button *pRef);
-		void hihatMinRangeBtnClicked(Button *pRef);
-		void hihatMaxRangeBtnClicked(Button *pRef);
+		void hihatGroupChanged( double fValue );
+		void hihatMinRangeChanged( double fValue );
+		void hihatMaxRangeChanged( double fValue );
 
-		void pSampleSelectionChanged( int );
+		void sampleSelectionChanged( int );
 
 		void waveDisplayDoubleClicked( QWidget *pRef );
 
 	private:
-		H2Core::Instrument *m_pInstrument;
+		std::shared_ptr<H2Core::Instrument> m_pInstrument;
 		int m_nSelectedLayer;
 		int m_nSelectedComponent;
 
-		ToggleButton *m_pShowInstrumentBtn;
-		ToggleButton *m_pShowLayersBtn;
+		Button *m_pShowInstrumentBtn;
+		Button *m_pShowLayersBtn;
 
 		// Instrument properties
 		PixmapWidget *m_pInstrumentProp;
@@ -115,52 +122,61 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 		Rotary *m_pDecayRotary;
 		Rotary *m_pSustainRotary;
 		Rotary *m_pReleaseRotary;
+		ClickableLabel* m_pAttackLbl;
+		ClickableLabel* m_pDecayLbl;
+		ClickableLabel* m_pSustainLbl;
+		ClickableLabel* m_pReleaseLbl;
 
 		// Instrument pitch
 		Rotary *m_pPitchCoarseRotary;
 		Rotary *m_pPitchFineRotary;
 		Rotary *m_pRandomPitchRotary;
 		LCDDisplay *m_pPitchLCD;
+		ClickableLabel* m_pPitchLbl;
+		ClickableLabel* m_pPitchCoarseLbl;
+		ClickableLabel* m_pPitchFineLbl;
+		ClickableLabel* m_pPitchRandomLbl;
 
 		// Low pass filter
-		ToggleButton *m_pFilterBypassBtn;
+		Button *m_pFilterBypassBtn;
 		Rotary *m_pCutoffRotary;
 		Rotary *m_pResonanceRotary;
+		ClickableLabel* m_pCutoffLbl;
+		ClickableLabel* m_pResonanceLbl;
 
 		// Instrument gain
 		LCDDisplay *m_pInstrumentGainLCD;
 		Rotary *m_pInstrumentGain;
+		ClickableLabel *m_pGainLbl;
 
 		QCheckBox *m_pApplyVelocity;
+		ClickableLabel *m_pApplyVelocityLbl;
+		ClickableLabel *m_pIsStopNoteLbl;
 
 		// Instrument mute group
-		LCDDisplay *m_pMuteGroupLCD;
-		Button *m_pAddMuteGroupBtn;
-		Button *m_pDelMuteGroupBtn;
+		LCDSpinBox *m_pMuteGroupLCD;
+		ClickableLabel *m_pMuteGroupLbl;
 
 		// Instrument midi out
-		LCDDisplay *m_pMidiOutChannelLCD;
-		Button *m_pAddMidiOutChannelBtn;
-		Button *m_pDelMidiOutChannelBtn;
+		LCDSpinBox *m_pMidiOutChannelLCD;
+		ClickableLabel* m_pMidiOutChannelLbl;
+	/** In order to allow for enumerations starting at 1 while using
+		-1 to turn off the LCD.*/
+	double m_fPreviousMidiOutChannel;
 
-		LCDDisplay *m_pMidiOutNoteLCD;
-		Button *m_pAddMidiOutNoteBtn;
-		Button *m_pDelMidiOutNoteBtn;
+		LCDSpinBox *m_pMidiOutNoteLCD;
+		ClickableLabel* m_pMidiOutNoteLbl;
 
 		// Instrument hihat
 
-		LCDDisplay *m_pHihatGroupLCD;
-		Button *m_pAddHihatGroupBtn;
-		Button *m_pDelHihatGroupBtn;
+		LCDSpinBox *m_pHihatGroupLCD;
+		ClickableLabel* m_pHihatGroupLbl;
 
-		LCDDisplay *m_pHihatMinRangeLCD;
-		Button *m_pAddHihatMinRangeBtn;
-		Button *m_pDelHihatMinRangeBtn;
+		LCDSpinBox *m_pHihatMinRangeLCD;
+		ClickableLabel* m_pHihatMinRangeLbl;
 
-		LCDDisplay *m_pHihatMaxRangeLCD;
-		Button *m_pAddHihatMaxRangeBtn;
-		Button *m_pDelHihatMaxRangeBtn;
-
+		LCDSpinBox *m_pHihatMaxRangeLCD;
+		ClickableLabel* m_pHihatMaxRangeLbl;
 
 		//~ Instrument properties
 
@@ -172,6 +188,11 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 		PixmapWidget *m_pLayerProp;
 		Rotary *m_pLayerGainRotary;
 		LCDDisplay *m_pLayerGainLCD;
+		ClickableLabel* m_pLayerGainLbl;
+		ClickableLabel* m_pCompoGainLbl;
+		ClickableLabel* m_pLayerPitchLbl;
+		ClickableLabel* m_pLayerPitchCoarseLbl;
+		ClickableLabel* m_pLayerPitchFineLbl;
 
 		Rotary *m_pLayerPitchCoarseRotary;
 		Rotary *m_pLayerPitchFineRotary;
@@ -181,6 +202,7 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 
 		//LCDCombo *__pattern_size_combo;
 		LCDCombo *m_sampleSelectionAlg;
+		ClickableLabel* m_pSampleSelectionLbl;
 
 		WaveDisplay *m_pWaveDisplay;
 
@@ -201,7 +223,6 @@ class InstrumentEditor : public QWidget, public H2Core::Object, public EventList
 		LCDDisplay *m_pCompoGainLCD;
 		//~ Component
 
-		void loadLayer();
 		void setAutoVelocity();
 };
 
