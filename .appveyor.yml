@@ -204,7 +204,7 @@ for:
         brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
         brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-        brew install qt5 libarchive jack pulseaudio cppunit ruby
+        brew install qt5@5.15.2 libarchive jack pulseaudio cppunit ruby
 
         # The build environment is now ready for use. We can complete
         # the rest of the process of creating the Homebrew archive
