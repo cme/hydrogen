@@ -99,6 +99,8 @@ for:
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
 
+      rm $cache
+
       mkdir -p $cdir/ccache
       ln -s $cdir/ccache $HOME/.ccache
 
