@@ -99,8 +99,6 @@ for:
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
 
-      rm $cache
-
       mkdir -p $cdir/ccache
       ln -s $cdir/ccache $HOME/.ccache
 
@@ -181,6 +179,7 @@ for:
       cdir=$HOME/cache_dir
       cache_tar=$cdir/$cache_tag.tar
       cache=$cache_tar.xz
+      rm $cache
 
       CPUS=$(sysctl -n hw.ncpu)
 
