@@ -232,6 +232,7 @@ for:
       echo "XXX Qt installs: "; ls -alrt $HOME/Qt
       find $HOME/Qt -name '*.cmake'
       export CMAKE_PREFIX_PATH="$HOME/Qt/5.15.2"
+      export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
       export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
 
     build_script: |-
