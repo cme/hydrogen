@@ -241,6 +241,8 @@ for:
       export CMAKE_PREFIX_PATH="$PWD/hydrogen-deps/hydrogen-deps:$HOME/Qt/5.15.2/clang_64/lib/cmake";
       find $HOME/Qt/5.15.2 -name '*.cmake'
       export PKG_CONFIG_PATH="$PWD/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
+      echo "XXX PWD: $PWD"
+      ls -alrt
       echo XXX PKG_CONFIG_PATH; find $PKG_CONFIG_PATH
       export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
       export Qt5Widgets_DIR=$HOME/Qt/5.15.2/clang_64/lib/cmake
