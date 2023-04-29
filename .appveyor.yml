@@ -235,7 +235,7 @@ for:
 
       fi
 
-      export CMAKE_PREFIX_PATH="$PWD/hydrogen-deps/hydrogen-deps:$HOME/Qt/5.15.2"";
+      export CMAKE_PREFIX_PATH="$PWD/hydrogen-deps/hydrogen-deps:$HOME/Qt/5.15.2";
       export PKG_CONFIG_PATH="$PWD/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
       export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
 
