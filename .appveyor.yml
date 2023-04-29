@@ -185,6 +185,9 @@ for:
 
       CPUS=$(sysctl -n hw.ncpu)
 
+      git submodule update --init --recursive
+
+
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached Homebrew $cache ==="
         (
@@ -245,8 +248,6 @@ for:
     build_script: |-
       # fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
-
-      git submodule update --init --recursive
 
       # Do the build
       (
