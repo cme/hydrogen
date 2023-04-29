@@ -239,6 +239,7 @@ for:
       find $HOME/Qt/5.15.2 -name '*.cmake'
       export PKG_CONFIG_PATH="$PWD/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
       export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
+      export Qt5Widgets_DIR=$HOME/Qt/5.15.2/clang_64/lib/cmake
 
     build_script: |-
       # fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
