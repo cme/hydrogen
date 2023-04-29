@@ -200,6 +200,8 @@ for:
         echo "Recording /usr/local state"
         python3 ./treestate.py scan /usr/local usrlocal.json
 
+        export HOMEBREW_NO_INSTALL_CLEANUP=1
+
         brew update
 
         # Build our own versions of these for macOS 10.12 target systems.
