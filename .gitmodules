@@ -1,3 +1,6 @@
 [submodule "data/doc"]
 	path = data/doc
 	url = https://github.com/hydrogen-music/documentation.git
+[submodule "hydrogen-deps"]
+	path = hydrogen-deps
+	url = https://github.com/cme/hydrogen-deps.git
