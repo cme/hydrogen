@@ -208,7 +208,7 @@ for:
           ( cd build && make -j $CPUS install )
         )
         
-        brew install cppunit ruby
+        brew install cppunit 
 
         # The build environment is now ready for use. We can complete
         # the rest of the process of creating the Homebrew archive
