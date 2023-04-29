@@ -136,7 +136,7 @@ for:
       fi
 
     build_script: |-
-      git submodule init && git submodule update
+      git submodule update --init --recursive
 
       CPUS=$(nproc)
       echo "Building with $CPUS cpus"
@@ -201,13 +201,14 @@ for:
         python3 ./treestate.py scan /usr/local usrlocal.json
 
         brew update
-        # Build our own versions of these for macOS 10.12 target systems.
-        brew install --build-from-source ./macos/HomebrewFormulae/berkeley-db.rb
-        brew install --build-from-source ./macos/HomebrewFormulae/libogg.rb
-        brew install --build-from-source ./macos/HomebrewFormulae/libvorbis.rb
-        brew install --build-from-source ./macos/HomebrewFormulae/libsndfile.rb
 
-        brew install qt5 libarchive jack pulseaudio cppunit ruby
+        # Build our own versions of these for macOS 10.12 target systems.
+        ( cd hydrogen-deps
+          cmake -B build .
+          ( cd build && make -j $CPUS install )
+        )
+        
+        brew install cppunit ruby
 
         # The build environment is now ready for use. We can complete
         # the rest of the process of creating the Homebrew archive
@@ -232,14 +233,15 @@ for:
 
       fi
 
-      export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
-      export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+      export CMAKE_PREFIX_PATH="$PWD/hydrogen-deps/hydrogen-deps:$HOME/Qt/5.15.2"";
+      export PKG_CONFIG_PATH="$PWD/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
+      export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
 
     build_script: |-
       # fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
       sed -i '' 's/, int register,/, int,/g' /opt/local/include/jack/types.h
 
-      git submodule init && git submodule update
+      git submodule update --init --recursive
 
       # Do the build
       (
@@ -317,8 +319,7 @@ for:
           ccache -s
 
           REM *** INIT SUBMODULES ***
-          git submodule init
-          git submodule update
+          git submodule update --init --recursive
 
           REM *** Configure build ***
           rename "C:\Program Files\Git\usr\bin\sh.exe" "sh2.exe"
