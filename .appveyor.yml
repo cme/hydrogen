@@ -53,7 +53,7 @@ environment:
 
     - job_name: 'OS X'
       job_group: 'Mac OS X'
-      appveyor_build_worker_image: macos
+      appveyor_build_worker_image: macos-bigsur
 
     - job_name: 'Windows64'
       job_group: 'Windows'
