@@ -187,6 +187,11 @@ for:
 
       git submodule update --init --recursive
 
+      # Build our own versions of these for macOS 10.12 target systems.
+      ( cd hydrogen-deps
+        cmake -B build .
+        ( cd build && make -j $CPUS install )
+      )
 
       if [ -d $cdir ] && [ -f $cache ]; then
         echo "=== Unpacking cached Homebrew $cache ==="
