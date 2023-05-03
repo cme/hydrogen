@@ -232,8 +232,16 @@ for:
 
       fi
 
-      export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
+      #export CMAKE_PREFIX_PATH="$(brew --prefix qt5)";
       export PKG_CONFIG_PATH="$(brew --prefix libarchive)/lib/pkgconfig";
+
+
+      export QTDIR=$HOME/Qt/5.15.2
+
+      export CMAKE_PREFIX_PATH="$(pwd)/hydrogen-deps/hydrogen-deps:$QTDIR/clang_64/lib/cmake";
+      #export PKG_CONFIG_PATH="$(pwd)/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
+      export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
+      export Qt5Widgets_DIR=$QTDIR/clang_64/lib/cmake
 
     build_script: |-
       # fix use of register keyword in jack: https://github.com/jackaudio/jack1/issues/84
@@ -245,7 +253,8 @@ for:
       (
           mkdir build &&                                                        \
               cd build &&                                                       \
-              cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. &&       \
+              cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1             \
+                    -DWANT_CPPUNIT=0 .. &&                                      \
               make -j $CPUS
       ) || exit 1
 
