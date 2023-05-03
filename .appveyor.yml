@@ -255,7 +255,7 @@ for:
       (
           mkdir build &&                                                        \
               cd build &&                                                       \
-              cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 .. &&       \
+              cmake -DWANT_LASH=1 -DWANT_LRDF=1 -DWANT_RUBBERBAND=1 -DWANT_CPPUNIT=0 .. &&       \
               make -j $CPUS
       ) || exit 1
 
