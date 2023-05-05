@@ -246,7 +246,7 @@ for:
       export QTDIR=$HOME/Qt/5.15.2
 
       echo "XXX Find macdeployqt"; find $QTDIR -name macdeployqt
-      
+      PATH="$QTDIR/bin:$PATH"
       export CMAKE_PREFIX_PATH="$(pwd)/hydrogen-deps/hydrogen-deps:$QTDIR/clang_64/lib/cmake";
       export PKG_CONFIG_PATH="$(pwd)/hydrogen-deps/hydrogen-deps/lib/pkgconfig";
       export CMAKE_MODULE_PATH="$CMAKE_MODULE_PATH:$HOME/Qt/5.15.2/clang_64/lib/cmake"
