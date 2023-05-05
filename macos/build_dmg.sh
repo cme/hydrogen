@@ -144,8 +144,10 @@ DMG_ROOT=`mktemp -d`
 
 verbose "Copying application bundle"
 cp -r "$SRC_APP" "$DMG_ROOT/Hydrogen.app" || error "Can't copy $SRC_APP"
+ls -l "$DMG_ROOT"
 
 verbose "Deploying Qt libraries"
+echo macdeployqt -v 3 "$DMG_ROOT/Hydrogen.app"
 macdeployqt -v 3 "$DMG_ROOT/Hydrogen.app" || error "macdeployqt failed"
 
 verbose "Deploying translations"
