@@ -147,7 +147,7 @@ cp -r "$SRC_APP" "$DMG_ROOT/Hydrogen.app" || error "Can't copy $SRC_APP"
 ls -l "$DMG_ROOT"
 
 verbose "Deploying Qt libraries"
-macdeployqt "$DMG_ROOT/Hydrogen.app" -verbose=3 || error "macdeployqt failed"
+macdeployqt "$DMG_ROOT/Hydrogen.app" -verbose=3 -libpath=/Users/appveyor/Qt/5.15.2/clang_64/lib|| error "macdeployqt failed"
 
 verbose "Deploying translations"
 I18N_DEST="$DMG_ROOT/Hydrogen.app/Contents/Resources/data/i18n"
