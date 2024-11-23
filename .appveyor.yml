@@ -55,7 +55,7 @@ environment:
 
     - job_name: 'OS X'
       job_group: 'Mac OS X'
-      appveyor_build_worker_image: macos
+      appveyor_build_worker_image: macos-sonoma
 
     - job_name: 'Windows64'
       job_group: 'Windows'
@@ -425,7 +425,7 @@ for:
       export MACOSX_DEPLOYMENT_TARGET=10.12
       sudo ln -s /usr/local /opt/local;
 
-      cache_tag=usr_local_1 # this can be modified to rebuild deps
+      cache_tag=usr_local_sonoma # this can be modified to rebuild deps
 
       cdir=$HOME/cache_dir
       cache_tar=$cdir/$cache_tag.tar
