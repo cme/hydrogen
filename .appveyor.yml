@@ -45,21 +45,10 @@ environment:
   TARGET_VERSION: '1.2.4'
   matrix:
 
-    - job_name: 'Ubuntu 20.04'
-      job_group: 'Linux'
-      appveyor_build_worker_image: Ubuntu2004
-
-    - job_name: 'Ubuntu 16.04 (AppImage)'
-      job_group: 'Linux (AppImage)'
-      appveyor_build_worker_image: Ubuntu1604
-
     - job_name: 'OS X'
       job_group: 'Mac OS X'
       appveyor_build_worker_image: macos
 
-    - job_name: 'Windows64'
-      job_group: 'Windows'
-      appveyor_build_worker_image: Visual Studio 2019
 
 build:
   verbosity: detailed
@@ -393,6 +382,8 @@ for:
         - job_group: 'Mac OS X'
 
     before_build: |-
+      echo "Check QtWidgets"
+      find $HOME/Qt/5.15/ -name QtWidgets -exec file '{}' +
       # In case we are not at a tag, we append some additional information to a)
       # indicate that the artifact is not an official release and b) allow use
       # to track down which sources it corresponds to.
