@@ -383,7 +383,7 @@ for:
 
     before_build: |-
       echo "Check QtWidgets"
-      find $HOME/Qt/5.15/ -name QtWidgets -exec file '{}' +
+      find $HOME/Qt/6.6.1/ -name QtWidgets -exec file '{}' +
       # In case we are not at a tag, we append some additional information to a)
       # indicate that the artifact is not an official release and b) allow use
       # to track down which sources it corresponds to.
