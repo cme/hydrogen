@@ -157,6 +157,9 @@ verbose "Deploying additional assets"
 ln -s /Applications "$DMG_ROOT/Applications"
 cp "${BASH_SOURCE%/*}/DS_Store" "$DMG_ROOT/.DS_Store"
 
+verbose "Code signing (mandatory for ARM)"
+sudo codesign --force --deep -s - "$DMG_ROOT/Hydrogen.app"
+
 verbose "Creating dmg image"
 hdiutil create -srcfolder "$DMG_ROOT" -volname "Hydrogen" -fs HFS+ -format UDZO "$DMG_PATH" || error "Creating dmg image failed"
 

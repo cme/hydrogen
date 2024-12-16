@@ -382,8 +382,8 @@ for:
         - job_group: 'Mac OS X'
 
     before_build: |-
-      echo "Check QtWidgets"
-      find $HOME/Qt/6.6.1/ -name QtWidgets -exec file '{}' +
+      echo "Check QtWidgets XXX"
+      find $HOME/Qt/6.*/ -name QtWidgets -exec file '{}' +
       # In case we are not at a tag, we append some additional information to a)
       # indicate that the artifact is not an official release and b) allow use
       # to track down which sources it corresponds to.
@@ -391,6 +391,7 @@ for:
       # Attention: Be sure to tweak both. Also adjust the copies in all other
       # pipelines (it can't, unfortunately, moved in the `init` section as the
       # git repo is not available at this point yet).
+      echo "XXX"
       DISPLAY_VERSION=$TARGET_VERSION
       if [[ "$(git describe --abbrev=0)" == "$TARGET_VERSION" ]]; then
           # If the last tag matches the display version (we are working on the
